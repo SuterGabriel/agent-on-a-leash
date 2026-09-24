@@ -229,11 +229,17 @@ export class LeashEngine implements Engine {
   private readonly baselines: Baselines;
   private readonly ledgers = new Map<string, Ledger>();
 
-  /** Pass the bus so the customer's answers reach the run's ledger. */
-  constructor(bus?: LeashBus) {
+  /**
+   * Pass the bus so the customer's answers reach the run's ledger. Pass baselines built from the live pack's history
+   * in live mode; without them, the local data pack (data/) is used.
+   */
+  constructor(bus?: LeashBus, baselines?: Baselines) {
     // Card history is loaded once here, not inside a decision.
-    const pack = loadDataPack();
-    this.baselines = buildBaselines(pack.history, pack.merchants);
+    if (baselines) this.baselines = baselines;
+    else {
+      const pack = loadDataPack();
+      this.baselines = buildBaselines(pack.history, pack.merchants);
+    }
     if (bus) this.follow(bus);
   }
 

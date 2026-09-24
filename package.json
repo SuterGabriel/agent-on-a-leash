@@ -9,6 +9,7 @@
     "check-key": "tsx packages/backend/src/cli/checkKey.ts",
     "scenario": "tsx packages/backend/src/cli/runScenario.ts",
     "replay": "tsx packages/engine/src/replay.ts",
+    "inspect-live": "tsx packages/backend/src/cli/inspectLive.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.engine.json --noEmit"
   },

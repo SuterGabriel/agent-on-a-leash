@@ -59,6 +59,12 @@ export function buildBaselines(history: Row[], merchants: Map<string, Row>): Bas
   const merchantNames = new Map(
     [...merchants.values()].map((m) => [m.merchant_id, { name: m.merchant_name, category: m.merchant_category }]),
   );
+  // History rows name their shop too. They fill in shops missing from the merchant table; the table wins.
+  for (const r of history) {
+    if (r.merchant_id && r.merchant_name && !merchantNames.has(r.merchant_id)) {
+      merchantNames.set(r.merchant_id, { name: r.merchant_name, category: r.merchant_category ?? "" });
+    }
+  }
   return { cards, customerMerchants, cardCustomer, issuerMerchants, merchantNames };
 }
 

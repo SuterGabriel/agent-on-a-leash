@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@leash/shared": "*",
+    "csv-parse": "^7.0.2",
     "dotenv": "^16.4.0"
   }
 }

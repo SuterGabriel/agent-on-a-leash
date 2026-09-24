@@ -27,7 +27,9 @@
     "packages/backend/src/engine/leashEngine.ts",
     "packages/backend/src/app/**",
     "packages/backend/src/cli/runScenario.ts",
+    "packages/backend/src/cli/inspectLive.ts",
     "packages/backend/test/worker.test.ts",
-    "packages/backend/test/engine.test.ts"
+    "packages/backend/test/engine.test.ts",
+    "packages/backend/test/live-reference.test.ts"
   ]
 }
