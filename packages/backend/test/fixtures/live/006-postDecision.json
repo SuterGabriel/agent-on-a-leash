@@ -1,0 +1,32 @@
+{
+  "method": "postDecision",
+  "args": [
+    "AU0001-af50a380",
+    {
+      "authorization_id": "AU0001-af50a380",
+      "decision": "step_up",
+      "reason_codes": [
+        "customer_confirmation"
+      ],
+      "customer_message": "Our rules engine is not connected yet, so we ask you about every purchase.",
+      "evidence": [],
+      "engine_version": "stub-0"
+    }
+  ],
+  "result": {
+    "authorization_id": "AU0001-af50a380",
+    "status": "pending_step_up",
+    "decision": {
+      "authorization_id": "AU0001-af50a380",
+      "decision": "step_up",
+      "reason_codes": [
+        "customer_confirmation"
+      ],
+      "customer_message": "Our rules engine is not connected yet, so we ask you about every purchase.",
+      "evidence": [],
+      "engine_version": "stub-0",
+      "decision_source": "team"
+    },
+    "step_up_expires_at": "2026-09-24T14:39:00.657422Z"
+  }
+}

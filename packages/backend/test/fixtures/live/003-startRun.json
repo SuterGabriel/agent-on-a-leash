@@ -1,0 +1,35 @@
+{
+  "method": "startRun",
+  "args": [
+    {
+      "scenario_id": "SCEN0000",
+      "mandate_id": "TM3ab8c88816f2110a"
+    }
+  ],
+  "result": {
+    "run_id": "run_2068de8caf50a380",
+    "scenario_id": "SCEN0000",
+    "mandate_id": "TM3ab8c88816f2110a",
+    "status": "running",
+    "raw": {
+      "run_id": "run_2068de8caf50a380",
+      "scenario_id": "SCEN0000",
+      "mandate_id": "TM3ab8c88816f2110a",
+      "status": "running",
+      "fixture_profiles": [
+        {
+          "profile_id": "PROFILE_AUTH0001",
+          "customer_id": "CU0001",
+          "card_id": "CA0001"
+        }
+      ],
+      "generated_event_count": 1,
+      "delivered_event_count": 0,
+      "finalized_event_count": 0,
+      "processed_event_count": 0,
+      "pending_event_count": 0,
+      "queued_event_count": 1,
+      "platform_rejected_count": 0
+    }
+  }
+}

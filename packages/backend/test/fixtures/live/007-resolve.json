@@ -1,0 +1,28 @@
+{
+  "method": "resolve",
+  "args": [
+    "AU0001-af50a380",
+    {
+      "decision": "approve",
+      "customer_message": "The customer confirmed this purchase.",
+      "evidence": []
+    }
+  ],
+  "result": {
+    "authorization_id": "AU0001-af50a380",
+    "status": "approved",
+    "decision": {
+      "type": "authorization.decision",
+      "authorization_id": "AU0001-af50a380",
+      "decision": "approve",
+      "reason_codes": [
+        "human_confirmation"
+      ],
+      "customer_message": "The customer confirmed this purchase.",
+      "evidence": [],
+      "engine_version": null,
+      "decision_source": "human"
+    },
+    "resolved_by": "human"
+  }
+}
