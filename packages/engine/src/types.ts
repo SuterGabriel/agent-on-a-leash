@@ -22,6 +22,8 @@ export interface Facts {
   simTime: number; // simulated purchase time in ms
   base: Baselines;
   card: CardBaseline; // history of THIS card
+  habits: CardBaseline; // what familiarity and session compare with: this card, or all the customer's cards
+  habitsScope: "card" | "customer" | "none"; // "customer" when the card has fewer than MIN_CARD_HISTORY purchases
   customerId: string | null;
   shop: ShopTextReport; // quarantined shop text, computed once
   addonLines: Set<number>; // line numbers that are add-ons, not the thing asked for

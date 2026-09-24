@@ -1,11 +1,13 @@
-// Guard 15: session integrity. Does this look like the customer? Judged against THIS card's history.
+// Guard 15: session integrity. Does this look like the customer? Judged against THIS card's history,
+// or all the customer's cards when the card has little ("baseline: customer").
 // 1–2 signals: ask. 3 or more: stop. Signals are per purchase, so a clean purchase after a burst passes.
+// With no history at all every signal would fire; that is missing data, not proof, so it only asks.
 import { swissHour } from "../../../shared/src/baselines";
 import type { Guard } from "../types";
 
 const MIN_HISTORY_FOR_HOURS = 30;
 
-export const sessionIntegrity: Guard = ({ auth, policy, card }) => {
+export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScope }) => {
   if (!policy.sessionIntegrity) return { guard: "session", verdict: "SKIP", evidence: [] };
 
   const hour = swissHour(auth.timestamp);
@@ -62,10 +64,11 @@ export const sessionIntegrity: Guard = ({ auth, policy, card }) => {
   const evidence = [
     { fact: "session_signals", value: signals.join(",") || "none", comparator: "count<", threshold: 1, source: "authorization vs card history" },
     { fact: "swiss_local_hour", value: hour, comparator: null, threshold: null, source: "authorization.timestamp" },
+    { fact: "baseline", value: habitsScope, comparator: null, threshold: null, source: "authorization_history" },
   ];
   if (signals.length === 0) return { guard: "session", verdict: "PASS", evidence, signals };
 
-  const verdict = signals.length >= 3 ? "DECLINE" : "STEP_UP";
+  const verdict = signals.length >= 3 && habitsScope !== "none" ? "DECLINE" : "STEP_UP";
   return {
     guard: "session",
     verdict,

@@ -147,3 +147,6 @@ live-samples/
 
 # Live pack reference data, downloaded at startup in live mode (npm run inspect-live / scenario --live)
 data/live/
+
+# Generated reports (npm run api-atlas); may contain live customer profiles
+reports/

@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { loadConfig } from "../config.js";
 import { HttpVisecaClient } from "../viseca/client.js";
 import { loadLiveReference } from "../live/referenceData.js";
-import { compilePolicy } from "../../../shared/src/compiler.js";
+import { compilePolicy, WEEKDAYS } from "../../../shared/src/compiler.js";
 
 const cfg = loadConfig({ mode: "live" });
 const client = new HttpVisecaClient(cfg.baseUrl, cfg.teamApiKey);
@@ -32,6 +32,12 @@ for (const s of ref.scenarios) {
   console.log(`  known shops only    ${p.familiarShopsOnly ? "yes" : "no"}`);
   console.log(`  no extras           ${p.noExtras ? "yes" : "no"}`);
   console.log(`  session check       ${p.sessionIntegrity ? "yes" : "no"}`);
+  console.log(`  per-unit limit      ${p.perUnitLimit ? `CHF ${p.perUnitLimit.amountChf} per ${p.perUnitLimit.unit}` : "—"}`);
+  console.log(`  max orders          ${p.maxOrdersPerPeriod ? `${p.maxOrdersPerPeriod.count} per ${p.maxOrdersPerPeriod.days} day(s)` : "—"}`);
+  console.log(`  allowed weekdays    ${p.allowedWeekdays ? p.allowedWeekdays.map((d) => WEEKDAYS[d]).join(",") : "—"}`);
+  console.log(`  blocked categories  ${show(p.blockedCategories)}`);
+  console.log(`  blocked keywords    ${show(p.blockedKeywords)}`);
+  console.log(`  refundable only     ${p.refundableRequired ? "yes" : "no"}`);
   console.log(`  when uncertain      ${p.uncertainty}`);
   for (const a of p.assumptions) console.log(`  assumption: ${a}`);
   for (const q of p.openQuestions) console.log(`  open question: ${q}`);

@@ -88,12 +88,13 @@ describe("replay against the oracle", () => {
 });
 
 describe("no hard-coding", () => {
-  it("engine code never mentions scenario or purchase IDs", () => {
+  it("engine and compiler code never mention scenario or purchase IDs (public or live)", () => {
     const dir = path.resolve(__dirname, "../packages/engine/src");
     const files = (d: string): string[] =>
       readdirSync(d).flatMap((f) => (statSync(path.join(d, f)).isDirectory() ? files(path.join(d, f)) : [path.join(d, f)]));
-    for (const f of files(dir).filter((f) => !f.endsWith("replay.ts"))) {
-      expect(readFileSync(f, "utf8"), f).not.toMatch(/SCEN00|AU00/);
+    const shared = ["compiler.ts", "baselines.ts"].map((f) => path.resolve(__dirname, "../packages/shared/src", f));
+    for (const f of [...files(dir).filter((f) => !f.endsWith("replay.ts")), ...shared]) {
+      expect(readFileSync(f, "utf8"), f).not.toMatch(/SCEN\d{2}|AU\d{3}/);
     }
   });
 });

@@ -16,7 +16,7 @@ let baselines: Baselines | null = null;
 export function getBaselines(): Baselines {
   if (!baselines) {
     const pack = loadDataPack();
-    baselines = buildBaselines(pack.history, pack.merchants);
+    baselines = buildBaselines(pack.history, pack.merchants, { cards: pack.cards.values(), accounts: pack.accounts.values() });
   }
   return baselines;
 }

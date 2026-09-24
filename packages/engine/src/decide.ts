@@ -20,18 +20,33 @@ import { lookalikeMerchant } from "./guards/lookalike";
 import { duplicateOrder } from "./guards/duplicate";
 import { requote } from "./guards/requote";
 import { sessionIntegrity } from "./guards/session";
+import { perUnitLimit } from "./guards/perUnitLimit";
+import { orderFrequency } from "./guards/orderFrequency";
+import { allowedWeekday } from "./guards/weekday";
+import { blockedItems } from "./guards/blocked";
+import { refundableOrder } from "./guards/refundable";
+import { issuerLimits } from "./guards/issuerLimits";
 
-export const ENGINE_VERSION = "leash-0.2.0";
+export const ENGINE_VERSION = "leash-0.3.0";
+
+/** Below this many approved purchases, a card is judged on all the customer's cards. */
+export const MIN_CARD_HISTORY = 10;
 
 // Order matters only for the order of reason codes among equally strict findings.
 export const GUARDS: Guard[] = [
   perOrderLimit,
+  issuerLimits,
+  perUnitLimit,
   periodBudget,
+  orderFrequency,
+  allowedWeekday,
   splitOrder,
   itemScope,
+  blockedItems,
   requestedItem,
   unrequestedAddon,
   returnTerms,
+  refundableOrder,
   merchantType,
   merchantFamiliarity,
   lookalikeMerchant,
@@ -93,14 +108,21 @@ export function decide(
   }
 
   const shop = quarantine(auth.items);
+  const card = base.cards.get(auth.card_id) ?? EMPTY_CARD;
+  const customerId = event.mandate.customer_id ?? base.cardCustomer.get(auth.card_id) ?? null;
+  const customerHabits = customerId ? base.customers.get(customerId) : undefined;
+  const habitsScope: Facts["habitsScope"] =
+    card.purchases >= MIN_CARD_HISTORY ? "card" : customerHabits && customerHabits.purchases > card.purchases ? "customer" : card.purchases > 0 ? "card" : "none";
   const facts: Facts = {
     auth,
     policy,
     ledger,
     simTime: Date.parse(auth.timestamp),
     base,
-    card: base.cards.get(auth.card_id) ?? EMPTY_CARD,
-    customerId: event.mandate.customer_id ?? base.cardCustomer.get(auth.card_id) ?? null,
+    card,
+    habits: habitsScope === "customer" && customerHabits ? customerHabits : card,
+    habitsScope,
+    customerId,
     shop,
     addonLines: findAddonLines(auth.items, policy, shop),
   };

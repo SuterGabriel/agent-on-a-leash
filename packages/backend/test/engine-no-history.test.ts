@@ -32,8 +32,8 @@ describe("a card with no history (live scenarios)", () => {
   it("'shops I use': unknown, asked, with an honest message", () => {
     const v = engine.decide(eventFor("AU0001", "SCEN0000", { card_id: "CA1331" }), { runId: `r-${Math.random()}`, currentMandate: null });
     expect(v.decision).toBe("step_up");
-    expect(v.reason_codes).toEqual(["missing_info"]);
-    expect(v.because).toBe("We don't have any purchase history for this card yet, so we can't tell whether you know Alpine Basket.");
+    expect(v.reason_codes).toEqual(["no_shop_history"]);
+    expect(v.because).toBe("We have no purchase history for this card or its owner, so we cannot tell whether you know Alpine Basket. Is it a shop you use?");
     expect(v.checks.find((c) => c.key === "familiarity")!.result).toBe("unsure");
   });
 

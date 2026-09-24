@@ -8,6 +8,7 @@ import { InMemoryDecisionStore, LeashBus, type StoredDecision } from "../src/sto
 import { Worker } from "../src/worker.js";
 import { resolveAsk, AskError } from "../src/asks.js";
 import { VisecaError, type VisecaApi } from "../src/viseca/api.js";
+import type { DecisionRequestEnvelope } from "@leash/shared";
 import { compile, toMandateDraft } from "../src/compiler/compile.js";
 
 const dataDir = fileURLToPath(new URL("../../../data", import.meta.url));
@@ -118,6 +119,53 @@ describe("worker against the offline platform", () => {
     await worker.runUntilDone(run.run_id);
     expect(store.list(run.run_id)).toHaveLength(1);
     expect(posts).toBe(1);
+  });
+
+  it("an answered purchase delivered again backs off 2 s, 5 s, then 15 s, and is not answered twice", async () => {
+    const waits: number[] = [];
+    const { store, worker, run, platform } = await setup("SCEN0000", stubEngine, {}, { sleep: async (ms: number) => void waits.push(ms) });
+    let posts = 0;
+    const post = platform.postDecision.bind(platform);
+    platform.postDecision = async (id, body) => {
+      posts += 1;
+      return post(id, body);
+    };
+    const next = platform.nextDecisionRequest.bind(platform);
+    let first: DecisionRequestEnvelope | null = null;
+    let repeats = 0;
+    platform.nextDecisionRequest = async (w) => {
+      if (!first) return (first = await next(w));
+      if (repeats < 4) {
+        repeats += 1;
+        return { ...first, status: "pending_step_up" };
+      }
+      return next(w);
+    };
+    await worker.runUntilDone(run.run_id);
+    expect(waits).toEqual([2000, 5000, 15000, 15000]);
+    expect(posts).toBe(1);
+    expect(store.list(run.run_id)).toHaveLength(1);
+    worker.stop();
+  });
+
+  it("the backoff never sleeps past the end of the customer's answer window", async () => {
+    const waits: number[] = [];
+    const { worker, run, platform } = await setup("SCEN0000", stubEngine, { humanWindowMs: 3000 }, { sleep: async (ms: number) => void waits.push(ms) });
+    const next = platform.nextDecisionRequest.bind(platform);
+    let first: DecisionRequestEnvelope | null = null;
+    let repeats = 0;
+    platform.nextDecisionRequest = async (w) => {
+      if (!first) return (first = await next(w));
+      if (repeats < 3) {
+        repeats += 1;
+        return { ...first, status: "pending_step_up" };
+      }
+      return next(w);
+    };
+    await worker.runUntilDone(run.run_id);
+    expect(waits[0]).toBe(2000);
+    expect(waits.slice(1).every((w) => w > 0 && w <= 3000)).toBe(true);
+    worker.stop();
   });
 
   it("engine error → step_up, never approve", async () => {

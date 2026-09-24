@@ -18,6 +18,8 @@ export interface LineFacts {
   finalSale: boolean;
   returnNotStated: boolean;
   billedRecurring: boolean;
+  refundable: boolean; // a clean sentence says refundable / free cancellation
+  clean: string[]; // sentences that passed the injection scan (searchable as data, never obeyed)
 }
 
 export interface ShopTextReport {
@@ -65,6 +67,8 @@ export function quarantine(items: CartLine[]): ShopTextReport {
       finalSale: false,
       returnNotStated: false,
       billedRecurring: false,
+      refundable: false,
+      clean: [],
     };
     const text = normalise(item.item_details ?? "");
 
@@ -74,12 +78,14 @@ export function quarantine(items: CartLine[]): ShopTextReport {
         flagged.push({ line_no: item.line_no, text: sentence.slice(0, 160), patterns });
         continue; // never extract facts from a manipulative sentence
       }
+      facts.clean.push(sentence);
       for (const part of sentence.split(/;\s*/)) {
         const size = part.match(/\b(?:size|gr(?:ö|oe)sse|gr\.|taille)\s*([A-Z0-9]{1,4}(?:[.,]5)?)\b/i);
         if (size && facts.size === null) facts.size = size[1].toUpperCase();
         const days = part.match(/\breturns?\s+accepted\s+within\s+(\d+)\s+days?|\b(\d+)[-\s]day\s+returns?|\b(\d+)\s+Tage\s+Rückgabe/i);
         if (days && facts.returnDays === null) facts.returnDays = Number(days[1] ?? days[2] ?? days[3]);
-        if (/\bfinal\s+sale\b|\bno\s+returns\b|\bnon[-\s]?returnable\b|\bvom\s+Umtausch\s+ausgeschlossen/i.test(part)) facts.finalSale = true;
+        if (/\bfinal\s+sale\b|\bno\s+returns\b|\bnon[-\s]?returnable\b|\bnon[-\s]?refundable\b|\bvom\s+Umtausch\s+ausgeschlossen/i.test(part)) facts.finalSale = true;
+        else if (/(?<!non[-\s]?)\brefundable\b|\bfree\s+cancell?ation\b|\bfully\s+refund/i.test(part)) facts.refundable = true;
         if (/\breturn\s+policy\s+not\s+stated\b|\bno\s+return\s+policy\b/i.test(part)) facts.returnNotStated = true;
         if (/\bbilled\s+(monthly|yearly|annually)\b|\bsubscription\b|\brenews\s+automatically\b/i.test(part)) facts.billedRecurring = true;
       }
