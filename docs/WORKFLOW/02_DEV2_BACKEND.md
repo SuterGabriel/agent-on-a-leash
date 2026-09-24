@@ -28,11 +28,19 @@ The bootstrap response holds the decision deadline (8 s) and the human window (1
 | `packages/shared/src/dataPack.ts`, `buildEvent.ts`, `fx.ts` | CSV loaders, CSV row → live event, half-even CHF conversion |
 | `packages/backend/src/viseca/` | `VisecaApi` interface, live HTTP client |
 | `packages/backend/src/offline/platform.ts` | Offline clone of the platform |
-| `packages/backend/src/engine/port.ts` | `Engine` interface Dev 1 implements, `stubEngine` (always step_up), fallback verdict |
+| `packages/backend/src/engine/port.ts` | `Engine` interface, `stubEngine` (always step_up, for tests), fallback verdict |
+| `packages/backend/src/engine/leashEngine.ts` | Ara's engine (`packages/engine`) behind the port: policy from the stricter mandate, one ledger per run, verdict for the app |
 | `packages/backend/src/worker.ts`, `asks.ts`, `store.ts` | Worker loop, customer answers, in-memory store + event bus |
-| `packages/backend/test/` | 20 tests: event building, FX, worker, retries, timeouts, resolve, expiry, PATCH rules, real live response shapes |
+| `packages/shared/src/leash.ts` | App shapes: `ParseResult`, `LeashRule`, `LeashView`, `Budget`, `Suggestion`, `TightenRequest` (for Kim) |
+| `packages/shared/src/ruleFields.ts` | **Rule conventions between compiler and engine** (hard_rule field names, rule keys, built-in protections). Ara reads these. |
+| `packages/backend/src/compiler/compile.ts` | Policy compiler (Step 5) |
+| `packages/backend/src/leash/` | `LeashService` (leash, runs, asks, tighten, pause, revoke, judge), rolling budget, D1 suggestions |
+| `packages/backend/src/http/server.ts` | App API + SSE stream (Step 6), plain `node:http` |
+| `packages/backend/src/tokens/vault.ts` | Decision-bound tokens (demo), see below |
+| `packages/backend/test/` | 47 tests: compiler, worker, retries, timeouts, resolve, expiry, PATCH rules, live response shapes, tokens, full API flow over HTTP |
 
-`npm test` runs them. `npm run scenario -- SCEN0001 --answer approve` runs a scenario offline.
+`npm test` runs them. `npm run api` starts the app API on http://localhost:8787 with Ara's engine (offline; `npm run api -- --live` for Viseca, which loads the live scenarios and card history).
+`npm run scenario -- SCEN0001 --answer approve` runs a scenario from the command line.
 
 **Confirmed on the live API (24 Sep 2026, SCEN0000 + SCEN0001 green, 31–157 ms per decision):**
 - The key works **without** the `team3:` prefix; `config.ts` strips it, so paste the key as you got it.
@@ -43,7 +51,10 @@ The bootstrap response holds the decision deadline (8 s) and the human window (1
 - `event_id` in the poll envelope is a number.
 - Real responses are kept as test fixtures in `packages/backend/test/fixtures/live/`. Live runs write new ones to `live-samples/` (git-ignored).
 
-**Still assumptions in the offline clone:** the period for `approved_spend_in_period_chf` is the longest period rule (else 7 days); an unanswered ask ends as `cancelled`.
+- An unanswered ask ends as `declined` with reason `step_up_expired` (seen live); the offline clone does the same. In the app it shows as `expired`.
+- The live history (`/v1/reference-data/authorization-history.csv`) is the public file: live scenario cards (e.g. CA1331) and shops are not in it, so "shops I use" can't be confirmed live. Asked Viseca whether that is intended.
+
+**Still an assumption in the offline clone:** the period for `approved_spend_in_period_chf` is the longest period rule (else 7 days).
 
 ## Step 1 — Viseca client ✅ done (tested live)
 
@@ -51,7 +62,7 @@ The bootstrap response holds the decision deadline (8 s) and the human window (1
 (bootstrap, reference data, mandates create/confirm/get/patch/delete, scenario runs, decision-requests/next, decision, resolve, authorizations, events, team reset).
 30 s timeout, errors thrown as `VisecaError` with status and body. The client and the offline platform implement the same `VisecaApi` interface.
 
-## Step 2 — Worker, end to end ✅ done (with stub engine)
+## Step 2 — Worker, end to end ✅ done (with Ara's engine)
 
 `packages/backend/src/worker.ts`
 ```
@@ -98,7 +109,7 @@ The engine returns a check `key`; **the backend adds `your_words`** from `rules`
 
 Writes never block a decision: decide and post first, write after.
 
-## Step 5 — Policy compiler (2 h) — differentiator D2
+## Step 5 — Policy compiler ✅ done — differentiator D2
 
 `POST /app/leash/parse {instruction}` →
 ```
@@ -112,9 +123,15 @@ Writes never block a decision: decide and post first, write after.
 - `internal_policy` (our extra rules) stays in our store; it is not sent to the app or Viseca.
 - Optional model (P1): only after regex works; must agree on numbers or the rule is marked "please check".
 
+Done: reads all 5 scenario instructions completely (no `not_understood`, correct offsets), plus the app's example wording
+("max CHF 120 per order", "CHF 300 per week"). Open question ids: `q_split_orders`, `q_other_card`, `q_close_after_first`;
+answers go in `POST /app/leash {answers}` and can only add or narrow rules. Every rule is sent to Viseca as a hard_rule with the
+field names in `ruleFields.ts`, so it travels with each purchase event to the engine.
+Assumptions go to Viseca as `guidance`; if Viseca rejects that format (undocumented), the leash is created without them.
+
 `assumptions` and `warnings` are missing in the App API contract today; add them there.
 
-## Step 6 — App API (from the App API contract)
+## Step 6 — App API ✅ done (offline-tested over HTTP; live pending a working key)
 
 | Method | Path | Screen | Calls Viseca |
 |---|---|---|---|
@@ -123,26 +140,107 @@ Writes never block a decision: decide and post first, write after.
 | GET | `/app/leash` | S4, S7 | `GET /v1/mandates/{id}` (cached); includes `budget`, `status`, `token`, learned rules, known shops |
 | PATCH | `/app/leash/rules` | S8 tighten | `PATCH /v1/mandates/{id}` (add rules only, or uncertainty → decline) |
 | DELETE | `/app/leash` | S9 revoke | `DELETE /v1/mandates/{id}` |
-| POST | `/app/leash/pause` | S7 | no (engine flag) — P1 |
+| POST | `/app/leash/pause {hours}` / `/app/leash/resume` | S7 | no: while paused every purchase is declined (`leash_paused`) |
 | GET | `/app/feed` | S4 | no |
 | GET | `/app/decisions/:id` | S5 | no |
 | GET | `/app/asks` | S4, S6 | no |
 | POST | `/app/asks/:id/resolve` | S6 | `POST /v1/authorizations/{id}/resolve` |
-| POST | `/app/suggestions/:id/accept` | S5, S6 | no (learned rule, engine-side; D1) |
+| POST | `/app/suggestions/:id/accept` / `/dismiss` | S5, S6 | `PATCH /v1/mandates/{id}` (learned rule added as hard_rule; D1) |
 | GET | `/app/stream` | all | no — SSE events `decision`, `ask`, `ask_expired`, `leash_changed` |
 | GET | `/judge/decisions?run_id=` | Judge view | no |
 | POST | `/api/runs {scenario_id}` | demo control | `POST /v1/scenario-runs` — *add to contract* |
 | GET | `/api/status` | demo control | `GET /v1/scenario-runs/{id}` — *add to contract* |
+| GET | `/api/scenarios` | demo control | no — the 5 scenarios with instructions |
+
+Details that matter for the app:
+- `POST /api/runs {scenario_id}` creates a fresh leash from the scenario's instruction and starts the run (worker runs in the background).
+  `{scenario_id, use_current_leash: true}` keeps the leash the customer built in S1–S3 instead.
+- `PATCH /app/leash/rules` bodies: `{type:"lower_order_limit", value}`, `{type:"block_shop", merchant_id}`, `{type:"block_category", category}`, `{type:"unsure_decline"}`. A looser limit is refused with `not_tighter`.
+- `POST /app/asks/:id/resolve {decision, accept_suggestion?, over_budget_ok?}`. After a decline, the decision carries `suggestion {id, text}` ("Never buy cosmetics") when one fits.
+  An approval that no longer fits the budget is refused with `over_budget` until the app sends it again with `over_budget_ok: true` (see App API security).
+- Checks come back with `your_words` filled from the leash (the backend adds them; the engine only returns keys).
+- Errors: `{error: {code, message}}`. 400 bad input, 401 missing app secret, 404 unknown, 409 conflict (revoked leash, already answered, answer already on its way `busy`, `over_budget`, run in progress), 410 ask expired, 502 Viseca error.
+- Known shops = approved purchases on the scenario card in the history, plus shops the customer approved (`new: true`). A one-item leash (`q_close_after_first: "Yes"`) revokes itself after the first approval.
 
 Realtime is **SSE from our backend**, not Supabase Realtime: it carries `ask_expired` and `leash_changed`, and the Supabase service key never leaves the server.
+
+## Engine integration ✅ done
+
+Ara's engine (`packages/engine`, leash-0.2.0) decides in the app API, the scenario runner and the token demo.
+- **One contract for rules:** the compiler writes hard_rules with the field names the engine reads (`ruleFields.ts`).
+  A rule the engine can't read is never ignored: the purchase is asked (`rule_not_applied`). Guarded by
+  `test/app-engine.test.ts`: compiler → mandate → worker → engine matches the reference on 45/45.
+- **Customer's words on checks:** the engine names checks after its guards (`per_order_limit`, `item_scope`, …);
+  `CHECK_TO_RULE` in `leash/service.ts` maps them to the leash rules so `your_words` shows on the decision card.
+- **Not readable by the engine yet (ask Ara):** `items.item_category not_in` (block a category, "Never buy cosmetics"),
+  `merchant.merchant_id not_in` (block a shop) and the learned flags. Tighten still writes them, which makes later
+  purchases asks; suggestions only offer rules the engine reads (today: no add-ons, known shops only).
+- **Live mode:** the live API has its own scenarios (e.g. `SCEN0101`) and card history; `npm run api -- --live` loads
+  them, `/api/scenarios` lists them, and the card is read from the first purchase.
+
+## Decision-bound tokens (demo) ✅ done
+
+Our rules decide; the token enforces the decision. After every approval (automated or by the customer) the agent gets
+a token for exactly that purchase: one shop (`merchant_id`), one maximum, 15 minutes, one payment. A fooled or hijacked
+agent can't spend more, somewhere else, later, or twice. Revoking the leash kills every unused token at once.
+
+- **The maximum never breaks the leash:** approved + 5 % rounding room, capped at the per-order limit and at what's left of
+  the budget (approved CHF 120 at a CHF 120 limit → max CHF 120, so AU0004's CHF 126 would be refused). Each token says why
+  in one sentence (`max_reason`).
+- **No card numbers:** IDs are `tok_demo_…`, labels `DEMO token ••ab12`. Nothing touches a network.
+- **Scope, honestly:** in Viseca's simulator the purchase we approve already *is* the payment, so tokens don't change the jury's
+  numbers. They show what happens in production, where the agent pays with a credential after the approval. They limit the
+  damage of an approval; whether to approve is still decided by the rules.
+
+| Method | Path | What |
+|---|---|---|
+| GET | `/app/tokens`, `/app/tokens/:id` | All tokens / one token with its history |
+| POST | `/demo/tokens/:id/charge {merchant_id?, amount_chf?, later?}` | Simulated merchant charge. Defaults to the bound shop and approved amount; override to show the refusals (`wrong_merchant`, `over_amount`, `token_expired` with `later: true`, `token_used`, `token_revoked`) |
+| POST | `/demo/tokens/:id/refund {amount_chf?}` | Refund after use; never more than was charged |
+
+Decisions carry `token` once approved; the stream sends a `token` event on every change. `npm run demo:tokens` tells the
+whole story on SCEN0004 data for the pitch or the backup recording.
+
+Pitch line: *"Our rules decide what's allowed. Every approval becomes a token for one shop, one amount, one use, so even a
+fooled agent can't spend more, somewhere else, later, or twice."*
+
+## App API security ✅ done
+
+Three fixes from the security review (the full list and what we skipped: `docs/learnings/2026-09-24-security-review.md`).
+Tested in `test/security.test.ts`; each test fails on the code before the fix.
+
+- **One answer per ask** (`asks.ts`). The ask is claimed before the call to Viseca's `/resolve`. A second answer
+  while the first is on its way gets 409 `busy`, so a double tap, or app and voice at once, can't send approve and
+  decline both. If Viseca fails, the claim is released and the ask stays waiting. Node runs one piece of code at a
+  time, so check and claim can't interleave: the same job `SELECT … FOR UPDATE` does in a database.
+- **The budget is checked again when the customer approves** (`LeashService.reserveBudget`). Each ask fit the budget
+  when the engine checked it, but two approved together may not (two asks of CHF 250 with CHF 300 left). Approvals
+  still on their way to Viseca count as spent until they land; check and reservation happen before any `await`, so
+  two taps at once can't both see the same money left. Over budget → 409 `over_budget` with the message
+  *"This puts you CHF 200.00 over your 7-day budget (CHF 50.00 left). Approve again to buy it anyway."* It's the
+  customer's money, so the app may resend with `over_budget_ok: true`.
+- **Only the app can write** (`server.ts`, `cli/api.ts`). With `APP_SECRET` set, every POST/PATCH/DELETE under
+  `/app/*` needs `Authorization: Bearer <APP_SECRET>`, otherwise 401 `unauthorized` (compared in constant time).
+  Reads, `/app/stream` and `/demo/tokens/*` stay open: the agent holds only decision tokens, which can pay but never
+  approve. `CORS_ORIGIN` names the one browser origin allowed. A header, not a cookie, so CSRF doesn't apply.
+
+| Setting | Offline | Live |
+|---|---|---|
+| `APP_SECRET` | optional; unset = open, with a warning | required, `npm run api` refuses to start without it |
+| `CORS_ORIGIN` | defaults to `*` | required, and not `*` |
+
+**Limit, honestly:** the secret ships in the app's bundle, so whoever has the built frontend can read it. It keeps
+the agent and outsiders out; it is not a user login. Per-user sessions come with Supabase Auth (Step 4).
 
 ## Step 7 — Resilience checklist
 
 - Decision post fails → retry once after 250 ms, then log `post_failed`. ✅
 - Engine throws or runs out of time → post `step_up`. ✅
 - Duplicate delivery → stored answer, counted once. ✅
-- Human window expires → mark `expired`, send nothing, emit `ask_expired`.
-- Revoke with pending step_up → do not fake a cancellation (expert question Q5).
+- Human window expires → mark `expired`, send nothing, emit `ask_expired`. ✅
+- Revoke with pending step_up → do not fake a cancellation (expert question Q5). ✅ (asks stay as they are)
+- Two answers to one ask at once → one goes to Viseca, the other gets `busy`. ✅
+- Approvals together over the budget → `over_budget` until the customer confirms. ✅
 
 ## Step 8 — Model service client (P1, after Thu 21:00)
 

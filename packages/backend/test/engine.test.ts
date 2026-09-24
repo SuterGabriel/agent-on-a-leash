@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 import { buildEvent, loadDataPack, type EventMandate } from "@leash/shared";
 import { readCsv } from "../../shared/src/loaders.js";
 import { OfflinePlatform } from "../src/offline/platform.js";
-import { LeashEngine, policyFor } from "../src/engine/leashEngine.js";
+import { LeashEngine, policyFor, trackRecordCheck } from "../src/engine/leashEngine.js";
+import { buildBaselines } from "../../shared/src/baselines.js";
 import { InMemoryDecisionStore, LeashBus } from "../src/store.js";
 import { Worker } from "../src/worker.js";
 import { resolveAsk } from "../src/asks.js";
@@ -91,6 +92,39 @@ describe("LeashEngine through the worker port", () => {
   it("a revoked current mandate declines", () => {
     const v = engine.decide(event(), { runId: "r3", currentMandate: { ...snapshot, status: "revoked" } });
     expect(v.decision).toBe("decline");
+  });
+});
+
+describe("shop track record (issuer history, display only)", () => {
+  const rows = (merchant: string, purchases: number, refunds: number) => [
+    ...Array.from({ length: purchases }, () => ({ merchant_id: merchant, transaction_type: "purchase", status: "approved", card_id: "CA1", customer_id: "CU1", timestamp: "2025-09-01T10:00:00Z" })),
+    ...Array.from({ length: refunds }, () => ({ merchant_id: merchant, transaction_type: "refund", status: "approved", card_id: "CA1", customer_id: "CU1", timestamp: "2025-09-01T10:00:00Z" })),
+  ];
+  const base = buildBaselines([...rows("ME_OK", 100, 1), ...rows("ME_REFUNDS", 40, 3), ...rows("ME_SMALL", 5, 2)], new Map());
+
+  it("a shop with a normal refund share passes, with the numbers as the fact", () => {
+    expect(trackRecordCheck("ME_OK", base)).toMatchObject({ key: "shop_track_record", source: "built_in", result: "pass", fact: "1 refund in 100 payments" });
+  });
+
+  it("5% refunds or more over 20+ payments is marked unsure", () => {
+    expect(trackRecordCheck("ME_REFUNDS", base)?.result).toBe("unsure");
+  });
+
+  it("too few payments to judge is never unsure; no history at all shows no check", () => {
+    expect(trackRecordCheck("ME_SMALL", base)?.result).toBe("pass");
+    expect(trackRecordCheck("ME_UNKNOWN", base)).toBeNull();
+  });
+
+  it("is added to the card without touching the decision", () => {
+    const e = buildEvent(pack, pack.attempts.get("AU0001")!, {
+      liveAuthorizationId: "LIVE-track", requestId: "req-t", mandate: mandate("SCEN0000"), relatedLiveId: null,
+      context: { approved_spend_in_period_chf: 0, recent_authorizations: [] },
+      receivedAt: new Date().toISOString(), deadlineAt: new Date(Date.now() + 8000).toISOString(),
+    });
+    const v = new LeashEngine().decide(e, { runId: "r-track", currentMandate: null });
+    expect(v.decision).toBe("approve");
+    expect(v.reason_codes).toEqual(["all_checks_passed"]);
+    expect(v.checks.find((c) => c.key === "shop_track_record")?.fact).toMatch(/^\d+ refunds? in \d+ payments$/);
   });
 });
 

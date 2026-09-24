@@ -1,7 +1,7 @@
 // Guard 15: session integrity. Does this look like the customer? Judged against THIS card's history,
 // or all the customer's cards when the card has little ("baseline: customer").
 // 1–2 signals: ask. 3 or more: stop. Signals are per purchase, so a clean purchase after a burst passes.
-// With no history at all every signal would fire; that is missing data, not proof, so it only asks.
+// No history at all (card and customer): only a burst of orders is a signal; the rest is unknown (UNCERTAIN).
 import { swissHour } from "../../../shared/src/baselines";
 import type { Guard } from "../types";
 
@@ -13,6 +13,34 @@ export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScop
   const hour = swissHour(auth.timestamp);
   const signals: string[] = [];
   const text: string[] = [];
+
+  // No history for this card or its customer (live scenario cards): device, country and shop can't be "new" against
+  // nothing. Only the burst signal stands on its own; the rest is unknown and goes to the uncertainty policy.
+  if (habitsScope === "none") {
+    const evidence = [
+      { fact: "card_history_purchases", value: 0, comparator: ">=", threshold: 1, source: "authorization_history" },
+      { fact: "baseline", value: habitsScope, comparator: null, threshold: null, source: "authorization_history" },
+      { fact: "recent_attempt_count_10m", value: auth.recent_attempt_count_10m, comparator: "<", threshold: 2, source: "authorization" },
+    ];
+    if (auth.recent_attempt_count_10m >= 2) {
+      return {
+        guard: "session",
+        verdict: "STEP_UP",
+        reason_code: "session_not_you",
+        evidence,
+        signals: ["quick_series"],
+        message: `Is this you? ${auth.recent_attempt_count_10m} other attempts in 10 minutes.`,
+      };
+    }
+    return {
+      guard: "session",
+      verdict: "UNCERTAIN",
+      reason_code: "missing_info",
+      evidence,
+      message: "We don't have any purchase history for this card yet, so we can't compare this with how you usually shop.",
+    };
+  }
+
   if (auth.customer_device_id && !card.devices.has(auth.customer_device_id)) {
     signals.push("new_device");
     text.push("a device you have never used");
@@ -41,7 +69,7 @@ export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScop
   ];
   if (signals.length === 0) return { guard: "session", verdict: "PASS", evidence, signals };
 
-  const verdict = signals.length >= 3 && habitsScope !== "none" ? "DECLINE" : "STEP_UP";
+  const verdict = signals.length >= 3 ? "DECLINE" : "STEP_UP";
   return {
     guard: "session",
     verdict,

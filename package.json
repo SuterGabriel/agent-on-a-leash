@@ -13,6 +13,8 @@
     "api-atlas": "tsx packages/backend/src/cli/apiAtlas.ts",
     "live-results": "tsx packages/backend/src/cli/liveResults.ts",
     "live-review": "tsx packages/backend/src/cli/liveReview.ts",
+    "api": "tsx packages/backend/src/cli/api.ts",
+    "demo:tokens": "tsx packages/backend/src/cli/demoTokens.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.engine.json --noEmit"
   },
@@ -24,5 +26,6 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "dependencies": {}
 }

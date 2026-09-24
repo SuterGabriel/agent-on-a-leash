@@ -9,7 +9,7 @@ import { Worker } from "../src/worker.js";
 import { resolveAsk, AskError } from "../src/asks.js";
 import { VisecaError, type VisecaApi } from "../src/viseca/api.js";
 import type { DecisionRequestEnvelope } from "@leash/shared";
-import { parseLeash } from "../src/app/parseLeash.js";
+import { compile, toMandateDraft } from "../src/compiler/compile.js";
 
 const dataDir = fileURLToPath(new URL("../../../data", import.meta.url));
 const pack = loadDataPack(dataDir);
@@ -31,8 +31,8 @@ const approveAll: Engine = {
 async function setup(scenarioId: string, engine: Engine = stubEngine, platformOpts = {}, workerOpts = {}) {
   const platform = new OfflinePlatform(pack, platformOpts);
   const instruction = pack.scenarios.get(scenarioId)!.cardholder_instruction;
-  const { hard_rules, uncertainty_policy } = parseLeash({ instruction });
-  const draft = await platform.createMandate({ instruction, hard_rules, uncertainty_policy, guidance: [], open_questions: [] });
+  const parsed = compile(instruction);
+  const draft = await platform.createMandate(toMandateDraft(parsed, parsed.rules));
   const { mandate_id } = await platform.confirmMandate(draft.draft_id);
   const store = new InMemoryDecisionStore();
   const bus = new LeashBus();
@@ -68,9 +68,13 @@ describe("data pack and events", () => {
     expect(toChf(10, "USD", pack.fx)).toBe(8.7);
   });
 
-  it("seeds the per-order price rule from the instruction", () => {
-    expect(parseLeash({ instruction: pack.scenarios.get("SCEN0001")!.cardholder_instruction }).hard_rules[0]!.value).toBe(120);
-    expect(parseLeash({ instruction: pack.scenarios.get("SCEN0000")!.cardholder_instruction }).hard_rules[0]!.value).toBe(20);
+  it("compiles the per-order limit into the mandate", () => {
+    const limitOf = (id: string) => {
+      const p = compile(pack.scenarios.get(id)!.cardholder_instruction);
+      return toMandateDraft(p, p.rules).hard_rules.find((r) => r.scope === "purchase")!.value;
+    };
+    expect(limitOf("SCEN0001")).toBe(120);
+    expect(limitOf("SCEN0000")).toBe(20);
   });
 });
 

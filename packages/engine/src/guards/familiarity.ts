@@ -10,11 +10,12 @@ export const merchantFamiliarity: Guard = ({ auth, policy, card, base, customerI
   const baseline = { fact: "baseline", value: habitsScope, comparator: null, threshold: null, source: "authorization_history" };
 
   if (habitsScope === "none") {
+    // Always an ask, whatever the uncertainty policy says: missing history is not a reason to decline.
     return {
       guard: "familiarity",
       verdict: "STEP_UP",
       reason_code: "no_shop_history",
-      evidence: [baseline],
+      evidence: [{ fact: "card_history_purchases", value: card.purchases, comparator: ">=", threshold: 1, source: "authorization_history" }, baseline],
       message: `We have no purchase history for this card or its owner, so we cannot tell whether you know ${auth.merchant.merchant_name}. Is it a shop you use?`,
     };
   }

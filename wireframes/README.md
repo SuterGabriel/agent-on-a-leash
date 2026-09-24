@@ -18,6 +18,7 @@ Low-fidelity wireframes for a new **Leash** tab in the card app (next to Card, C
 | 4 | Ask-me sheet | `04-ask-me-sheet.png` |
 | 5 | Ask-me sheet, manipulated shop | `05-ask-me-manipulated-shop.png` |
 | 6 | Decision card | `06-decision-card.png` |
+| 6b | Decision card, approved with one-time pass (token) | html only: `html/DecisionApproved.html` |
 | 7 | History, mixed | `07-history-mixed.png` |
 | 8 | Leash detail (Rules) | `08-leash-detail-rules.png` |
 | 8b | Revoke confirmation | `08b-revoke-confirmation.png` |

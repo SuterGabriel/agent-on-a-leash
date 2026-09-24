@@ -13,7 +13,8 @@ import { LeashEngine } from "../engine/leashEngine.js";
 import { InMemoryDecisionStore, LeashBus } from "../store.js";
 import { Worker } from "../worker.js";
 import { resolveAsk } from "../asks.js";
-import { parseLeash } from "../app/parseLeash.js";
+import { compile, toMandateDraft } from "../compiler/compile.js";
+import { createMandateSafely } from "../leash/service.js";
 import { loadLiveReference } from "../live/referenceData.js";
 import { buildBaselines } from "../../../shared/src/baselines.js";
 
@@ -42,15 +43,16 @@ if (!scenario) {
   throw new Error(`unknown scenario ${scenarioId} in ${cfg.mode} mode; available: ${known.join(" ")}`);
 }
 
-const { hard_rules, uncertainty_policy, assumptions, open_questions } = parseLeash({ instruction: scenario.cardholder_instruction });
+const parsed = compile(scenario.cardholder_instruction);
 console.log(`${scenarioId} · ${scenario.scenario_name} · mode ${cfg.mode}`);
 console.log(`instruction: ${scenario.cardholder_instruction}`);
-console.log(`hard_rules: ${JSON.stringify(hard_rules)}`);
-for (const a of assumptions) console.log(`  assumption: ${a}`);
-for (const q of open_questions) console.log(`  open question: ${q}`);
+console.log(`rules: ${parsed.rules.map((r) => r.label).join(" · ")}`);
+for (const a of parsed.assumptions) console.log(`  assumption: ${a}`);
+for (const q of parsed.open_questions) console.log(`  open question: ${q.text}`);
+for (const n of parsed.not_understood) console.log(`  NOT UNDERSTOOD: ${n}`);
 console.log();
 
-const draft = await api.createMandate({ instruction: scenario.cardholder_instruction, hard_rules, uncertainty_policy, guidance: [], open_questions: [] });
+const draft = await createMandateSafely(api, toMandateDraft(parsed, parsed.rules));
 const { mandate_id } = await api.confirmMandate(draft.draft_id);
 const store = new InMemoryDecisionStore();
 const bus = new LeashBus();

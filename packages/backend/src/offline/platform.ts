@@ -42,6 +42,8 @@ interface AttemptState {
   decision?: DecisionBody & { received_at: number; deadline_missed: boolean };
   humanDeadlineAt?: number;
   resolution?: ResolveBody & { received_at: number };
+  /** The customer's answer window ran out: Viseca declines with reason step_up_expired. */
+  expired?: boolean;
   status?: FinalStatus;
   deliveries: number;
 }
@@ -208,8 +210,9 @@ export class OfflinePlatform implements VisecaApi {
     const now = this.now();
     for (const s of run.attempts) {
       if (s.status === "pending" && s.humanDeadlineAt !== undefined && now > s.humanDeadlineAt) {
-        // Assumption: an unanswered step_up ends as cancelled; nothing is bought.
-        s.status = "cancelled";
+        // As the live API does (seen 24 Sep 2026): an unanswered step_up ends as declined, reason step_up_expired.
+        s.status = "declined";
+        s.expired = true;
         this.log("authorization.expired", s.liveId);
       }
     }
@@ -367,6 +370,7 @@ export class OfflinePlatform implements VisecaApi {
           source_authorization_id: s.attempt.authorization_id,
           run_id: run.run_id,
           decision: s.decision?.decision ?? null,
+          final_reason_codes: s.expired ? ["step_up_expired"] : null,
           status: s.status ?? "queued",
           deadline_missed: s.decision?.deadline_missed ?? false,
         }));

@@ -16,15 +16,16 @@ export function readCsv(file: string): Row[] {
 }
 
 function byId(rows: Row[], key: string): Map<string, Row> {
-  return new Map(rows.map((r) => [r[key], r]));
+  return new Map(rows.map((r) => [r[key] ?? "", r]));
 }
 
 function groupBy(rows: Row[], key: string): Map<string, Row[]> {
   const m = new Map<string, Row[]>();
   for (const r of rows) {
-    const list = m.get(r[key]) ?? [];
+    const k = r[key] ?? "";
+    const list = m.get(k) ?? [];
     list.push(r);
-    m.set(r[key], list);
+    m.set(k, list);
   }
   return m;
 }

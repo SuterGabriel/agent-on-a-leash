@@ -18,19 +18,19 @@
   // The engine and the files that import it are checked by tsconfig.engine.json instead.
   "exclude": [
     "packages/engine/**",
-    "packages/shared/src/types.ts",
-    "packages/shared/src/loaders.ts",
     "packages/shared/src/baselines.ts",
-    "packages/shared/src/compiler.ts",
     "packages/shared/src/csvEvent.ts",
-    "packages/shared/src/fxRates.ts",
     "packages/backend/src/engine/leashEngine.ts",
     "packages/backend/src/app/**",
     "packages/backend/src/cli/runScenario.ts",
     "packages/backend/src/cli/inspectLive.ts",
     "packages/backend/src/cli/liveReview.ts",
+    "packages/backend/src/cli/api.ts",
+    "packages/backend/src/cli/demoTokens.ts",
     "packages/backend/test/worker.test.ts",
     "packages/backend/test/engine.test.ts",
-    "packages/backend/test/live-reference.test.ts"
+    "packages/backend/test/live-reference.test.ts",
+    "packages/backend/test/app-engine.test.ts",
+    "packages/backend/test/engine-no-history.test.ts"
   ]
 }

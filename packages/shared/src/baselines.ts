@@ -16,6 +16,7 @@ export interface Baselines {
   cardCustomer: Map<string, string>;
   customers: Map<string, CardBaseline>; // the same habits, over ALL cards of a customer (for cards with little history)
   issuerMerchants: Map<string, number>; // merchant -> approved purchases across ALL customers
+  issuerRefunds: Map<string, number>; // merchant -> refunds across ALL customers (shop track record, display only)
   cardLimits: Map<string, CardLimits>; // card -> limits of the account behind it
   merchantNames: Map<string, { name: string; category: string }>;
 }
@@ -58,9 +59,11 @@ export function buildBaselines(history: Row[], merchants: Map<string, Row>, cata
   const cardCustomer = new Map<string, string>();
   const issuerMerchants = new Map<string, number>();
   const customers = new Map<string, CardBaseline>();
+  const issuerRefunds = new Map<string, number>();
 
   for (const r of history) {
     cardCustomer.set(r.card_id, r.customer_id);
+    if (r.transaction_type === "refund" && r.status === "approved") inc(issuerRefunds, r.merchant_id);
     if (r.transaction_type !== "purchase" || r.status !== "approved") continue;
 
     let c = cards.get(r.card_id);
@@ -113,7 +116,7 @@ export function buildBaselines(history: Row[], merchants: Map<string, Row>, cata
       if (l) cardLimits.set(c.card_id, l);
     }
   }
-  return { cards, customerMerchants, cardCustomer, customers, issuerMerchants, merchantNames, cardLimits };
+  return { cards, customerMerchants, cardCustomer, customers, issuerMerchants, issuerRefunds, merchantNames, cardLimits };
 }
 
 export const EMPTY_CARD: CardBaseline = {

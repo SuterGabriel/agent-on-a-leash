@@ -213,7 +213,8 @@ const CHECKS: Record<string, { label: string; source: CheckSource }> = {
 
 function checkResult(g: GuardResult): CheckResult {
   if (g.verdict === "PASS") return "pass";
-  if (g.verdict === "UNCERTAIN" || g.reason_code === "guard_error") return "unsure";
+  // No history is "we don't know", not a failed check (the decision is still an ask).
+  if (g.verdict === "UNCERTAIN" || g.reason_code === "guard_error" || g.reason_code === "no_shop_history") return "unsure";
   return "fail";
 }
 
@@ -274,6 +275,34 @@ function inactiveVerdict(status: string): EngineVerdict {
   };
 }
 
+// ---------- Shop track record: issuer data, shown on the card, never decides ----------
+
+/** A shop is worth a second look from this share of refunds, once it has enough payments to judge. */
+export const TRACK_RECORD_MIN_PAYMENTS = 20;
+export const TRACK_RECORD_REFUND_SHARE = 0.05;
+
+/**
+ * How the shop did across all Viseca cardholders (authorization history), not what the agent or the shop claims.
+ * Context for the customer only: it never changes the decision, the reason codes or the uncertainty.
+ * No history = no check (missing data is neutral). With real chargeback data, the same check could ask.
+ */
+export function trackRecordCheck(merchantId: string, b: Baselines): Check | null {
+  const payments = b.issuerMerchants.get(merchantId) ?? 0;
+  if (!payments) return null;
+  const refunds = b.issuerRefunds.get(merchantId) ?? 0;
+  const worthALook = payments >= TRACK_RECORD_MIN_PAYMENTS && refunds / payments >= TRACK_RECORD_REFUND_SHARE;
+  return {
+    key: "shop_track_record",
+    label: "Shop's history with Viseca cardholders",
+    your_words: null,
+    source: "built_in",
+    result: worthALook ? "unsure" : "pass",
+    fact: `${refunds} refund${refunds === 1 ? "" : "s"} in ${payments} payments`,
+  };
+}
+
+const withTrackRecord = (v: EngineVerdict, check: Check | null): EngineVerdict => (check ? { ...v, checks: [...v.checks, check] } : v);
+
 // ---------- The port ----------
 
 export class LeashEngine implements Engine {
@@ -321,12 +350,13 @@ export class LeashEngine implements Engine {
     // Same event shape. The two type files differ only in `context` (spend may be null live), which the engine never reads.
     const result = decide(event as unknown as EngineEvent, policy, ledger, this.baselines);
     const verdict = toVerdict(result);
-    if (!notApplied.length) return verdict;
+    const trackRecord = trackRecordCheck(event.authorization.merchant.merchant_id, this.baselines);
+    if (!notApplied.length) return withTrackRecord(verdict, trackRecord);
 
     const asked = askForRulesNotApplied(verdict, notApplied);
     // Keep the ledger in step with what we answer: an ask is not spend until the customer says yes.
     const entry = ledger.get(result.authorization_id);
     if (entry && asked.decision === "step_up" && entry.final_status === "approved") entry.final_status = "pending";
-    return asked;
+    return withTrackRecord(asked, trackRecord);
   }
 }
