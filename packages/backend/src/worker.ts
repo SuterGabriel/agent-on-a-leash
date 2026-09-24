@@ -20,7 +20,11 @@ export interface WorkerOptions {
   /** How long a loaded mandate stays fresh. */
   mandateCacheMs?: number;
   pollWaitSeconds?: number;
+  /** Waits after a purchase we already answered is delivered again (same event, or still pending_step_up). */
+  repeatBackoffMs?: number[];
   log?: (line: string) => void;
+  /** For tests. */
+  sleep?: (ms: number) => Promise<unknown>;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -32,7 +36,10 @@ export class Worker {
   private readonly humanWindowMs: number;
   private readonly mandateCacheMs: number;
   private readonly pollWaitSeconds: number;
+  private readonly repeatBackoffMs: number[];
   private readonly log: (line: string) => void;
+  private readonly sleep: (ms: number) => Promise<unknown>;
+  private seenEvents = new Set<string>();
   private mandateCache = new Map<string, { at: number; mandate: EventMandate | null }>();
   private expiryTimers = new Set<NodeJS.Timeout>();
 
@@ -48,7 +55,9 @@ export class Worker {
     this.humanWindowMs = opts.humanWindowMs ?? 120_000;
     this.mandateCacheMs = opts.mandateCacheMs ?? 30_000;
     this.pollWaitSeconds = opts.pollWaitSeconds ?? 25;
+    this.repeatBackoffMs = opts.repeatBackoffMs ?? [2_000, 5_000, 15_000];
     this.log = opts.log ?? (() => {});
+    this.sleep = opts.sleep ?? sleep;
   }
 
   /** Call after we PATCH a mandate so the next decision sees the tightened rules. */
@@ -187,15 +196,46 @@ export class Worker {
     this.expiryTimers.add(timer);
   }
 
+  /**
+   * A purchase we already answered, delivered again: the same event, a purchase still waiting for the customer
+   * (live Viseca redelivers a pending_step_up on every poll until the answer window ends), or a live ID we stored.
+   */
+  private isRepeat(envelope: DecisionRequestEnvelope): boolean {
+    const key = `${envelope.run_id}:${String(envelope.event_id)}`;
+    const repeat = this.seenEvents.has(key) || envelope.status === "pending_step_up" || this.store.get(envelope.authorization_id) !== undefined;
+    this.seenEvents.add(key);
+    return repeat;
+  }
+
+  /**
+   * Backoff after a repeat: 2 s, 5 s, then 15 s. Never past the end of that purchase's answer window: live Viseca
+   * queues the next purchase the moment the window closes, and its 8 s deadline starts then, not when we poll.
+   */
+  private repeatWaitMs(envelope: DecisionRequestEnvelope, step: number): number {
+    const backoff = this.repeatBackoffMs[Math.min(step, this.repeatBackoffMs.length - 1)] ?? 0;
+    const humanDeadline = this.store.get(envelope.authorization_id)?.human_deadline_at;
+    const untilWindowEnds = humanDeadline ? Date.parse(humanDeadline) - Date.now() : Infinity;
+    return Math.max(0, Math.min(backoff, untilWindowEnds));
+  }
+
   /** Polls until the run has no automated work left. `expectedEvents` = the scenario's event_count. */
   async runUntilDone(runId: string, opts: { maxIdlePolls?: number; expectedEvents?: number } = {}): Promise<void> {
     const maxIdle = opts.maxIdlePolls ?? 20;
     let idle = 0;
+    let repeats = 0;
     while (true) {
       const envelope = await this.api.nextDecisionRequest(this.pollWaitSeconds);
       if (envelope) {
         idle = 0;
+        const repeat = this.isRepeat(envelope);
         await this.handle(envelope);
+        if (repeat) {
+          const wait = this.repeatWaitMs(envelope, repeats);
+          repeats += 1;
+          if (wait > 0) await this.sleep(wait);
+        } else {
+          repeats = 0;
+        }
         continue;
       }
       // 204 does not mean the run is over: check progress.
