@@ -1,6 +1,6 @@
-# Learning: merchant and product reputation check stays out of the build
+# Learning: merchant reputation check: only a display-only version goes in
 
-Date: 24 September 2026. Status: decided, do not reopen before submission.
+Date: 24 September 2026. Status: decided. The external reputation check (Trustpilot, agent-supplied ratings) is out; an issuer-data version that never decides is in (see Update). Do not reopen before submission.
 
 ## What was proposed
 
@@ -22,6 +22,16 @@ Missing data (no profile, no ratings) never flags. The prototype ran correctly o
 
 - Mention it in the pitch and Q&A as the next step, based on **issuer data**, not scraping: *"Next step: feed Viseca's own dispute and chargeback rates per merchant into the same step_up rule."* Viseca already holds that data, it can't be spoofed by the agent, and it needs no third-party terms.
 - If we want a visual, a mock "shop rated poorly → step_up" card in the judge view costs far less than wiring in Python.
+
+## Update (same day): a display-only version went in
+
+We kept the idea and dropped the Python prototype. The part that is left:
+
+- **Data:** refunds and approved purchases per shop across all Viseca cardholders, counted once at startup from `authorization_history.csv` (`issuerRefunds` in `packages/shared/src/baselines.ts`). Issuer data, keyed by `merchant_id`, so the agent can't spoof it and no API key is needed.
+- **Check:** `trackRecordCheck()` in `packages/backend/src/engine/leashEngine.ts` adds one line to the decision card, "Shop's history with Viseca cardholders", for example "4 refunds in 218 payments". It is marked `unsure` only with at least 5% refunds over at least 20 payments. A shop with no history gets no line.
+- **Never decides:** it runs after the engine and doesn't touch the decision, the reason codes or the uncertainty. The 45-purchase replay still matches `reference_decisions.csv` exactly.
+- **In the demo:** none of the 13 scenario shops reaches the threshold (the highest is 1 refund in 29 payments), so the jury only sees neutral lines. We deliberately did not lower the threshold to force a warning: the data pack has no chargeback field, and a "bad shop" warning based on refund counts wouldn't hold up with a Viseca juror.
+- **Pitch line:** "Today this line uses refund history. With Viseca's real chargeback data per merchant, the same check can ask the customer."
 
 ## Takeaways
 
