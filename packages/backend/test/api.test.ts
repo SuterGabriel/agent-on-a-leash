@@ -151,7 +151,7 @@ describe("app API, offline end to end", () => {
     // items.item_category not_in is not readable by the engine yet; offering it would make every later purchase an ask.
     expect(resolved.body.suggestion).toBeUndefined();
 
-    const again = await call<{ error: { code: string } }>("POST", `/app/asks/${cosmetics.id}/resolve`, { decision: "approve" });
+    const again = await call<{ error: { code: string } }>("POST", `/app/asks/${cosmetics.id}/resolve`, { decision: "approve", face_id_confirmed: true });
     expect(again.status).toBe(409);
   });
 

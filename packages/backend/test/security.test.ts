@@ -134,6 +134,24 @@ describe("only the app can answer", () => {
     expect(service.decision(id).status).toBe("waiting_for_you");
   });
 
+  it("an approve needs Face ID; a decline never does", async () => {
+    // The two cheapest asks, so the approve is not refused for being over budget.
+    const cheapest = [...asks].sort((a, b) => a.amount.chf - b.amount.chf);
+    const [first, second] = [cheapest[0]!.id, cheapest[1]!.id];
+    const noFaceId = await call("POST", `/app/asks/${first}/resolve`, { decision: "approve" }, SECRET);
+    expect(noFaceId.status).toBe(403);
+    expect(((await noFaceId.json()) as { error: { code: string } }).error.code).toBe("face_id_required");
+    expect(service.decision(first).status).toBe("waiting_for_you");
+
+    const withFaceId = await call("POST", `/app/asks/${first}/resolve`, { decision: "approve", face_id_confirmed: true }, SECRET);
+    expect(withFaceId.status).toBe(200);
+    expect(service.decision(first).status).toBe("approved_by_you");
+
+    const decline = await call("POST", `/app/asks/${second}/resolve`, { decision: "decline" }, SECRET);
+    expect(decline.status).toBe(200);
+    expect(service.decision(second).status).toBe("declined_by_you");
+  });
+
   it("lets the app in, keeps reads open, and allows only the app's origin", async () => {
     const read = await call("GET", "/app/leash");
     expect(read.status).toBe(200);

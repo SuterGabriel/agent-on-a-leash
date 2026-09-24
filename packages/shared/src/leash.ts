@@ -51,6 +51,8 @@ export interface ParseResult {
   /** Every interpretation, in plain words. */
   assumptions: string[];
   warnings: string[];
+  /** "until Friday", "for two weeks": the leash ends at this instant (23:59:59 Swiss time). null = no end named. */
+  valid_until: string | null;
 }
 
 /** POST /app/leash */
@@ -59,6 +61,8 @@ export interface CreateLeashRequest {
   /** Answers to open questions, by question id: { q_split_orders: "Yes" }. */
   answers?: Record<string, string>;
   uncertainty_policy?: UncertaintyPolicy;
+  /** ISO instant. Overrides what the instruction says; null = no end. Omitted = as parsed from the instruction. */
+  valid_until?: string | null;
   /** Face ID confirmation from the app. Without it nothing is created. */
   confirmed: boolean;
 }
@@ -107,6 +111,8 @@ export interface LeashView {
   known_shops: KnownShop[];
   suggestions: Suggestion[];
   paused_until: string | null;
+  /** The leash ends here; purchases with a later (simulated) timestamp are declined `leash_ended`. null = no end. */
+  valid_until: string | null;
   /**
    * The agent's task, when a run was started on top of the customer's card rules (v4 app): the task instruction
    * and the rules read from it. `rules` above then holds task rules and card rules together; the engine takes the stricter.
@@ -120,4 +126,6 @@ export type TightenRequest =
   | { type: "lower_period_budget"; value: number; period_days?: number }
   | { type: "block_shop"; merchant_id: string; name?: string }
   | { type: "block_category"; category: string }
-  | { type: "unsure_decline" };
+  | { type: "unsure_decline" }
+  /** Ends the leash earlier. A later date (or removing the end) is a loosening: new leash. */
+  | { type: "end_earlier"; valid_until: string };

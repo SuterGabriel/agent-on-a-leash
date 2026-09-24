@@ -406,7 +406,9 @@ const sideEffects = (a: Action, s: State) => {
     const fail = (what: string) => (err: unknown) => console.error(`${what} failed`, err);
     switch (a.type) {
         case "RESOLVE_ASK":
-            if (s.waiting) api.resolve(s.waiting.decisionId, { decision: a.outcome === "approved" ? "approve" : "decline" }).catch(fail("resolve"));
+            // RESOLVE_ASK approved is only ever dispatched after FACE_ID_DONE (ask sheet and voice both go through FACE_ID).
+            if (s.waiting)
+                api.resolve(s.waiting.decisionId, a.outcome === "approved" ? { decision: "approve", face_id_confirmed: true } : { decision: "decline" }).catch(fail("resolve"));
             break;
         case "CREATE_CARD":
             api.createLeash({ instruction: "", rules: s.rules, smart: s.smart }).catch(fail("create leash"));

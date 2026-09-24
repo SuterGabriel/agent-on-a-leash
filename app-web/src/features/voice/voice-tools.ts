@@ -147,10 +147,13 @@ export const buildVoiceTools = (get: () => VoiceContext): VoiceToolHandlers => (
         const d = waitingDecision(state);
         if (!d) return "No question is waiting. Nothing was changed.";
         if (decision !== "approve" && decision !== "decline") return "Say approve or decline.";
-        dispatch({ type: "RESOLVE_ASK", outcome: decision === "approve" ? "approved" : "declined" });
-        return decision === "approve"
-            ? `Approved. ${spokenChf(d.amount.chf)} at ${d.merchant.name}. Your agent was told to go ahead.`
-            : `Declined. Nothing was bought. Your agent was told why.`;
+        // A spoken "yes" is not enough to approve: the phone still asks for Face ID, same as the Approve button.
+        if (decision === "approve") {
+            dispatch({ type: "FACE_ID", then: { type: "RESOLVE_ASK", outcome: "approved" } });
+            return `Approving ${spokenChf(d.amount.chf)} at ${d.merchant.name}. Confirm with Face ID on your phone and your agent will be told to go ahead.`;
+        }
+        dispatch({ type: "RESOLVE_ASK", outcome: "declined" });
+        return `Declined. Nothing was bought. Your agent was told why.`;
     },
 
     [VOICE_TOOLS.readShopText]: () => {

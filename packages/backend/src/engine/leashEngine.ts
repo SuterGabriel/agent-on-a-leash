@@ -137,6 +137,11 @@ function tighten(p: Policy, r: MandateRule): boolean {
       if (str !== "required" && str !== "ask") return false;
       p.sessionIntegrity = true;
       return true;
+    case "merchant.text_instructions =":
+      // The learned rule after a declined shop-text ask: from now on such text declines instead of asking.
+      if (str !== "decline") return false;
+      p.shopTextAction = "decline";
+      return true;
     case "items.unit_price_chf <=":
       if (num === null || (r.currency && r.currency !== "CHF")) return false;
       p.perUnitLimit = { amountChf: Math.min(p.perUnitLimit?.amountChf ?? num, num), unit: p.perUnitLimit?.unit ?? "item" };

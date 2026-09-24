@@ -9,6 +9,7 @@ import {
   type RuleGroup,
   type UncertaintyPolicy,
   type YourWords,
+  parseValidUntil,
 } from "@leash/shared";
 import type { MandateDraftRequest } from "../viseca/api.js";
 
@@ -241,7 +242,8 @@ function sentences(text: string): { s: string; start: number; end: number }[] {
   });
 }
 
-export function compile(instruction: string): ParseResult {
+/** `now` anchors relative dates ("until Friday", "for two weeks"); tests pass a fixed instant. */
+export function compile(instruction: string, now: number = Date.now()): ParseResult {
   const text = instruction.trim();
   const b = new Builder(text);
   const validDays = (m: RegExpExecArray) => {
@@ -403,6 +405,15 @@ export function compile(instruction: string): ParseResult {
   if (!b.has(RULE_KEYS.order_limit) && !b.has(RULE_KEYS.period_budget)) b.warnings.push("No spending limit found. Add one, for example: max CHF 100 per order.");
   if (!b.has(RULE_KEYS.purpose) && !b.has(RULE_KEYS.requested_item)) b.warnings.push("I couldn't tell what the agent may buy, so I'll ask you about every purchase.");
 
+  // When the leash ends. Kept in our store, not as a hard rule: the engine cannot read a date rule.
+  const validUntil = parseValidUntil(text, now);
+  if (validUntil) {
+    const words: YourWords = { text: validUntil.text, start: validUntil.start, end: validUntil.end };
+    b.spans.push({ start: words.start, end: words.end });
+    b.add(RULE_KEYS.valid_until, `Valid until ${validUntil.label}`, "restrictions", words, null);
+    b.assumptions.push(`The leash ends ${validUntil.label} at 23:59 Swiss time. Purchases after that are declined.`);
+  }
+
   // Sentences no rule came from: never silently dropped.
   const not_understood = sentences(text)
     .filter((x) => !b.spans.some((sp) => sp.start < x.end && sp.end > x.start))
@@ -415,6 +426,7 @@ export function compile(instruction: string): ParseResult {
     uncertainty_policy: uncertainty,
     open_questions: b.questions,
     not_understood,
+    valid_until: validUntil?.until ?? null,
     assumptions: b.assumptions,
     warnings: b.warnings,
   };

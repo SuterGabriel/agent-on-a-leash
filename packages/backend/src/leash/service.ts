@@ -20,6 +20,7 @@ import {
   type TightenRequest,
   type TokenHistoryCheck,
   type UncertaintyPolicy,
+  formatSwissDay,
 } from "@leash/shared";
 import { applyAnswers, compile, QUESTION_IDS, toMandateDraft } from "../compiler/compile.js";
 import type { Engine } from "../engine/port.js";
@@ -50,6 +51,14 @@ export interface CardCarry {
 }
 
 const POLICY_RANK: Record<UncertaintyPolicy, number> = { decline: 2, ask: 1, approve: 0 };
+
+/** An ISO instant as ms; null stays null (no end); anything unreadable is refused. */
+export function parseInstant(v: string | null): number | null {
+  if (v === null) return null;
+  const ms = typeof v === "string" ? Date.parse(v) : Number.NaN;
+  if (Number.isNaN(ms)) throw new ServiceError(400, "invalid_date", "Give the end of the leash as an ISO date.");
+  return ms;
+}
 
 /** Two policies meet: the stricter one applies (decline > ask > approve). */
 export function strictestPolicy(a: UncertaintyPolicy, b?: UncertaintyPolicy): UncertaintyPolicy {
@@ -85,6 +94,8 @@ export interface LeashState {
   uncertainty_policy: UncertaintyPolicy;
   revoked: boolean;
   paused_until: number | null;
+  /** Purchases with a later simulated timestamp are declined `leash_ended`. null = no end. */
+  valid_until: number | null;
   card_id: string | null;
   /** Shops that became known through the customer's approvals. */
   learned_shops: Map<string, { name: string; count: number }>;
@@ -213,6 +224,19 @@ export class LeashService {
             engine_version: this.inner.version,
           };
         }
+        // The leash's end is judged in simulated time, like every other time rule (weekday, rolling budget).
+        if (leash && leash.mandate_id === event.mandate.mandate_id && leash.valid_until !== null && Date.parse(event.authorization.timestamp) > leash.valid_until) {
+          return {
+            decision: "decline",
+            reason_codes: ["leash_ended"],
+            headline: "Declined · Leash ended",
+            because: `Your leash was valid until ${formatSwissDay(leash.valid_until)}. This purchase comes after that, so nothing is bought.`,
+            checks: [],
+            uncertainty: [],
+            shop_text_quarantine: null,
+            engine_version: this.inner.version,
+          };
+        }
         // Live scenarios don't say which card they use; the first purchase does.
         if (leash && !leash.card_id && leash.mandate_id === event.mandate.mandate_id) leash.card_id = event.authorization.card_id;
         const verdict = await this.inner.decide(event, ctx);
@@ -253,24 +277,29 @@ export class LeashService {
     const cardRules = card ? card.rules.map((r) => ({ ...structuredClone(r), id: r.id.startsWith("card_") ? r.id : `card_${r.id}` })) : [];
     const rules = card ? [...taskRules, ...cardRules] : taskRules;
     const uncertainty = strictestPolicy(req.uncertainty_policy ?? parsed.uncertainty_policy, card?.uncertainty_policy);
+    // The app's date wins over the instruction's; omitted = as parsed; null = no end.
+    const valid_until = req.valid_until === undefined ? (parsed.valid_until ? Date.parse(parsed.valid_until) : null) : parseInstant(req.valid_until);
 
     // Loosening = a new leash. The old one is revoked first so only one leash is ever active.
     if (this.leash && !this.leash.revoked) {
       await this.api.revokeMandate(this.leash.mandate_id).catch((err: Error) => this.log(`revoking previous leash failed: ${err.message}`));
     }
-    const draft = await createMandateSafely(this.api, toMandateDraft(parsed, rules, answers, uncertainty));
+    // Learned rules carry over as hard rules too, otherwise the platform would enforce them only until the next leash.
+    const learned = card ? card.learned.map((r) => structuredClone(r)) : [];
+    const draft = await createMandateSafely(this.api, toMandateDraft(parsed, [...rules, ...learned], answers, uncertainty));
     const { mandate_id } = await this.api.confirmMandate(draft.draft_id);
     this.leash = {
       mandate_id,
       parsed,
       answers,
       rules,
-      learned: card ? card.learned.map((r) => structuredClone(r)) : [],
+      learned,
       card_rules: card ? cardRules : rules,
       task: card ? { instruction: parsed.instruction, rules: taskRules } : null,
       uncertainty_policy: uncertainty,
       revoked: false,
       paused_until: null,
+      valid_until,
       card_id: null,
       learned_shops: new Map(),
     };
@@ -309,6 +338,7 @@ export class LeashService {
         known_shops: [],
         suggestions: [],
         paused_until: null,
+        valid_until: null,
         task: null,
       };
     }
@@ -331,6 +361,7 @@ export class LeashService {
       known_shops: this.knownShops(leash),
       suggestions: [...this.suggestions.values()].filter((s) => s.status === "open"),
       paused_until: status === "paused" ? new Date(leash.paused_until as number).toISOString() : null,
+      valid_until: leash.valid_until === null ? null : new Date(leash.valid_until).toISOString(),
       task: leash.task,
     };
   }
@@ -401,6 +432,14 @@ export class LeashService {
         await this.api.patchMandate(leash.mandate_id, { uncertainty_policy: "decline" });
         leash.uncertainty_policy = "decline";
       }
+    } else if (req.type === "end_earlier") {
+      // Our store only: the engine cannot read a date rule, and the wrapper declines by the leash's valid_until.
+      const at = parseInstant(req.valid_until);
+      if (at === null) throw new ServiceError(400, "invalid_date", "Give the end of the leash as a date.");
+      if (leash.valid_until !== null && at >= leash.valid_until) throw new ServiceError(400, "not_tighter", "That would loosen your leash. Start a new leash to loosen it.");
+      leash.valid_until = at;
+      leash.rules = leash.rules.filter((r) => r.key !== RULE_KEYS.valid_until);
+      leash.rules.push({ id: this.nextId("r_valid_until"), key: RULE_KEYS.valid_until, label: `Valid until ${formatSwissDay(at)}`, group: "restrictions", source: "you", your_words: null, hard_rule: null, added_at: now });
     } else {
       const rule = this.tightenRule(leash, req, now);
       await this.addHardRule(leash, rule);
@@ -413,7 +452,7 @@ export class LeashService {
     return this.getLeash();
   }
 
-  private tightenRule(leash: LeashState, req: Exclude<TightenRequest, { type: "unsure_decline" }>, now: string): LeashRule {
+  private tightenRule(leash: LeashState, req: Exclude<TightenRequest, { type: "unsure_decline" } | { type: "end_earlier" }>, now: string): LeashRule {
     const base = { source: "you" as const, your_words: null, added_at: now };
     if (req.type === "lower_order_limit") {
       // Only a number or a numeric string is an amount: an array or a boolean would coerce to 1 with a bare Number().
@@ -777,7 +816,8 @@ export class LeashService {
     if (s.version !== 1) throw new ServiceError(400, "snapshot_version", `Snapshot version ${String(s.version)} is not supported.`);
     if (s.mode !== this.mode) throw new ServiceError(400, "snapshot_mode", `Snapshot is from ${s.mode} mode, this server runs ${this.mode}.`);
     this.seq = Math.max(this.seq, s.seq);
-    this.leash = s.leash ? { ...s.leash, learned_shops: new Map(s.leash.learned_shops) } : null;
+    // Snapshots from before the leash had an end carry no valid_until.
+    this.leash = s.leash ? { ...s.leash, valid_until: s.leash.valid_until ?? null, learned_shops: new Map(s.leash.learned_shops) } : null;
     let interrupted = 0;
     for (const r of s.runs) {
       const copy: RunRecord = { ...r };

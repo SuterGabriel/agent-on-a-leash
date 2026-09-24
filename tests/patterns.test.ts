@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { buildBaselines, swissWeekday, type Baselines } from "../packages/shared/src/baselines";
 import { compilePolicy, toHardRules } from "../packages/shared/src/compiler";
+import { parseValidUntil } from "../packages/shared/src/validUntil";
 import { buildEvent } from "../packages/shared/src/csvEvent";
 import { loadDataPack, type Row } from "../packages/shared/src/loaders";
 import type { AuthorizationEvent } from "../packages/shared/src/types";
@@ -379,5 +380,43 @@ describe("session: 'stop and ask me' asks, 'pause anything' stops", () => {
     const stopped = run(STOP, event(STOP, threeSignals));
     expect(stopped.reason_codes).toContain("session_not_you");
     expect(stopped.decision).toBe("decline");
+  });
+});
+
+describe("A9 when the leash ends: 'until Friday', 'bis 30.09.', 'for the next two weeks'", () => {
+  const NOW = Date.UTC(2026, 8, 24, 10); // Thu 24 Sep 2026, midday in Zurich (summer time, UTC+2)
+  const until = (s: string) => parseValidUntil(s, NOW)?.until ?? null;
+
+  it("weekdays and durations count from today, Swiss time, end of day", () => {
+    expect(until("Buy the shoes, valid until Friday.")).toBe("2026-09-25T21:59:59.000Z");
+    expect(until("Kauf die Schuhe bis Freitag.")).toBe("2026-09-25T21:59:59.000Z");
+    expect(until("Until next Thursday.")).toBe("2026-10-01T21:59:59.000Z");
+    expect(until("Groceries for the next two weeks.")).toBe("2026-10-07T21:59:59.000Z");
+    expect(until("Gültig für 3 Tage.")).toBe("2026-09-26T21:59:59.000Z");
+    expect(until("Today only.")).toBe("2026-09-24T21:59:59.000Z");
+    expect(until("Until the end of the month.")).toBe("2026-09-30T21:59:59.000Z");
+  });
+
+  it("dates in words, numbers or ISO; a date without a year is the next one; winter time is winter time", () => {
+    expect(until("Valid until 30 September.")).toBe("2026-09-30T21:59:59.000Z");
+    expect(until("Bis 30.09.")).toBe("2026-09-30T21:59:59.000Z");
+    expect(until("Until Sept 30th.")).toBe("2026-09-30T21:59:59.000Z");
+    expect(until("Until 15 March.")).toBe("2027-03-15T22:59:59.000Z");
+    expect(until("Until 2026-12-31.")).toBe("2026-12-31T22:59:59.000Z");
+    expect(parseValidUntil("Until 31 December 2026.", NOW)?.label).toBe("Thu 31 Dec 2026");
+  });
+
+  it("a budget period, a return term or 'until further notice' is not an end", () => {
+    expect(until("CHF 200 for two weeks.")).toBeNull();
+    expect(until("Spend CHF 300 per week.")).toBeNull();
+    expect(until("Returns accepted for 14 days.")).toBeNull();
+    expect(until("Any 7-day window: CHF 400.")).toBeNull();
+    expect(until("Until further notice.")).toBeNull();
+  });
+
+  it("keeps the customer's words, with offsets", () => {
+    const r = parseValidUntil("Max CHF 100 per order, valid until Friday, shoes only.", NOW)!;
+    expect(r.text).toBe("valid until Friday");
+    expect("Max CHF 100 per order, valid until Friday, shoes only.".slice(r.start, r.end)).toBe(r.text);
   });
 });

@@ -43,6 +43,7 @@ export class AppV4 {
   private smart: AppSmart = { ...DEFAULT_SMART };
   private values: AppRuleValues = { ...DEFAULT_VALUES };
   private cardInstruction: string | null = null;
+  private validUntil: string | null = null;
   private historyCache: Row[] | null = null;
   /** Decisions already sent on the stream; the bus repeats `decision` (token issued, ask answered) and the app must not. */
   private forwarded = new Set<string>();
@@ -80,7 +81,7 @@ export class AppV4 {
     const given = typeof body.instruction === "string" ? body.instruction.trim() : "";
     // The app may send its own sentence; we keep it only if our compiler reads both limits out of it.
     const instruction = given && this.readsLimits(given) ? given : instructionFromCard(values, smart);
-    await this.setCard(instruction, values, smart, body.task_instruction?.trim() || null);
+    await this.setCard(instruction, values, smart, body.task_instruction?.trim() || null, readUntil(body.valid_until));
     return this.leash();
   }
 
@@ -97,19 +98,20 @@ export class AppV4 {
    * Creates (or re-creates) the card leash. If the agent's task is active, the task instruction stays and the
    * card rules travel with it; Viseca can't loosen a mandate, so the service revokes the old one and confirms a new one.
    */
-  private async setCard(instruction: string, values: AppRuleValues, smart: AppSmart, taskInstruction: string | null) {
+  private async setCard(instruction: string, values: AppRuleValues, smart: AppSmart, taskInstruction: string | null, validUntil: string | null) {
     const policy: UncertaintyPolicy = smart.unsure === "decline" ? "decline" : "ask";
     const view = this.service.getLeash();
     const task = taskInstruction ?? (view.status === "active" || view.status === "paused" ? view.task?.instruction ?? null : null);
     if (task) {
       const cardRules = this.service.parse(instruction).rules;
-      await this.service.createLeash({ instruction: task, confirmed: true, uncertainty_policy: policy }, { rules: cardRules, learned: view.learned_rules, uncertainty_policy: policy });
+      await this.service.createLeash({ instruction: task, confirmed: true, uncertainty_policy: policy, valid_until: validUntil }, { rules: cardRules, learned: view.learned_rules, uncertainty_policy: policy });
     } else {
-      await this.service.createLeash({ instruction, confirmed: true, uncertainty_policy: policy });
+      await this.service.createLeash({ instruction, confirmed: true, uncertainty_policy: policy, valid_until: validUntil });
     }
     this.cardInstruction = instruction;
     this.values = values;
     this.smart = smart;
+    this.validUntil = validUntil;
   }
 
   leash(): AppLeash {
@@ -130,6 +132,7 @@ export class AppV4 {
       task: view.task ? { instruction: view.task.instruction, rules: view.task.rules.map((r) => ({ key: r.key, label: r.label, your_words: r.your_words?.text ?? "" })) } : null,
       month_spent_chf: view.budget?.spent_chf ?? 0,
       frees_up_at: view.budget?.next_release?.at ?? null,
+      valid_until: view.valid_until,
     };
   }
 
@@ -141,23 +144,30 @@ export class AppV4 {
     const current = this.leash();
     const nextValues = readValues({ ...current.rules, ...(body.rules ?? {}) }, current.rules);
     const nextSmart: AppSmart = { ...current.smart, ...pickSmart(body.smart) };
+    const nextUntil = body.valid_until === undefined ? current.valid_until : readUntil(body.valid_until);
+    // No end → an end is tighter. An end → a later end, or no end, is looser.
+    const untilChanged = nextUntil !== current.valid_until;
+    const untilLooser = untilChanged && (nextUntil === null || (current.valid_until !== null && Date.parse(nextUntil) > Date.parse(current.valid_until)));
 
     const looser =
       nextValues.orderLimit > current.rules.orderLimit ||
       nextValues.monthBudget > current.rules.monthBudget ||
       (nextSmart.unsure === "ask" && current.smart.unsure === "decline") ||
-      (nextSmart.newShops === "ask" && current.smart.newShops === "known");
+      (nextSmart.newShops === "ask" && current.smart.newShops === "known") ||
+      untilLooser;
     if (looser && body.face_id_confirmed !== true) throw new ServiceError(403, "face_id_required", "Loosening a rule needs Face ID.");
 
     if (looser || (nextSmart.newShops === "known" && current.smart.newShops !== "known")) {
       // A looser rule (or a new "only known shops" rule) is a new mandate; the service revokes the old one.
-      await this.setCard(instructionFromCard(nextValues, nextSmart), nextValues, nextSmart, null);
+      await this.setCard(instructionFromCard(nextValues, nextSmart), nextValues, nextSmart, null, nextUntil);
     } else {
       if (nextValues.orderLimit < current.rules.orderLimit) await this.service.tighten({ type: "lower_order_limit", value: nextValues.orderLimit });
       if (nextValues.monthBudget < current.rules.monthBudget) await this.service.tighten({ type: "lower_period_budget", value: nextValues.monthBudget, period_days: MONTH_DAYS });
       if (nextSmart.unsure === "decline" && current.smart.unsure !== "decline") await this.service.tighten({ type: "unsure_decline" });
+      if (untilChanged && nextUntil !== null) await this.service.tighten({ type: "end_earlier", valid_until: nextUntil });
       this.values = nextValues;
       this.smart = nextSmart;
+      this.validUntil = nextUntil;
     }
 
     if (typeof body.block_shop === "string" && body.block_shop.trim()) {
@@ -192,6 +202,7 @@ export class AppV4 {
   }
 
   async resolve(id: string, body: AppResolveRequest): Promise<void> {
+    if (body.decision === "approve" && body.face_id_confirmed !== true) throw new ServiceError(403, "face_id_required", "Approving a purchase needs Face ID.");
     await this.service.resolve(id, body.decision);
   }
 
@@ -278,6 +289,14 @@ function busiestCard(rows: Row[]): string {
   const counts = new Map<string, number>();
   for (const r of rows) if (r.status === "approved" && r.transaction_type === "purchase") counts.set(r.card_id as string, (counts.get(r.card_id as string) ?? 0) + 1);
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? DEMO_CARD;
+}
+
+/** `valid_until` from the app: null or missing = no end; a string must be a readable instant. */
+function readUntil(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const ms = typeof v === "string" ? Date.parse(v) : Number.NaN;
+  if (Number.isNaN(ms)) throw new ServiceError(400, "invalid_date", "valid_until must be an ISO date.");
+  return new Date(ms).toISOString();
 }
 
 function readValues(given: Partial<AppRuleValues> | undefined, fallback: AppRuleValues): AppRuleValues {

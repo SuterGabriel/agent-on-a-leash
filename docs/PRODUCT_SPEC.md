@@ -103,7 +103,7 @@ Looks like the 3-D Secure confirmation sheet customers already know.
   5. Grey box **"From the shop"**, only when shop text was flagged, quoting the sentence verbatim, with the note "We ignored this."
   6. Countdown 120 s. Text: "If you do nothing, nothing is bought."
   7. Two equally sized buttons: **Approve** (asks Face ID) and **Decline**.
-- Approve → backend `POST /resolve {decision: approve}` → row turns green, budget bar updates.
+- Approve → backend `POST /resolve {decision: approve, face_id_confirmed: true}` → row turns green, budget bar updates. Without `face_id_confirmed` the backend answers 403 `face_id_required`; a decline never needs it.
 - Decline → backend `POST /resolve {decision: decline}` → row turns red.
 - Timeout → sheet closes, row shows "Expired, nothing bought".
 - If an approval given meanwhile means this purchase would now break the budget, the sheet says so above the buttons; the customer can still decide.
@@ -188,6 +188,8 @@ event ──▶ validate schema ──▶ retry check (live ID seen?) ──▶ 
 ```
 
 Time budget: total 8 s from queueing. We target < 50 ms for rules. Model call (if enabled) capped at 2.5 s. 1.5 s reserved for posting with one retry. Hard stop at 5 s after receipt: whatever is known decides, missing facts follow the uncertainty policy.
+
+**Model status (24 Sep):** no model runs in the purchase path. Every decision comes from the rules alone; the 5 s cap is the whole engine's budget, and on timeout the fallback is step_up. The model uses below (§3.5 fact extraction, §4.3 model compiler) are P1 and not built. If one is added, it runs once at setup (the compiler) with the rules as tiebreaker, never per purchase, so the answers stay the same with it switched off.
 
 ### 3.3 Guard verdicts and aggregation
 
@@ -343,6 +345,13 @@ Both are produced from the instruction. Both are stored in our `mandates` table.
 
 - Tighten chip → add rule(s) to `hard_rules` (never remove), optionally set `uncertainty_policy: decline`, PATCH the platform, update our mandate row, audit event `tighten`.
 - Revoke → DELETE on the platform, mandate status `revoked`, audit event `revoke`, app shows token off. Pending step_ups stay pending until they expire (platform behaviour unspecified; we do not fake a cancellation).
+
+### 4.5 When the leash ends (`valid_until`)
+
+- The compiler reads "valid until Friday", "bis 30.09.", "until 15 March", "for the next two weeks", "today only", "until the end of the month" (English and German) into a `valid_until` rule with the customer's words. Relative phrases are anchored at the real clock when the leash is written; the end is 23:59:59 Swiss time. The app can also set or override the date (`valid_until` on create; `null` = no end).
+- Not a hard rule: the engine cannot read a date rule (ruleFields.ts), so the end lives on the leash in our store. The engine wrapper declines every purchase whose **simulated** timestamp is after the end with `leash_ended` ("Your leash was valid until Fri 26 Sep 2026."), like every other time rule (weekday, rolling budget). A replayed August scenario is therefore not "expired" just because it is September now.
+- Tighten: `{type: "end_earlier", valid_until}` moves the end earlier in place, one tap. A later end, or removing it, is a loosening: Face ID and a new leash (v4 app: `valid_until` on PATCH /v4/app/leash/rules).
+- Not done: revoking the Viseca mandate at the date in real time. Today the mandate stays open at Viseca and our engine declines; a scheduled revoke is the production follow-up.
 
 ---
 

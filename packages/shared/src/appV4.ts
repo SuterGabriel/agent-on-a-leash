@@ -45,6 +45,8 @@ export interface AppCreateLeashRequest {
   rules: AppRuleValues;
   smart: AppSmart;
   task_instruction?: string;
+  /** ISO instant the Agent Card stops working; null or omitted = no end. */
+  valid_until?: string | null;
 }
 
 /** GET /v4/app/leash */
@@ -59,6 +61,8 @@ export interface AppLeash {
   task: { instruction: string; rules: { key: string; label: string; your_words: string }[] } | null;
   month_spent_chf: number;
   frees_up_at: string | null;
+  /** The card stops working here (purchases after it are declined `leash_ended`); null = no end. */
+  valid_until: string | null;
 }
 
 /** PATCH /v4/app/leash/rules */
@@ -66,6 +70,8 @@ export interface AppTightenRequest {
   rules?: Partial<AppRuleValues>;
   smart?: Partial<AppSmart>;
   block_shop?: string;
+  /** An earlier end is a tighten; a later end or null (no end) loosens and needs `face_id_confirmed`. */
+  valid_until?: string | null;
   face_id_confirmed?: boolean;
 }
 
@@ -103,6 +109,8 @@ export interface AppFeedResponse {
 export interface AppResolveRequest {
   decision: "approve" | "decline";
   reason?: string;
+  /** An approve needs Face ID (403 `face_id_required` without it). A decline never does: the safe answer stays the easy one. */
+  face_id_confirmed?: boolean;
 }
 
 /** GET /v4/app/stream: `event:` is `type`, `data:` the rest. */

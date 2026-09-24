@@ -112,6 +112,8 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
     route("GET", "/app/asks", () => service.asks()),
     route("POST", "/app/asks/:id/resolve", async ({ params, body }) => {
       const b = await body();
+      // An approve needs Face ID; a decline never does, so the safe answer stays the easy one.
+      if (b.decision === "approve" && b.face_id_confirmed !== true) throw new ServiceError(403, "face_id_required", "Approving a purchase needs Face ID.");
       return service.resolve(params.id as string, b.decision as "approve" | "decline", b.accept_suggestion === true, b.over_budget_ok === true);
     }),
     route("POST", "/app/suggestions/:id/accept", ({ params }) => service.acceptSuggestion(params.id as string)),

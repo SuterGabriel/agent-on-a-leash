@@ -49,6 +49,8 @@ export interface CreateLeashRequest {
     smart: SuggestResponse["smart"] extends infer S ? Omit<S, "evidence"> : never;
     /** Optional task instruction if the agent already sent one. */
     task_instruction?: string;
+    /** ISO instant the Agent Card stops working; null or omitted = no end. */
+    valid_until?: string | null;
 }
 
 export interface Leash {
@@ -62,6 +64,8 @@ export interface Leash {
     task: { instruction: string; rules: { key: string; label: string; your_words: string }[] } | null;
     month_spent_chf: number;
     frees_up_at: string | null;
+    /** The card stops working here (purchases after it are declined `leash_ended`); null = no end. */
+    valid_until?: string | null;
 }
 
 /** PATCH /app/leash/rules — only stricter values are accepted without `face_id_confirmed`. */
@@ -69,6 +73,8 @@ export interface TightenRequest {
     rules?: Partial<{ orderLimit: number; monthBudget: number }>;
     smart?: Partial<Omit<SuggestResponse["smart"], "evidence">>;
     block_shop?: string;
+    /** An earlier end is stricter; a later end or null (no end) needs `face_id_confirmed`. */
+    valid_until?: string | null;
     face_id_confirmed?: boolean;
 }
 
@@ -83,6 +89,8 @@ export interface ResolveRequest {
     decision: "approve" | "decline";
     /** Optional customer reason chips ("Too expensive"). */
     reason?: string;
+    /** Required for approve (the backend answers 403 `face_id_required` without it). Never needed for decline. */
+    face_id_confirmed?: boolean;
 }
 
 /** GET /app/stream (Server-Sent Events). `event:` name = `type`, `data:` = JSON of the rest. */

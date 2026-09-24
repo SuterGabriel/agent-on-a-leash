@@ -21,6 +21,8 @@ export const RULE_KEYS = {
   split_orders: "split_orders",
   blocked_shop: "blocked_shop",
   blocked_category: "blocked_category",
+  /** "until Friday": kept in our store only, the engine cannot read a date rule (see valid_until on the leash). */
+  valid_until: "valid_until",
 } as const;
 
 /**
@@ -82,6 +84,7 @@ export const ENGINE_READABLE_RULES = new Set([
   "merchant.familiar_on_card =",
   "order.addons_allowed =",
   "session.integrity =",
+  "merchant.text_instructions =",
 ]);
 
 /** Always on for every leash. The engine reports them as checks with source "built_in". */

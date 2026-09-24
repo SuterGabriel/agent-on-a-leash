@@ -112,7 +112,7 @@ describe("HTTP edge", () => {
       for (const id of ["..", "%2e%2e%2f", "' OR 1=1 --", "<script>alert(1)</script>", "x".repeat(5_000), "%00", "AU0001%0A"]) {
         const res = await call("GET", `/app/decisions/${id}`, undefined, null);
         expect(res.status, id).toBe(404);
-        const res2 = await call("POST", `/app/asks/${id}/resolve`, { decision: "approve" });
+        const res2 = await call("POST", `/app/asks/${id}/resolve`, { decision: "approve", face_id_confirmed: true });
         expect([404, 400], id).toContain(res2.status);
       }
     });
