@@ -93,3 +93,22 @@ describe("a limit per night or per item is not a limit per order", () => {
     expect(rules.find((r) => r.field === "items.unit_price_chf")).toMatchObject({ value: 120 });
   });
 });
+
+describe("a stay: destination and nights become chips the engine reads back", () => {
+  it("'A hotel in Lyon for 3 nights' gives a Stay in Lyon chip and a 3 nights chip with hard rules", () => {
+    const parsed = compile("A hotel in Lyon for 3 nights, at most CHF 150 per night. Ask me when uncertain.");
+    const city = parsed.rules.find((r) => r.key === "destination");
+    const nights = parsed.rules.find((r) => r.key === "nights");
+    expect(city?.label).toBe("Stay in Lyon");
+    expect(city?.your_words?.text).toBe("hotel in Lyon");
+    expect(city?.hard_rule).toEqual({ field: "order.destination_city", operator: "=", value: "Lyon" });
+    expect(nights?.label).toBe("3 nights");
+    expect(nights?.hard_rule).toEqual({ field: "order.nights", operator: "=", value: 3 });
+    expect(parsed.not_understood).toEqual([]);
+  });
+  it("no stay, no chips", () => {
+    const keys = compile("Groceries up to CHF 100 per order.").rules.map((r) => r.key);
+    expect(keys).not.toContain("destination");
+    expect(keys).not.toContain("nights");
+  });
+});

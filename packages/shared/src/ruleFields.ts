@@ -72,6 +72,8 @@ export const RULE_KEYS = {
 export const RULE_FIELDS = {
   amount: "authorization.billing_amount_chf",
   unitPrice: "items.unit_price_chf",
+  destinationCity: "order.destination_city", // "a hotel in Lyon": the stay must be in that city (engine: destination guard)
+  nights: "order.nights", // "for 3 nights": the per-night limit divides the total by this
   itemCategory: "items.item_category",
   fulfillment: "authorization.fulfillment_method",
   requestedItem: "items.requested_item",

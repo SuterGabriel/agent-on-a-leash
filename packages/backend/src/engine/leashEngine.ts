@@ -80,6 +80,12 @@ function dropGuessesCoveredByRules(p: Policy, rules: MandateRule[]) {
       case "items.size =":
         p.size = null;
         break;
+      case "order.destination_city =":
+        p.destinationCity = null;
+        break;
+      case "order.nights =":
+        p.stayNights = null;
+        break;
     }
   }
 }
@@ -123,6 +129,14 @@ function tighten(p: Policy, r: MandateRule): boolean {
       if (str === null) return false;
       p.size ??= str;
       return p.size === str;
+    case "order.destination_city =":
+      if (str === null) return false;
+      p.destinationCity ??= str;
+      return p.destinationCity === str; // two cities cannot be expressed
+    case "order.nights =":
+      if (num === null) return false;
+      p.stayNights ??= num;
+      return p.stayNights === num;
     case "merchant.familiar_on_card =":
       if (str !== "true") return false;
       p.familiarShopsOnly = true;

@@ -12,6 +12,7 @@ import {
   parseValidUntil,
 } from "@leash/shared";
 import type { MandateDraftRequest } from "../viseca/api.js";
+import { compilePolicy } from "../../../shared/src/compiler.js";
 
 // Policy compiler (D2): instruction in plain words → rules the customer can review.
 // Deterministic patterns in English and German, always runs. An optional model may add to it later, never replace it.
@@ -352,6 +353,26 @@ export function compile(instruction: string, now: number = Date.now()): ParseRes
 
   const delivery = b.find(DELIVERY);
   if (delivery) b.add(RULE_KEYS.delivery, "Delivered orders", "purpose", b.words(delivery), null);
+
+  // A stay: where and for how many nights. Read by the engine's own compiler (shared/src/compiler.ts), so the chip says
+  // exactly what the destination guard and the per-night limit will use.
+  const stay = compilePolicy(text);
+  const stayWords = (field: "destinationCity" | "stayNights"): YourWords | null => {
+    const src = stay.sources[field];
+    if (!src) return null;
+    b.spans.push({ start: src.start, end: src.end });
+    return { text: src.text, start: src.start, end: src.end };
+  };
+  if (stay.destinationCity) {
+    b.add(RULE_KEYS.destination, `Stay in ${stay.destinationCity}`, "purpose", stayWords("destinationCity"), { field: RULE_FIELDS.destinationCity, operator: "=", value: stay.destinationCity });
+    b.assumptions.push(`The stay must be in ${stay.destinationCity}: a hotel elsewhere is declined.`);
+  }
+  if (stay.stayNights !== null) {
+    b.add(RULE_KEYS.nights, `${stay.stayNights} night${stay.stayNights === 1 ? "" : "s"}`, "purpose", stayWords("stayNights"), { field: RULE_FIELDS.nights, operator: "=", value: stay.stayNights });
+    b.assumptions.push(`${stay.stayNights} night(s): a per-night limit is checked on the total divided by ${stay.stayNights}.`);
+    const conflict = stay.questions.find((q) => q.id === "q_nights");
+    if (conflict) b.questions.push({ id: conflict.id, text: conflict.text, options: ["The nights I wrote", "The dates"] });
+  }
 
   // Where it may be bought.
   const known = b.first(KNOWN_SHOP);
