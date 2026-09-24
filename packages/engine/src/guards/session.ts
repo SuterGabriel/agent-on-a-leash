@@ -11,6 +11,33 @@ export const sessionIntegrity: Guard = ({ auth, policy, card }) => {
   const hour = swissHour(auth.timestamp);
   const signals: string[] = [];
   const text: string[] = [];
+
+  // No history for this card (live scenario cards): device, country and shop can't be "new" against nothing.
+  // Only the burst signal stands on its own; the rest is unknown and goes to the uncertainty policy.
+  if (card.purchases === 0) {
+    const evidence = [
+      { fact: "card_history_purchases", value: 0, comparator: ">=", threshold: 1, source: "authorization_history" },
+      { fact: "recent_attempt_count_10m", value: auth.recent_attempt_count_10m, comparator: "<", threshold: 2, source: "authorization" },
+    ];
+    if (auth.recent_attempt_count_10m >= 2) {
+      return {
+        guard: "session",
+        verdict: "STEP_UP",
+        reason_code: "session_not_you",
+        evidence,
+        signals: ["quick_series"],
+        message: `Is this you? ${auth.recent_attempt_count_10m} other attempts in 10 minutes.`,
+      };
+    }
+    return {
+      guard: "session",
+      verdict: "UNCERTAIN",
+      reason_code: "missing_info",
+      evidence,
+      message: "We don't have any purchase history for this card yet, so we can't compare this with how you usually shop.",
+    };
+  }
+
   if (auth.customer_device_id && !card.devices.has(auth.customer_device_id)) {
     signals.push("new_device");
     text.push("a device you have never used");

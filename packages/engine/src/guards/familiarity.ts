@@ -13,6 +13,17 @@ export const merchantFamiliarity: Guard = ({ auth, policy, card, base, customerI
     { fact: "approved_purchases_other_cards", value: onOtherCards, comparator: null, threshold: null, source: "authorization_history" },
   ];
   if (onCard > 0) return { guard: "familiarity", verdict: "PASS", evidence };
+  // No history for this card and none for the customer (live scenario cards): "never bought here" would be a guess.
+  // A missing fact is never permission and never a verdict: it is unknown, and the uncertainty policy decides.
+  if (card.purchases === 0 && onOtherCards === 0 && !(customerId && base.customerMerchants.get(customerId)?.size)) {
+    return {
+      guard: "familiarity",
+      verdict: "UNCERTAIN",
+      reason_code: "missing_info",
+      evidence: [{ fact: "card_history_purchases", value: 0, comparator: ">=", threshold: 1, source: "authorization_history" }, ...evidence],
+      message: `We don't have any purchase history for this card yet, so we can't tell whether you know ${auth.merchant.merchant_name}.`,
+    };
+  }
   if (onOtherCards > 0) {
     return { guard: "familiarity", verdict: "STEP_UP", reason_code: "shop_used_other_card", evidence, message: `You bought at ${auth.merchant.merchant_name} ${onOtherCards}× with your other card, never with this one. Count it as a shop you know?` };
   }
