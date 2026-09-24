@@ -18,6 +18,7 @@ import {
   type Row,
   type Suggestion,
   type TightenRequest,
+  type TokenHistoryCheck,
   type UncertaintyPolicy,
 } from "@leash/shared";
 import { applyAnswers, compile, QUESTION_IDS, toMandateDraft } from "../compiler/compile.js";
@@ -56,12 +57,16 @@ export async function createMandateSafely(api: VisecaApi, draft: MandateDraftReq
   }
 }
 
-interface LeashState {
+export interface LeashState {
   mandate_id: string;
   parsed: ParseResult;
   answers: Record<string, string>;
   rules: LeashRule[];
   learned: LeashRule[];
+  /** The customer's card rules (wallet policy). Equal to `rules` unless a task was merged in. */
+  card_rules: LeashRule[];
+  /** The agent's task merged on top of the card rules, or null when the leash is the instruction alone. */
+  task: { instruction: string; rules: LeashRule[] } | null;
   uncertainty_policy: UncertaintyPolicy;
   revoked: boolean;
   paused_until: number | null;
@@ -70,7 +75,7 @@ interface LeashState {
   learned_shops: Map<string, { name: string; count: number }>;
 }
 
-interface RunRecord {
+export interface RunRecord {
   run_id: string;
   scenario_id: string;
   mandate_id: string;
@@ -92,6 +97,19 @@ export interface LeashServiceOptions {
   /** Live mode: the live card history, for known shops. */
   historyRows?: Row[];
   log?: (line: string) => void;
+}
+
+/** Everything a restart must not lose. Written by persist.ts; the store's rows travel as they are. */
+export interface ServiceSnapshot {
+  version: 1;
+  saved_at: string;
+  mode: "offline" | "live";
+  seq: number;
+  leash: (Omit<LeashState, "learned_shops"> & { learned_shops: [string, { name: string; count: number }][] }) | null;
+  runs: RunRecord[];
+  suggestions: Suggestion[];
+  decisions: StoredDecision[];
+  tokens: DecisionToken[];
 }
 
 export interface ScenarioInfo {
@@ -661,4 +679,66 @@ export class LeashService {
       })),
     };
   }
+
+  // ── Snapshot: what a restart must not lose (persist.ts writes it to a file) ────────────────────
+
+  /** Checks a token's hash-chained history. */
+  verifyToken(id: string): TokenHistoryCheck {
+    const r = this.tokens.verify(id);
+    if (!r) throw new ServiceError(404, "token_not_found", `No token ${id}.`);
+    return r;
+  }
+
+  snapshot(): ServiceSnapshot {
+    return {
+      version: 1,
+      saved_at: new Date().toISOString(),
+      mode: this.mode,
+      seq: this.seq,
+      leash: this.leash ? { ...this.leash, learned_shops: [...this.leash.learned_shops] } : null,
+      runs: [...this.runs.values()],
+      suggestions: [...this.suggestions.values()],
+      decisions: this.store.list(),
+      tokens: this.tokens.snapshot(),
+    };
+  }
+
+  /**
+   * Loads a snapshot into an empty service. A run that was still going is marked failed: the worker is not polling
+   * it anymore. An ask whose answer window passed while we were down is expired. Tokens whose history chain does
+   * not verify are dropped.
+   */
+  restore(s: ServiceSnapshot): { decisions: number; open_asks: number; expired_asks: number; tokens: number; tokens_rejected: string[]; runs_interrupted: number } {
+    if (s.version !== 1) throw new ServiceError(400, "snapshot_version", `Snapshot version ${String(s.version)} is not supported.`);
+    if (s.mode !== this.mode) throw new ServiceError(400, "snapshot_mode", `Snapshot is from ${s.mode} mode, this server runs ${this.mode}.`);
+    this.seq = Math.max(this.seq, s.seq);
+    this.leash = s.leash ? { ...s.leash, learned_shops: new Map(s.leash.learned_shops) } : null;
+    let interrupted = 0;
+    for (const r of s.runs) {
+      const copy: RunRecord = { ...r };
+      if (copy.state === "running") {
+        copy.state = "failed";
+        copy.error = "backend restarted during the run";
+        interrupted += 1;
+      }
+      this.runs.set(copy.run_id, copy);
+    }
+    for (const sg of s.suggestions) this.suggestions.set(sg.id, sg);
+    let openAsks = 0;
+    let expiredAsks = 0;
+    const now = Date.now();
+    for (const d of s.decisions) {
+      const copy: StoredDecision = { ...d };
+      if (copy.status === "waiting_for_you") {
+        if (copy.human_deadline_at && now > Date.parse(copy.human_deadline_at)) {
+          copy.status = "expired";
+          expiredAsks += 1;
+        } else openAsks += 1;
+      }
+      this.store.save(copy);
+    }
+    const t = this.tokens.restore(s.tokens);
+    return { decisions: s.decisions.length, open_asks: openAsks, expired_asks: expiredAsks, tokens: t.restored, tokens_rejected: t.rejected, runs_interrupted: interrupted };
+  }
+
 }

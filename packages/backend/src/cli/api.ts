@@ -8,6 +8,7 @@ import { LeashEngine } from "../engine/leashEngine.js";
 import { LeashService } from "../leash/service.js";
 import { createLeashServer } from "../http/server.js";
 import { loadLiveReference } from "../live/referenceData.js";
+import { attachSnapshotFile } from "../persist.js";
 import { buildBaselines } from "../../../shared/src/baselines.js";
 
 const cfg = loadConfig(process.argv.includes("--live") ? { mode: "live" } : {});
@@ -32,6 +33,11 @@ const service = new LeashService({
 });
 // The engine keeps one ledger per run; it has to hear the customer's answers.
 engine.follow(service.bus);
+
+// A restart keeps the leash, the feed, open asks and tokens: data/live/state-<mode>.json (git-ignored).
+// LEASH_STATE_FILE=off disables it; any other value is the file to use.
+const stateFile = process.env.LEASH_STATE_FILE?.trim() || resolve(cfg.dataDir, "live", `state-${cfg.mode}.json`);
+if (stateFile !== "off") attachSnapshotFile(service, stateFile, { log });
 
 // Live moves money on Viseca's side, so it refuses to start open. Offline stays open for local development.
 const appSecret = process.env.APP_SECRET?.trim() || null;

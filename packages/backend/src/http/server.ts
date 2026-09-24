@@ -109,6 +109,7 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
     // Decision-bound tokens (demo): the agent pays with a token bound to one approved purchase.
     route("GET", "/app/tokens", () => service.listTokens()),
     route("GET", "/app/tokens/:id", ({ params }) => service.token(params.id as string)),
+    route("GET", "/app/tokens/:id/verify", ({ params }) => service.verifyToken(params.id as string)),
     route("POST", "/demo/tokens/:id/charge", async ({ params, body }) => {
       const b = await body();
       return service.demoCharge(params.id as string, {

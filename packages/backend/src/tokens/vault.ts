@@ -1,5 +1,5 @@
-import { randomBytes } from "node:crypto";
-import type { ChargeResult, DecisionToken, TokenEvent } from "@leash/shared";
+import { createHash, randomBytes } from "node:crypto";
+import type { ChargeResult, DecisionToken, TokenEvent, TokenHistoryCheck } from "@leash/shared";
 
 // Stands in for the issuer's token service. Our rules decide; the token enforces the decision:
 // a fooled agent can't spend more, somewhere else, later, or twice.
@@ -9,6 +9,27 @@ export const TOKEN_TTL_MS = 15 * 60 * 1000;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const chf = (n: number) => `CHF ${n.toFixed(2)}`;
+
+export const GENESIS = "genesis";
+
+/** The hash of one history line. The previous hash is part of it, so the lines form a chain. */
+export function eventHash(prevHash: string, at: string, type: string, detail: string): string {
+  return createHash("sha256").update(`${prevHash}\n${at}\n${type}\n${detail}`).digest("hex");
+}
+
+/**
+ * Walks a token's history and recomputes every hash. A changed detail, a removed line or a reordered line breaks the
+ * chain from that point on. The vault is in memory, so this guards against a bug or a tampered snapshot, not a root.
+ */
+export function verifyHistory(t: Pick<DecisionToken, "history">): TokenHistoryCheck {
+  let prev = GENESIS;
+  for (let i = 0; i < t.history.length; i++) {
+    const e = t.history[i]!;
+    if (e.prev_hash !== prev || e.hash !== eventHash(e.prev_hash, e.at, e.type, e.detail)) return { ok: false, events: t.history.length, broken_at: i };
+    prev = e.hash;
+  }
+  return { ok: true, events: t.history.length, broken_at: null };
+}
 
 export interface IssueInput {
   decision_id: string;
@@ -48,8 +69,36 @@ export class TokenVault {
   ) {}
 
   private event(t: DecisionToken, type: string, detail: string, at = this.now()) {
-    const e: TokenEvent = { at: new Date(at).toISOString(), type, detail };
+    const prev_hash = t.history[t.history.length - 1]?.hash ?? GENESIS;
+    const iso = new Date(at).toISOString();
+    const e: TokenEvent = { at: iso, type, detail, prev_hash, hash: eventHash(prev_hash, iso, type, detail) };
     t.history.push(e);
+  }
+
+  /** Every token as plain data, for a snapshot file. */
+  snapshot(): DecisionToken[] {
+    return [...this.tokens.values()].map((t) => ({ ...t, history: t.history.map((e) => ({ ...e })) }));
+  }
+
+  /** Loads tokens from a snapshot. A token whose history chain does not verify is dropped, and reported. */
+  restore(tokens: DecisionToken[]): { restored: number; rejected: string[] } {
+    const rejected: string[] = [];
+    for (const t of tokens) {
+      if (!verifyHistory(t).ok) {
+        rejected.push(t.id);
+        continue;
+      }
+      const copy: DecisionToken = { ...t, history: t.history.map((e) => ({ ...e })) };
+      this.tokens.set(copy.id, copy);
+      this.byDecision.set(copy.decision_id, copy.id);
+    }
+    return { restored: tokens.length - rejected.length, rejected };
+  }
+
+  /** Checks one token's history chain. */
+  verify(id: string): TokenHistoryCheck | undefined {
+    const t = this.tokens.get(id);
+    return t ? verifyHistory(t) : undefined;
   }
 
   /** Called only after an approval (automated or by the customer). One token per decision. */

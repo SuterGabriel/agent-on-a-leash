@@ -8,6 +8,18 @@ export interface TokenEvent {
   /** issued, charged, declined, refunded, expired, revoked */
   type: string;
   detail: string;
+  /** Hash of the previous event ("genesis" for the first), so the history is a chain: change one line and every later hash breaks. */
+  prev_hash: string;
+  /** sha256 of prev_hash, at, type and detail. */
+  hash: string;
+}
+
+/** Result of checking a token's history chain. */
+export interface TokenHistoryCheck {
+  ok: boolean;
+  events: number;
+  /** Index of the first event whose hash does not match, or null when the chain holds. */
+  broken_at: number | null;
 }
 
 export interface DecisionToken {
