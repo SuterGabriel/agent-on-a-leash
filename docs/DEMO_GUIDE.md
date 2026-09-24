@@ -83,4 +83,5 @@ Unset `VITE_API_BASE`, restart `npm run dev`, and use **Play SCEN0004** in the s
 | Against a plain limit | 6 of 28 risky purchases caught, ours 28 of 28, CHF 5,899 kept from going through unchecked (`npm run compare`) |
 | Guards | 21, in five families: money, item, shop, session, manipulation |
 | Tests | 260, all green on 24 September |
-| Live | fill in from the re-run on the 25th (`npm run live-results`) |
+| Live, asks answered yes | 7 scenarios · 74 purchases · 38 % asked · 0 missed deadlines · 268 ms median including network (`docs/pitch/live-figures-asks-approved.md`) |
+| Live, asks answered no | 10 scenarios · 111 purchases · 59 % asked · 0 missed deadlines · 327 ms median (`docs/pitch/live-figures-asks-declined.md`). The difference is the shop learning: a yes once per shop, then the shop is known |
