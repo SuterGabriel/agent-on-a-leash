@@ -1,0 +1,23 @@
+{
+  "name": "agent-on-a-leash",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "check-key": "tsx packages/backend/src/cli/checkKey.ts",
+    "scenario": "tsx packages/backend/src/cli/runScenario.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^5.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
