@@ -8,6 +8,7 @@ import { LeashService } from "../src/leash/service.js";
 import { createLeashServer } from "../src/http/server.js";
 import type { Engine } from "../src/engine/port.js";
 import type { StoredDecision } from "../src/store.js";
+import { suggestionFor } from "../src/leash/suggestions.js";
 
 // End-to-end through HTTP against the offline platform, with a tiny stand-in for Ara's engine.
 
@@ -140,21 +141,24 @@ describe("app API, offline end to end", () => {
     expect(events.some((e) => e.event === "ask")).toBe(true);
   });
 
-  it("D1: declining the cosmetics basket offers 'Never buy cosmetics', accepting adds a learned rule at Viseca", async () => {
+  it("D1: a decline only offers rules the engine can read ('Never buy cosmetics' waits for engine support)", async () => {
     const asks = (await call<StoredDecision[]>("GET", "/app/asks")).body;
     const cosmetics = asks.find((d) => d.items.some((i) => i.category === "cosmetics"))!;
     expect(cosmetics).toBeDefined();
 
     const resolved = await call<StoredDecision>("POST", `/app/asks/${cosmetics.id}/resolve`, { decision: "decline" });
     expect(resolved.body.status).toBe("declined_by_you");
-    expect(resolved.body.suggestion!.text).toBe("Never buy cosmetics");
+    // items.item_category not_in is not readable by the engine yet; offering it would make every later purchase an ask.
+    expect(resolved.body.suggestion).toBeUndefined();
 
     const again = await call<{ error: { code: string } }>("POST", `/app/asks/${cosmetics.id}/resolve`, { decision: "approve" });
     expect(again.status).toBe(409);
+  });
 
-    const accepted = await call<LeashView>("POST", `/app/suggestions/${resolved.body.suggestion!.id}/accept`);
-    expect(accepted.body.learned_rules[0]).toMatchObject({ source: "learned", label: "Never buy cosmetics" });
-    expect((await platform.getMandate(accepted.body.mandate_id!)).hard_rules).toContainEqual({ field: "items.item_category", operator: "not_in", value: ["cosmetics"] });
+  it("D1: an add-on suggestion is offered, and accepting adds a learned rule the engine reads", async () => {
+    const draft = suggestionFor({ reason_codes: ["unrequested_addon"], items: [] });
+    expect(draft).toEqual({ reason_code: "unrequested_addon", text: "Always decline when something is added I didn't ask for", rule: { field: "order.addons_allowed", operator: "=", value: "false" } });
+    expect(suggestionFor({ reason_codes: ["lookalike_shop"], items: [] })).toBeNull();
   });
 
   it("S8: tighten only ever tightens", async () => {

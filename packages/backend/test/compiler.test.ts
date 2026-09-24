@@ -58,8 +58,8 @@ describe("policy compiler", () => {
     const parsed = compile(instruction("SCEN0004"));
     const rules = applyAnswers(parsed, { [QUESTION_IDS.splitOrders]: "Yes", [QUESTION_IDS.otherCard]: "Yes" });
     expect(rules.map((r) => r.key)).toContain("split_orders");
-    expect(rules.find((r) => r.key === "known_shop")!.hard_rule!.value).toEqual(["used_on_this_card", "used_on_other_card"]);
-    expect(parsed.rules.find((r) => r.key === "known_shop")!.hard_rule!.value).toEqual(["used_on_this_card"]);
+    expect(rules.find((r) => r.key === "known_shop")!.label).toBe("Only shops you've bought from, with either card");
+    expect(rules.find((r) => r.key === "known_shop")!.hard_rule).toEqual({ field: "merchant.familiar_on_card", operator: "=", value: "true" });
     expect(toMandateDraft(parsed, rules, { [QUESTION_IDS.splitOrders]: "Yes", [QUESTION_IDS.otherCard]: "Yes" }).open_questions).toEqual([]);
   });
 });

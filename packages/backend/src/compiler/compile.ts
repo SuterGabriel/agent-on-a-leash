@@ -146,17 +146,17 @@ export function compile(instruction: string): ParseResult {
 
   const one = b.find(/\b(?:buy\s+)?one (?:ordinary\s+)?(?:grocery\s+)?item\b/i);
   if (one) {
-    b.add(RULE_KEYS.one_item, "One item per order", "purpose", b.words(one), { field: RULE_FIELDS.lineCount, operator: "<=", value: 1 });
+    b.add(RULE_KEYS.one_item, "One item per order", "purpose", b.words(one), null);
     b.questions.push({ id: QUESTION_IDS.closeAfterFirst, text: "After the first item is bought, should the agent stop buying?", options: ["Yes", "No"] });
   }
 
   const delivery = b.find(/\bfor delivery\b/i);
-  if (delivery) b.add(RULE_KEYS.delivery, "Delivered orders", "purpose", b.words(delivery), { field: RULE_FIELDS.fulfillment, operator: "=", value: "delivery" });
+  if (delivery) b.add(RULE_KEYS.delivery, "Delivered orders", "purpose", b.words(delivery), null);
 
   // Where it may be bought.
   const known = b.find(/\b(?:from\s+)?(?:a |the )?(?:shops?|sellers?|stores?|retailers?) I (?:use regularly|have bought from before|bought from before|have used before|know)\b/i);
   if (known) {
-    b.add(RULE_KEYS.known_shop, "Only shops you've bought from", "restrictions", b.words(known), { field: RULE_FIELDS.familiarity, operator: "in", value: ["used_on_this_card"] });
+    b.add(RULE_KEYS.known_shop, "Only shops you've bought from", "restrictions", b.words(known), { field: RULE_FIELDS.familiarOnCard, operator: "=", value: "true" });
     const phrase = /regularly/i.test(known[0]) ? "use regularly" : "before";
     b.assumptions.push(`I read "${phrase}" as: at least one approved purchase at that shop with this card.`);
     b.questions.push({ id: QUESTION_IDS.otherCard, text: "Does a shop you used with your other card count as known?", options: ["Yes", "No"] });
@@ -174,10 +174,10 @@ export function compile(instruction: string): ParseResult {
     b.assumptions.push("If the return terms are missing, I'm not sure, so I'll ask you.");
   }
   const extras = b.find(/\b(?:do not|don't) add anything I did(?: not|n't) ask for\b|\bnothing extra\b|\bno extras\b|\bonly what I (?:asked for|chose)\b/i);
-  if (extras) b.add(RULE_KEYS.no_extras, "Nothing you didn't ask for", "restrictions", b.words(extras), { field: RULE_FIELDS.extras, operator: "=", value: "none" });
+  if (extras) b.add(RULE_KEYS.no_extras, "Nothing you didn't ask for", "restrictions", b.words(extras), { field: RULE_FIELDS.addonsAllowed, operator: "=", value: "false" });
   const session = b.find(/\b(?:pause|stop|hold) anything that looks like someone other than me is driving the session\b/i) ?? b.find(/\bsomeone other than me\b/i);
   if (session) {
-    b.add(RULE_KEYS.session, "Pause if it doesn't look like you", "restrictions", b.words(session), { field: RULE_FIELDS.sessionDriver, operator: "=", value: "cardholder" });
+    b.add(RULE_KEYS.session, "Pause if it doesn't look like you", "restrictions", b.words(session), { field: RULE_FIELDS.sessionIntegrity, operator: "=", value: "required" });
     b.assumptions.push("A new phone, unusual hours, a burst of orders or a new country makes it look like someone else; then I ask you.");
   }
 
@@ -247,15 +247,12 @@ export function applyAnswers(parsed: ParseResult, answers: Record<string, string
       group: "limits",
       source: "you",
       your_words: null,
-      hard_rule: { field: RULE_FIELDS.combineWithin, operator: "=", value: 10 },
+      hard_rule: null,
     });
   }
   if (yes(QUESTION_IDS.otherCard)) {
     const known = rules.find((r) => r.key === RULE_KEYS.known_shop);
-    if (known?.hard_rule) {
-      known.hard_rule.value = ["used_on_this_card", "used_on_other_card"];
-      known.label = "Only shops you've bought from, with either card";
-    }
+    if (known) known.label = "Only shops you've bought from, with either card";
   }
   return rules;
 }
