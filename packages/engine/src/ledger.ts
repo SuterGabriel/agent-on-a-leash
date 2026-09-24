@@ -55,6 +55,13 @@ export class Ledger {
     );
   }
 
+  /** Approved purchases at this shop in this run, whatever the time: the customer said yes here, so the shop is known. */
+  approvedAtMerchant(merchantId: string): number {
+    let n = 0;
+    for (const e of this.entries.values()) if (e.final_status === "approved" && e.merchant_id === merchantId) n++;
+    return n;
+  }
+
   all(): LedgerEntry[] {
     return [...this.entries.values()];
   }

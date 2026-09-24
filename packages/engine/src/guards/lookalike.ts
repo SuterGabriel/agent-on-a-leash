@@ -40,10 +40,14 @@ function closest(name: string, category: string, selfId: string, ids: Iterable<s
   return best;
 }
 
-export const lookalikeMerchant: Guard = ({ auth, base, customerId }) => {
+export const lookalikeMerchant: Guard = ({ auth, base, customerId, ledger }) => {
   const m = auth.merchant;
   const known = customerId ? base.customerMerchants.get(customerId) : undefined;
   if (known?.has(m.merchant_id)) return { guard: "lookalike", verdict: "PASS", evidence: [] };
+  const approvedHere = ledger.approvedAtMerchant(m.merchant_id);
+  if (approvedHere > 0) {
+    return { guard: "lookalike", verdict: "PASS", evidence: [{ fact: "approved_in_this_run", value: approvedHere, comparator: ">=", threshold: 1, source: "ledger" }] };
+  }
   const issuerCount = base.issuerMerchants.get(m.merchant_id) ?? 0;
 
   // 1. Against the shops this customer bought from.
@@ -63,19 +67,21 @@ export const lookalikeMerchant: Guard = ({ auth, base, customerId }) => {
   }
 
   // 2. Against every established shop at the issuer. Only a shop with no purchases at all can be an imitation here:
-  //    two established shops with similar names are simply two shops.
+  //    two established shops with similar names are simply two shops. The customer never bought at the original,
+  //    so this is a question, not a verdict: "Night Owl Kitchen" may well be their usual service, not a copy of
+  //    "NightOwl Kitchen" in another town. Against the customer's OWN shops (step 1) it stays a decline.
   if (issuerCount > 0) return { guard: "lookalike", verdict: "PASS", evidence: [] };
   const established = closest(m.merchant_name, m.merchant_category, m.merchant_id, base.issuerMerchants.keys(), base.merchantNames);
   if (!established || established.score < THRESHOLD) return { guard: "lookalike", verdict: "PASS", evidence: [] };
   return {
     guard: "lookalike",
-    verdict: "DECLINE",
+    verdict: "STEP_UP",
     reason_code: "lookalike_shop",
     evidence: [
       { fact: "name_similarity", value: Math.round(established.score * 100) / 100, comparator: ">=", threshold: THRESHOLD, source: `${m.merchant_name} vs ${established.name} (established shop)` },
       { fact: "issuer_approved_purchases_at_shop", value: 0, comparator: "=", threshold: 0, source: "authorization_history (all customers)" },
       { fact: "issuer_approved_purchases_at_original", value: base.issuerMerchants.get(established.id) ?? 0, comparator: ">", threshold: 0, source: "authorization_history (all customers)" },
     ],
-    message: `"${m.merchant_name}" looks like "${established.name}", an established shop, but no customer of ours has ever bought there.`,
+    message: `"${m.merchant_name}" looks like "${established.name}", an established shop, but no customer of ours has ever bought there. Is this the shop you meant?`,
   };
 };

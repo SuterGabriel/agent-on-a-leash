@@ -68,7 +68,8 @@ export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScop
   ];
   if (signals.length === 0) return { guard: "session", verdict: "PASS", evidence, signals };
 
-  const verdict = signals.length >= 3 && habitsScope !== "none" ? "DECLINE" : "STEP_UP";
+  // Three or more signals stop the purchase, unless the customer asked to be asked ("... stop and ask me").
+  const verdict = signals.length >= 3 && habitsScope !== "none" && policy.sessionAction !== "ask" ? "DECLINE" : "STEP_UP";
   return {
     guard: "session",
     verdict,

@@ -4,9 +4,19 @@
 // No history at all: we cannot tell, so we ask. Never a decline on missing history.
 import type { Guard } from "../types";
 
-export const merchantFamiliarity: Guard = ({ auth, policy, card, base, customerId, habits, habitsScope }) => {
+export const merchantFamiliarity: Guard = ({ auth, policy, card, base, customerId, habits, habitsScope, ledger }) => {
   if (!policy.familiarShopsOnly) return { guard: "familiarity", verdict: "SKIP", evidence: [] };
   const mId = auth.merchant.merchant_id;
+
+  // The customer already said yes to this shop in this run (or it passed): it is a shop they use now.
+  const approvedHere = ledger.approvedAtMerchant(mId);
+  if (approvedHere > 0) {
+    return {
+      guard: "familiarity",
+      verdict: "PASS",
+      evidence: [{ fact: "approved_in_this_run", value: approvedHere, comparator: ">=", threshold: 1, source: "ledger" }],
+    };
+  }
   const baseline = { fact: "baseline", value: habitsScope, comparator: null, threshold: null, source: "authorization_history" };
 
   if (habitsScope === "none") {

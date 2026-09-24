@@ -237,10 +237,19 @@ export function compilePolicy(instruction: string): Policy {
   const noExtras = /(do\s+not|don't|never)\s+add\s+anything|nothing\s+extra|no\s+extras|nothing\s+else\s+in\s+the\s+(basket|cart|order)|only\s+(that|this|the\s+one)\s+item/i.test(instruction);
   if (noExtras) assumptions.push("Add-ons you did not ask for (protection plans, subscriptions) are declined.");
 
+  const SESSION_PHRASE = /someone\s+other\s+than\s+me|not\s+me\b|driving\s+the\s+session|someone\s+else|session\s+(looks?|seems?)\s+(unusual|odd|strange|off|suspicious)|(doesn't|does\s+not|don't)\s+look\s+like\s+me|unusual\s+(session|activity)/i;
+  // "stop and ask me" / "ask me" in the sentence that describes the session: a question, not a stop, however many signs.
+  const sessionSentenceAsks = (text: string) =>
+    text.split(/(?<=[.!?])\s+/).some((sentence) => SESSION_PHRASE.test(sentence) && /\bask\b/i.test(sentence) && !/\b(don't|do\s+not|never)\s+ask\b/i.test(sentence));
   const sessionIntegrity =
     /someone\s+other\s+than\s+me|not\s+me\b|driving\s+the\s+session|someone\s+else|session\s+(looks?|seems?)\s+(unusual|odd|strange|off|suspicious)|(doesn't|does\s+not|don't)\s+look\s+like\s+me|unusual\s+(session|activity)/i.test(instruction);
+  const sessionAction: Policy["sessionAction"] = sessionIntegrity && sessionSentenceAsks(instruction) ? "ask" : "stop";
   if (sessionIntegrity) {
-    assumptions.push("I watch for a new device, an hour you never shop at, a burst of orders, a new country and an unknown shop. One sign: I ask. Three or more: I stop it.");
+    assumptions.push(
+      sessionAction === "ask"
+        ? "I watch for a new device, an hour you never shop at, a burst of orders, a new country and an unknown shop. Any sign: I stop and ask you."
+        : "I watch for a new device, an hour you never shop at, a burst of orders, a new country and an unknown shop. One sign: I ask. Three or more: I stop it.",
+    );
   }
 
   // --- Uncertain cases: ask (default) or decline.
@@ -273,6 +282,7 @@ export function compilePolicy(instruction: string): Policy {
     familiarShopsOnly,
     noExtras,
     sessionIntegrity,
+    sessionAction,
     perUnitLimit,
     maxOrdersPerPeriod,
     allowedWeekdays,
@@ -309,7 +319,7 @@ export function toHardRules(p: Policy): HardRule[] {
   if (p.requiredMerchantCategories) rules.push({ field: "merchant.merchant_category", operator: "in", value: p.requiredMerchantCategories });
   if (p.familiarShopsOnly) rules.push({ field: "merchant.familiar_on_card", operator: "=", value: "true" });
   if (p.noExtras) rules.push({ field: "order.addons_allowed", operator: "=", value: "false" });
-  if (p.sessionIntegrity) rules.push({ field: "session.integrity", operator: "=", value: "required" });
+  if (p.sessionIntegrity) rules.push({ field: "session.integrity", operator: "=", value: p.sessionAction === "ask" ? "ask" : "required" });
   if (p.perUnitLimit) rules.push({ field: "items.unit_price_chf", operator: "<=", value: p.perUnitLimit.amountChf, currency: "CHF" });
   if (p.maxOrdersPerPeriod) {
     rules.push({ field: "orders.count", operator: "<=", value: p.maxOrdersPerPeriod.count, scope: "period", period_days: p.maxOrdersPerPeriod.days });

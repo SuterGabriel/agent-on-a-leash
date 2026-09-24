@@ -257,9 +257,16 @@ describe("lookalike against every established shop at the issuer", () => {
     e.mandate.customer_id = "CU_NEWCOMER";
   };
 
-  it("a never-used shop named almost like an established one is an imitation, even for a customer with no history", () => {
+  it("a never-used shop named almost like an established one is a question, even for a customer with no history", () => {
+    // The customer never bought at the original, so it may be their usual shop with a different spelling: ask, never decline.
     const r = run(I, event(I, at("ME_FAKE", "Harbourlime Grocers")), new Ledger(), base);
-    expect(r.decision).toBe("decline");
+    expect(r.decision).toBe("step_up");
+    expect(r.reason_codes).toContain("lookalike_shop");
+  });
+  it("a spelling twin of an established shop in another town is asked about, not stopped", () => {
+    const twin = [...history, ...Array.from({ length: 20 }, (_, i) => hist("ME_ORIG", "Moonlit Noodle Bar", "restaurants", "CU_OTHER", i))];
+    const r = run(I, event(I, at("ME_MINE", "Moon lit Noodle Bar", "restaurants")), new Ledger(), buildBaselines(twin, new Map()));
+    expect(r.decision).toBe("step_up");
     expect(r.reason_codes).toContain("lookalike_shop");
   });
   it("two established shops with similar names are just two shops", () => {
@@ -291,5 +298,86 @@ describe("issuer limits: the card's own per-purchase limit", () => {
     expect(run(I, event(I, onCard("CA_LIM", 300)), new Ledger(), base).reason_codes).not.toContain("over_card_limit");
     const unknown = run(I, event(I, onCard("CA_UNLISTED", 9000)), new Ledger(), base);
     expect(unknown.guards.find((g) => g.guard === "issuer_limits")?.verdict).toBe("SKIP");
+  });
+});
+
+describe("a shop the customer approved in this run is a shop they use", () => {
+  const I = "Only from shops I have used before, up to CHF 500 per order.";
+  // `daysLater` moves the purchase on and changes the basket, so the second order is not a duplicate of the first.
+  const newcomer = (id: string, name: string, daysLater = 0) => (e: AuthorizationEvent) => {
+    e.authorization.merchant.merchant_id = id;
+    e.authorization.merchant.merchant_name = name;
+    e.authorization.merchant.merchant_category = "groceries";
+    e.authorization.card_id = "CA_NEWCOMER";
+    e.mandate.customer_id = "CU_NEWCOMER";
+    if (daysLater) {
+      e.authorization.timestamp = new Date(Date.parse(e.authorization.timestamp) + daysLater * 86_400_000).toISOString();
+      e.authorization.items[0].quantity += daysLater;
+    }
+  };
+
+  it("first purchase asks (no history), the customer says yes, the second one at the same shop is approved", () => {
+    const ledger = new Ledger();
+    const first = run(I, event(I, newcomer("ME_LOCAL", "Corner Larder"), "same-run-1"), ledger);
+    expect(first.decision).toBe("step_up");
+    expect(first.reason_codes).toContain("no_shop_history");
+    ledger.resolve(first.authorization_id, "approve");
+    const second = run(I, event(I, newcomer("ME_LOCAL", "Corner Larder", 3), "same-run-2"), ledger);
+    expect(second.decision).toBe("approve");
+    expect(second.reason_codes).not.toContain("no_shop_history");
+  });
+
+  it("a declined ask teaches nothing, and another shop is still asked about", () => {
+    const ledger = new Ledger();
+    const first = run(I, event(I, newcomer("ME_LOCAL", "Corner Larder"), "same-run-3"), ledger);
+    ledger.resolve(first.authorization_id, "decline");
+    expect(run(I, event(I, newcomer("ME_LOCAL", "Corner Larder", 2), "same-run-4"), ledger).decision).toBe("step_up");
+    ledger.resolve(run(I, event(I, newcomer("ME_LOCAL", "Corner Larder", 4), "same-run-5"), ledger).authorization_id, "approve");
+    expect(run(I, event(I, newcomer("ME_OTHER", "Birch Street Deli", 6), "same-run-6"), ledger).decision).toBe("step_up");
+  });
+
+  it("the same-run approval also clears the lookalike check for that shop", () => {
+    const hist = (i: number): Row => ({
+      card_id: "CA_X", customer_id: "CU_X", account_id: "AC_X", transaction_type: "purchase", status: "approved",
+      merchant_id: "ME_EST", merchant_name: "Corner Larders", merchant_category: "groceries", customer_device_id: "DV_X", recurring: "false",
+      timestamp: `2026-05-${String(1 + i).padStart(2, "0")}T12:00:00Z`, merchant_country: "CH",
+    });
+    const base = buildBaselines(Array.from({ length: 5 }, (_, i) => hist(i)), new Map());
+    const ledger = new Ledger();
+    const first = run(I, event(I, newcomer("ME_LOCAL", "Corner Larder"), "same-run-7"), ledger, base);
+    expect(first.reason_codes).toContain("lookalike_shop");
+    ledger.resolve(first.authorization_id, "approve");
+    const second = run(I, event(I, newcomer("ME_LOCAL", "Corner Larder", 3), "same-run-8"), ledger, base);
+    expect(second.reason_codes).not.toContain("lookalike_shop");
+    expect(second.decision).toBe("approve");
+  });
+});
+
+describe("session: 'stop and ask me' asks, 'pause anything' stops", () => {
+  const ASK = "Small purchases up to CHF 300. If the session looks unusual, a new device or shops abroad, stop and ask me.";
+  const STOP = "Small purchases up to CHF 300. Pause anything that looks like someone other than me is driving the session.";
+  const threeSignals = (e: AuthorizationEvent) => {
+    e.authorization.customer_device_id = "DVC-NEVER-SEEN";
+    e.authorization.merchant.merchant_country = "JP";
+    e.authorization.merchant.merchant_id = "ME_UNKNOWN";
+    e.authorization.merchant.merchant_name = "Shinjuku Gadgets";
+  };
+
+  it("the compiler reads the action from the customer's words", () => {
+    expect(compilePolicy(ASK).sessionIntegrity).toBe(true);
+    expect(compilePolicy(ASK).sessionAction).toBe("ask");
+    expect(compilePolicy(STOP).sessionAction).toBe("stop");
+    expect(compilePolicy("If it doesn't look like me, don't ask, just decline.").sessionAction).toBe("stop");
+    expect(toHardRules(compilePolicy(ASK)).find((r) => r.field === "session.integrity")?.value).toBe("ask");
+    expect(toHardRules(compilePolicy(STOP)).find((r) => r.field === "session.integrity")?.value).toBe("required");
+  });
+
+  it("three signals: asked under 'stop and ask me', declined under 'pause anything'", () => {
+    const asked = run(ASK, event(ASK, threeSignals));
+    expect(asked.reason_codes).toContain("session_not_you");
+    expect(asked.decision).toBe("step_up");
+    const stopped = run(STOP, event(STOP, threeSignals));
+    expect(stopped.reason_codes).toContain("session_not_you");
+    expect(stopped.decision).toBe("decline");
   });
 });

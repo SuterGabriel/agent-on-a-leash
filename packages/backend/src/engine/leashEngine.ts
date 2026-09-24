@@ -132,7 +132,9 @@ function tighten(p: Policy, r: MandateRule): boolean {
       p.noExtras = true;
       return true;
     case "session.integrity =":
-      if (str !== "required") return false;
+      // "required" stops at three signals, "ask" only asks. The text re-read above already set the action from the
+      // customer's own words; a rule only switches the check on, it never turns their "ask" into a stop.
+      if (str !== "required" && str !== "ask") return false;
       p.sessionIntegrity = true;
       return true;
     case "items.unit_price_chf <=":
