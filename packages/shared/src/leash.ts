@@ -107,11 +107,17 @@ export interface LeashView {
   known_shops: KnownShop[];
   suggestions: Suggestion[];
   paused_until: string | null;
+  /**
+   * The agent's task, when a run was started on top of the customer's card rules (v4 app): the task instruction
+   * and the rules read from it. `rules` above then holds task rules and card rules together; the engine takes the stricter.
+   */
+  task: { instruction: string; rules: LeashRule[] } | null;
 }
 
 /** PATCH /app/leash/rules — only ever tightens. */
 export type TightenRequest =
   | { type: "lower_order_limit"; value: number }
+  | { type: "lower_period_budget"; value: number; period_days?: number }
   | { type: "block_shop"; merchant_id: string; name?: string }
   | { type: "block_category"; category: string }
   | { type: "unsure_decline" };

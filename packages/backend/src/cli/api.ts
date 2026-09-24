@@ -48,9 +48,10 @@ if (cfg.mode === "live" && (!appSecret || !corsOrigin || corsOrigin === "*")) {
 }
 if (!appSecret) console.warn("APP_SECRET is not set: anyone who reaches this server can answer purchases.");
 
-createLeashServer(service, { corsOrigin: corsOrigin as string, appSecret }).listen(port, () => {
+createLeashServer(service, { corsOrigin: corsOrigin as string, appSecret, app: { history: liveRef?.history } }).listen(port, () => {
   console.log(`Leash API on http://localhost:${port} · mode ${cfg.mode} · engine ${engine.version}`);
   console.log(`  scenarios: ${service.scenarios().map((s) => s.scenario_id).join(" ")}`);
   console.log(`  GET  /app/leash · /app/feed · /app/asks · /app/stream (SSE) · /app/tokens · /judge/decisions · /api/status`);
   console.log(`  POST /app/leash/parse · /app/leash · /app/asks/:id/resolve · /api/runs {"scenario_id":"..."}`);
+  console.log(`  v4 app (app-web): VITE_API_BASE=http://localhost:${port}/v4 · /v4/app/leash/suggest · /v4/app/feed · /v4/app/stream · /v4/api/runs`);
 });

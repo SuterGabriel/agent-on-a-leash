@@ -9,6 +9,8 @@
     "check-key": "tsx packages/backend/src/cli/checkKey.ts",
     "scenario": "tsx packages/backend/src/cli/runScenario.ts",
     "api": "tsx packages/backend/src/cli/api.ts",
+    "web": "npm --prefix app-web run dev",
+    "web:build": "npm --prefix app-web run build",
     "demo:tokens": "tsx packages/backend/src/cli/demoTokens.ts",
     "api-atlas": "tsx packages/backend/src/cli/apiAtlas.ts",
     "live-results": "tsx packages/backend/src/cli/liveResults.ts",

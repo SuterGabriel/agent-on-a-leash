@@ -1,0 +1,1264 @@
+{
+    "_readme": "Figma component set → React component. Claude reads this before turning a Figma frame into code, and updates it whenever a component is added or renamed (on either side). Figma node IDs refer to the file in design-system/figma.config.json. Prop rules: Figma variant value → React prop value. 'omit' = Figma-only (visual state like Hover/Focused, handled by CSS/React Aria).",
+    "components": [
+        {
+            "figma": {
+                "name": "Buttons/Button",
+                "nodeId": "3287:427074",
+                "page": "Buttons"
+            },
+            "react": {
+                "import": "import { Button } from \"@/components/base/buttons/button\";",
+                "component": "Button"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size",
+                    "values": {
+                        "xs": "xs",
+                        "sm": "sm",
+                        "md": "md",
+                        "lg": "lg",
+                        "xl": "xl"
+                    }
+                },
+                "Hierarchy": {
+                    "prop": "color",
+                    "values": {
+                        "Primary": "primary",
+                        "Secondary": "secondary",
+                        "Tertiary": "tertiary",
+                        "Link color": "link-color",
+                        "Link gray": "link-gray"
+                    }
+                },
+                "State": {
+                    "values": {
+                        "Default": "omit",
+                        "Hover": "omit",
+                        "Focused": "omit",
+                        "Disabled": "isDisabled",
+                        "Loading": "isLoading"
+                    }
+                },
+                "Icon only": {
+                    "values": {
+                        "True": "pass only iconLeading, no children (+ aria-label)",
+                        "False": "omit"
+                    }
+                },
+                "⬅️ Icon leading / 🔀 Icon leading swap": {
+                    "prop": "iconLeading",
+                    "note": "Icon name from @untitledui/icons, e.g. iconLeading={Plus}"
+                },
+                "➡️ Icon trailing / 🔀 Icon trailing swap": {
+                    "prop": "iconTrailing"
+                },
+                "Loading text": {
+                    "prop": "showTextWhileLoading"
+                }
+            },
+            "example": "<Button size=\"md\" color=\"secondary\" iconLeading={Plus}>New agent</Button>"
+        },
+        {
+            "figma": {
+                "name": "Buttons/Button destructive",
+                "nodeId": "6218:85578",
+                "page": "Buttons"
+            },
+            "react": {
+                "import": "import { Button } from \"@/components/base/buttons/button\";",
+                "component": "Button"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Hierarchy": {
+                    "prop": "color",
+                    "values": {
+                        "Primary": "primary-destructive",
+                        "Secondary": "secondary-destructive",
+                        "Tertiary": "tertiary-destructive",
+                        "Link": "link-destructive"
+                    }
+                },
+                "State": {
+                    "values": {
+                        "Disabled": "isDisabled",
+                        "Loading": "isLoading"
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Buttons/Button utility",
+                "nodeId": "8003:526508",
+                "page": "Buttons"
+            },
+            "react": {
+                "import": "import { ButtonUtility } from \"@/components/base/buttons/button-utility\";",
+                "component": "ButtonUtility"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Hierarchy": {
+                    "prop": "color",
+                    "values": {
+                        "Secondary": "secondary",
+                        "Tertiary": "tertiary"
+                    }
+                },
+                "🔀 Icon swap": {
+                    "prop": "icon"
+                }
+            },
+            "note": "Pass tooltip=\"…\" — it doubles as the accessible label."
+        },
+        {
+            "figma": {
+                "name": "Buttons/Button close X",
+                "nodeId": "2763:420129",
+                "page": "Buttons"
+            },
+            "react": {
+                "import": "import { CloseButton } from \"@/components/base/buttons/close-button\";",
+                "component": "CloseButton"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Dark background": {
+                    "prop": "theme",
+                    "values": {
+                        "True": "dark",
+                        "False": "light"
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Buttons/Social button",
+                "nodeId": "1256:130788",
+                "page": "Buttons"
+            },
+            "react": {
+                "import": "import { SocialButton } from \"@/components/base/buttons/social-button\";",
+                "component": "SocialButton"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Social": {
+                    "prop": "social",
+                    "note": "lowercase: google, facebook, apple, twitter, figma, dribble"
+                },
+                "Theme": {
+                    "prop": "theme",
+                    "note": "brand | gray | color"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Badge",
+                "nodeId": "1046:3819",
+                "page": "Badges"
+            },
+            "react": {
+                "import": "import { Badge, BadgeWithDot, BadgeWithIcon, BadgeWithFlag, BadgeWithImage, BadgeWithButton, BadgeIcon } from \"@/components/base/badges/badges\";",
+                "component": "Badge*"
+            },
+            "props": {
+                "Icon": {
+                    "selectsComponent": {
+                        "False": "Badge",
+                        "Dot": "BadgeWithDot",
+                        "Icon leading": "BadgeWithIcon (iconLeading)",
+                        "Icon trailing": "BadgeWithIcon (iconTrailing)",
+                        "Only": "BadgeIcon",
+                        "Country": "BadgeWithFlag",
+                        "Avatar": "BadgeWithImage",
+                        "X close": "BadgeWithButton"
+                    }
+                },
+                "Type": {
+                    "prop": "type",
+                    "values": {
+                        "Pill color": "pill-color",
+                        "Badge color": "color",
+                        "Badge modern": "modern"
+                    }
+                },
+                "Size": {
+                    "prop": "size"
+                },
+                "Color": {
+                    "prop": "color",
+                    "note": "lowercase: gray, brand, error, warning, success, slate, sky, blue, indigo, purple, pink, orange"
+                }
+            },
+            "example": "<BadgeWithDot type=\"pill-color\" color=\"success\" size=\"sm\">Running</BadgeWithDot>"
+        },
+        {
+            "figma": {
+                "name": "Badge group",
+                "nodeId": "1046:8088",
+                "page": "Badges"
+            },
+            "react": {
+                "import": "import { BadgeGroup } from \"@/components/base/badges/badge-groups\";",
+                "component": "BadgeGroup"
+            },
+            "props": {
+                "Badge": {
+                    "prop": "align",
+                    "values": {
+                        "Leading": "leading",
+                        "Trailing": "trailing"
+                    }
+                },
+                "Size": {
+                    "prop": "size"
+                },
+                "Color": {
+                    "prop": "color"
+                },
+                "Type": {
+                    "prop": "theme",
+                    "values": {
+                        "Pill color": "light",
+                        "Badge modern": "modern"
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Avatar",
+                "nodeId": "11008:45389",
+                "page": "Avatars"
+            },
+            "react": {
+                "import": "import { Avatar } from \"@/components/base/avatar/avatar\";",
+                "component": "Avatar"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Border": {
+                    "prop": "border"
+                },
+                "Placeholder text": {
+                    "prop": "initials"
+                },
+                "Placeholder icon": {
+                    "prop": "placeholderIcon"
+                },
+                "Status icon": {
+                    "prop": "status | verified | count",
+                    "note": "online/offline dot, verified tick, or count badge"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Avatar label group",
+                "nodeId": "82:2793",
+                "page": "Avatars"
+            },
+            "react": {
+                "import": "import { AvatarLabelGroup } from \"@/components/base/avatar/avatar-label-group\";",
+                "component": "AvatarLabelGroup"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Supporting text": {
+                    "prop": "subtitle"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Avatar profile photo",
+                "nodeId": "1217:108477",
+                "page": "Avatars"
+            },
+            "react": {
+                "import": "import { AvatarProfilePhoto } from \"@/components/base/avatar/avatar-profile-photo\";",
+                "component": "AvatarProfilePhoto"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Verified": {
+                    "prop": "verified"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Input field",
+                "nodeId": "1090:57817",
+                "page": "Inputs"
+            },
+            "react": {
+                "import": "import { Input } from \"@/components/base/input/input\";",
+                "component": "Input"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size",
+                    "values": {
+                        "sm": "sm",
+                        "md": "md",
+                        "lg": "lg"
+                    }
+                },
+                "Label": {
+                    "prop": "label"
+                },
+                "Hint text": {
+                    "prop": "hint"
+                },
+                "Help icon": {
+                    "prop": "tooltip"
+                },
+                "↳ Required *": {
+                    "prop": "isRequired"
+                },
+                "⬅️ Icon leading / 🔀 Icon swap": {
+                    "prop": "icon"
+                },
+                "Destructive": {
+                    "prop": "isInvalid"
+                },
+                "State": {
+                    "values": {
+                        "Disabled": "isDisabled",
+                        "Placeholder": "placeholder=…",
+                        "Filled": "defaultValue=…",
+                        "Focused": "omit"
+                    }
+                },
+                "Type": {
+                    "selectsComponent": {
+                        "Default": "Input",
+                        "Leading text / Trailing button / Leading dropdown / Trailing dropdown": "InputGroup from @/components/base/input/input-group (leadingAddon / trailingAddon)",
+                        "Payment input": "PaymentInput from @/components/base/input/input-payment",
+                        "Tags inner": "InputTags from @/components/base/input/input-tags",
+                        "Tags outer": "InputTagsOuter from @/components/base/input/input-tags-outer",
+                        "Number counter horizontal / vertical": "InputNumber from @/components/base/input/input-number",
+                        "Date and time": "InputDate from @/components/base/input/input-date",
+                        "File upload": "InputFile from @/components/base/input/input-file",
+                        "OTP": "PinInput from @/components/base/input/pin-input",
+                        "Password": "Input type=\"password\""
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Verification code input field",
+                "nodeId": "1106:66757",
+                "page": "Inputs"
+            },
+            "react": {
+                "import": "import { PinInput } from \"@/components/base/input/pin-input\";",
+                "component": "PinInput"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Digits": {
+                    "prop": "PinInput.Group maxLength",
+                    "values": {
+                        "4": "4",
+                        "6": "6"
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Textarea input field",
+                "nodeId": "1238:278",
+                "page": "Inputs"
+            },
+            "react": {
+                "import": "import { TextArea } from \"@/components/base/textarea/textarea\";",
+                "component": "TextArea"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Label": {
+                    "prop": "label"
+                },
+                "Hint text": {
+                    "prop": "hint"
+                },
+                "Destructive": {
+                    "prop": "isInvalid"
+                },
+                "State": {
+                    "values": {
+                        "Disabled": "isDisabled"
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Select",
+                "nodeId": "3281:377673",
+                "page": "Select"
+            },
+            "react": {
+                "import": "import { Select } from \"@/components/base/select/select\";",
+                "component": "Select"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Label": {
+                    "prop": "label"
+                },
+                "Hint text": {
+                    "prop": "hint"
+                },
+                "Type": {
+                    "selectsComponent": {
+                        "Default": "Select",
+                        "Icon leading": "Select icon={…}",
+                        "Avatar leading": "Select.Item avatarUrl",
+                        "Dot leading": "Select.Item icon={<Dot/>}",
+                        "Search": "Select.ComboBox",
+                        "Tags": "TagSelect from @/components/base/select/tag-select"
+                    }
+                },
+                "State": {
+                    "values": {
+                        "Disabled": "isDisabled",
+                        "Open": "omit (React Aria handles)"
+                    }
+                }
+            },
+            "example": "<Select label=\"Agent\" items={agents}>{(a) => <Select.Item id={a.id} supportingText={a.role}>{a.name}</Select.Item>}</Select>"
+        },
+        {
+            "figma": {
+                "name": "Multi-select",
+                "nodeId": "12206:577041",
+                "page": "Select"
+            },
+            "react": {
+                "import": "import { MultiSelect } from \"@/components/base/select/multi-select\";",
+                "component": "MultiSelect"
+            },
+            "props": {
+                "Size": {
+                    "prop": "size"
+                },
+                "Label": {
+                    "prop": "label"
+                },
+                "Hint text": {
+                    "prop": "hint"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Checkbox",
+                "nodeId": "1097:63652",
+                "page": "Checkboxes"
+            },
+            "react": {
+                "import": "import { Checkbox } from \"@/components/base/checkbox/checkbox\";",
+                "component": "Checkbox"
+            },
+            "props": {
+                "Type": {
+                    "selectsComponent": {
+                        "Checkbox": "Checkbox",
+                        "Radio": "RadioButton inside RadioGroup from @/components/base/radio-buttons/radio-buttons"
+                    }
+                },
+                "Size": {
+                    "prop": "size"
+                },
+                "Checked": {
+                    "prop": "isSelected / defaultSelected"
+                },
+                "Indeterminate": {
+                    "prop": "isIndeterminate"
+                },
+                "Text": {
+                    "prop": "label"
+                },
+                "Supporting text": {
+                    "prop": "hint"
+                },
+                "State": {
+                    "values": {
+                        "Disabled": "isDisabled"
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Toggle",
+                "nodeId": "1102:4208",
+                "page": "Toggles"
+            },
+            "react": {
+                "import": "import { Toggle } from \"@/components/base/toggle/toggle\";",
+                "component": "Toggle"
+            },
+            "props": {
+                "Type": {
+                    "prop": "slim",
+                    "values": {
+                        "Default": "false",
+                        "Slim": "true"
+                    }
+                },
+                "Size": {
+                    "prop": "size"
+                },
+                "Pressed": {
+                    "prop": "isSelected / defaultSelected"
+                },
+                "Text": {
+                    "prop": "label"
+                },
+                "Supporting text": {
+                    "prop": "hint"
+                },
+                "State": {
+                    "values": {
+                        "Disabled": "isDisabled"
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Horizontal tabs",
+                "nodeId": "1118:69893",
+                "page": "Tabs"
+            },
+            "react": {
+                "import": "import { Tabs, TabList, Tab, TabPanel } from \"@/components/application/tabs/tabs\";",
+                "component": "Tabs + TabList"
+            },
+            "props": {
+                "Type": {
+                    "prop": "TabList type",
+                    "values": {
+                        "Button brand": "button-brand",
+                        "Button gray": "button-gray",
+                        "Underline": "underline",
+                        "Button border": "button-border",
+                        "Button minimal": "button-minimal"
+                    }
+                },
+                "Size": {
+                    "prop": "TabList size"
+                },
+                "Full width": {
+                    "prop": "TabList fullWidth"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Vertical tabs",
+                "nodeId": "1397:9880",
+                "page": "Tabs"
+            },
+            "react": {
+                "import": "import { Tabs, TabList, Tab, TabPanel } from \"@/components/application/tabs/tabs\";",
+                "component": "Tabs orientation=\"vertical\""
+            },
+            "props": {
+                "Type": {
+                    "prop": "TabList type",
+                    "values": {
+                        "Button primary": "button-brand",
+                        "Button gray": "button-gray",
+                        "Line": "line",
+                        "Button border": "button-border",
+                        "Button minimal": "button-minimal"
+                    }
+                },
+                "Size": {
+                    "prop": "TabList size"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Modal",
+                "nodeId": "4057:415205",
+                "page": "Modals"
+            },
+            "react": {
+                "import": "import { DialogTrigger, ModalOverlay, Modal, Dialog } from \"@/components/application/modals/modal\";",
+                "component": "DialogTrigger > ModalOverlay > Modal > Dialog"
+            },
+            "props": {
+                "Type": {
+                    "note": "Each Type is a layout example. Build the content from base components inside <Dialog>; PRO has ready-made modal templates — search them with the untitledui MCP (get_page_templates / search_components \"modal <type>\")."
+                },
+                "Breakpoint": {
+                    "note": "responsive, not a prop"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Table",
+                "nodeId": "1227:110587",
+                "page": "Tables"
+            },
+            "react": {
+                "import": "import { Table, TableCard } from \"@/components/application/table/table\";",
+                "component": "TableCard.Root > Table (Table.Header/Head, Table.Body/Row/Cell)"
+            },
+            "props": {
+                "Dividers": {
+                    "note": "Alternating fills → add odd:bg-secondary on Table.Row"
+                }
+            },
+            "related": [
+                "Table header cell 1221:107933 → Table.Head",
+                "Table cell 1222:107305 → Table.Cell (content = Avatar/Badge/ProgressBar/etc.)",
+                "Table cell lead action 9400:570197 → selectionMode=\"multiple\" on Table"
+            ]
+        },
+        {
+            "figma": {
+                "name": "Sidebar navigation",
+                "nodeId": "1158:90768",
+                "page": "Application navigation"
+            },
+            "react": {
+                "import": "import { SidebarNavigationSimple } from \"@/components/application/app-navigation/sidebar-navigation/sidebar-simple\";",
+                "component": "SidebarNavigation*"
+            },
+            "props": {
+                "Type": {
+                    "selectsComponent": {
+                        "Simple": "sidebar-simple.tsx → SidebarNavigationSimple",
+                        "Dual-tier": "sidebar-dual-tier.tsx",
+                        "Slim": "sidebar-slim.tsx",
+                        "Sections dividers": "sidebar-section-dividers.tsx",
+                        "Sections subheadings": "sidebar-sections-subheadings.tsx"
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Header navigation",
+                "nodeId": "1207:1678",
+                "page": "Application navigation"
+            },
+            "react": {
+                "import": "import { HeaderNavigationBase } from \"@/components/application/app-navigation/header-navigation\";",
+                "component": "HeaderNavigationBase"
+            }
+        },
+        {
+            "figma": {
+                "name": "Status bar",
+                "nodeId": "21079:2",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { StatusBar } from \"@/components/chrome/status-bar\";",
+                "component": "StatusBar"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Home indicator",
+                "nodeId": "21079:13",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { HomeIndicator } from \"@/components/chrome/home-indicator\";",
+                "component": "HomeIndicator"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Nav bar/Large title",
+                "nodeId": "21079:15",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { NavBar } from \"@/components/chrome/nav-bar\";",
+                "component": "NavBar"
+            },
+            "props": {
+                "Title": {
+                    "prop": "title"
+                },
+                "Trailing button": {
+                    "prop": "trailing",
+                    "note": "icon element or undefined"
+                },
+                "Variant": {
+                    "prop": "variant",
+                    "values": {
+                        "Large title": "large",
+                        "Inline": "inline"
+                    }
+                },
+                "Back": {
+                    "prop": "onBack + backLabel"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Status pill",
+                "nodeId": "21080:15",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { StatusPill } from \"@/components/shopping-card/status-pill\";",
+                "component": "StatusPill"
+            },
+            "props": {
+                "Status": {
+                    "prop": "status",
+                    "values": {
+                        "Approved": "approved",
+                        "Declined": "declined",
+                        "Waiting for you": "waiting",
+                        "Active": "active",
+                        "Paused": "paused",
+                        "Off": "off",
+                        "You declined": "you-declined",
+                        "Time's up": "times-up"
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Grouped list/Row",
+                "nodeId": "21080:67",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { ListRow } from \"@/components/shopping-card/list-row\";",
+                "component": "ListRow"
+            },
+            "props": {
+                "Trailing": {
+                    "prop": "trailing",
+                    "values": {
+                        "Chevron": "chevron",
+                        "Value": "value",
+                        "Toggle": "toggle",
+                        "None": "none",
+                        "Check": "check"
+                    }
+                },
+                "Destructive": {
+                    "prop": "destructive"
+                },
+                "Title": {
+                    "prop": "title"
+                },
+                "Subtitle": {
+                    "prop": "subtitle"
+                },
+                "Value": {
+                    "prop": "value"
+                },
+                "Show subtitle": {
+                    "prop": "omit (pass subtitle or not)"
+                },
+                "Status pill": {
+                    "prop": "pill",
+                    "note": "StatusPill status value"
+                },
+                "Leading": {
+                    "prop": "icon (40 grey circle) | leading (avatar, card thumbnail)"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Tab bar",
+                "nodeId": "21081:128",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { TabBar } from \"@/components/chrome/tab-bar\";",
+                "component": "TabBar"
+            },
+            "props": {
+                "Active": {
+                    "prop": "active",
+                    "values": {
+                        "Cockpit": "cockpit",
+                        "Analytics": "analytics",
+                        "surprize": "surprize",
+                        "Bills": "bills",
+                        "Card": "card"
+                    }
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Rule row",
+                "nodeId": "21082:90",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { RuleRow } from \"@/features/shopping-card/rule-row\";",
+                "component": "RuleRow"
+            },
+            "props": {
+                "Mode": {
+                    "prop": "mode",
+                    "values": {
+                        "Review": "review",
+                        "Settings": "settings",
+                        "Result": "result",
+                        "Locked": "locked"
+                    }
+                },
+                "Result": {
+                    "prop": "result",
+                    "values": {
+                        "Pass": "pass",
+                        "Fail": "fail",
+                        "Unsure": "unsure",
+                        "None": "omit"
+                    }
+                },
+                "Label": {
+                    "prop": "label"
+                },
+                "Value": {
+                    "prop": "value"
+                },
+                "Your words": {
+                    "prop": "yourWords (text layer, no Figma property)"
+                },
+                "Fact": {
+                    "prop": "fact (text layer, no Figma property)"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Budget meter",
+                "nodeId": "21084:43",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { BudgetMeter } from \"@/features/shopping-card/budget-meter\";",
+                "component": "BudgetMeter"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Bottom sheet",
+                "nodeId": "21084:54",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { BottomSheet } from \"@/components/shopping-card/bottom-sheet\";",
+                "component": "BottomSheet"
+            },
+            "props": {
+                "Title": {
+                    "prop": "title"
+                },
+                "Body": {
+                    "prop": "description"
+                },
+                "Buttons": {
+                    "prop": "actions",
+                    "note": "two <Button size=\"lg\"> side by side, equal width"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Push banner",
+                "nodeId": "21084:78",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { PushBanner } from \"@/components/shopping-card/push-banner\";",
+                "component": "PushBanner"
+            },
+            "props": {
+                "Title": {
+                    "prop": "title"
+                },
+                "Body": {
+                    "prop": "body"
+                },
+                "App name": {
+                    "prop": "appName"
+                },
+                "Time": {
+                    "prop": "time"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Shop text (untrusted)",
+                "nodeId": "21084:87",
+                "page": "Agent on a Leash — Components"
+            },
+            "react": {
+                "import": "import { ShopTextBox } from \"@/features/shopping-card/shop-text-box\";",
+                "component": "ShopTextBox"
+            },
+            "props": {
+                "Quote": {
+                    "prop": "quote"
+                },
+                "Note": {
+                    "prop": "note"
+                }
+            }
+        },
+        {
+            "figma": {
+                "name": "Shopping card",
+                "nodeId": "55:46",
+                "page": "Agent on a Leash — Components",
+                "note": "New in prototype-spec.md §2 — create the Figma component, then fill nodeId.",
+                "file": "design file DdqoAEPoyXJZEBqOaOW2QW, page \"Components · new (move to library)\""
+            },
+            "react": {
+                "import": "import { ShoppingCard } from \"@/features/shopping-card/shopping-card\";",
+                "component": "ShoppingCard"
+            },
+            "props": {
+                "Variant": {
+                    "prop": "variant",
+                    "values": {
+                        "Default": "default",
+                        "Frozen": "frozen",
+                        "Small": "small"
+                    }
+                },
+                "Card": {
+                    "prop": "card",
+                    "values": {
+                        "Shopping": "shopping",
+                        "Main": "main"
+                    }
+                }
+            },
+            "example": "<ShoppingCard variant=\"frozen\" />"
+        },
+        {
+            "figma": {
+                "name": "Countdown ring",
+                "nodeId": "55:66",
+                "page": "Agent on a Leash — Components",
+                "note": "New in prototype-spec.md §2 — create the Figma component, then fill nodeId.",
+                "file": "design file DdqoAEPoyXJZEBqOaOW2QW, page \"Components · new (move to library)\""
+            },
+            "react": {
+                "import": "import { CountdownRing } from \"@/features/shopping-card/countdown-ring\";",
+                "component": "CountdownRing"
+            },
+            "props": {
+                "Time": {
+                    "prop": "secondsLeft",
+                    "note": "live seconds; total defaults to 120"
+                }
+            },
+            "example": "<CountdownRing secondsLeft={114} />"
+        },
+        {
+            "figma": {
+                "name": "Quick action",
+                "nodeId": "55:67",
+                "page": "Agent on a Leash — Components",
+                "note": "New in prototype-spec.md §2 — create the Figma component, then fill nodeId.",
+                "file": "design file DdqoAEPoyXJZEBqOaOW2QW, page \"Components · new (move to library)\""
+            },
+            "react": {
+                "import": "import { QuickAction } from \"@/features/shopping-card/quick-action\";",
+                "component": "QuickAction"
+            },
+            "props": {
+                "Label": {
+                    "prop": "label"
+                },
+                "🔀 Icon swap": {
+                    "prop": "icon"
+                }
+            },
+            "example": "<QuickAction icon={Snowflake01} label=\"Freeze\" />"
+        },
+        {
+            "figma": {
+                "name": "Chip",
+                "nodeId": "56:20",
+                "page": "Agent on a Leash — Components",
+                "note": "New in prototype-spec.md §2 — create the Figma component, then fill nodeId.",
+                "file": "design file DdqoAEPoyXJZEBqOaOW2QW, page \"Components · new (move to library)\""
+            },
+            "react": {
+                "import": "import { ChipGroup } from \"@/components/shopping-card/chip\";",
+                "component": "ChipGroup"
+            },
+            "props": {
+                "Selected": {
+                    "prop": "value",
+                    "note": "selected ids of the group"
+                }
+            },
+            "example": "<ChipGroup ariaLabel=\"How long\" items={[{ id: \"ongoing\", label: \"Ongoing\" }]} value={[\"ongoing\"]} onChange={set} />"
+        },
+        {
+            "figma": {
+                "name": "Agent chat bubble",
+                "nodeId": "56:50",
+                "page": "Agent on a Leash — Components",
+                "note": "New in prototype-spec.md §2 — create the Figma component, then fill nodeId.",
+                "file": "design file DdqoAEPoyXJZEBqOaOW2QW, page \"Components · new (move to library)\""
+            },
+            "react": {
+                "import": "import { ChatBubble } from \"@/features/agent-chat/chat-bubble\";",
+                "component": "ChatBubble"
+            },
+            "props": {
+                "From": {
+                    "prop": "from",
+                    "values": {
+                        "User": "user",
+                        "Agent": "agent"
+                    }
+                }
+            },
+            "example": "<ChatBubble from=\"agent\">Paid CHF 44.50 at Alpine Basket.</ChatBubble>"
+        },
+        {
+            "figma": {
+                "name": "Option card",
+                "nodeId": "56:37",
+                "file": "design file DdqoAEPoyXJZEBqOaOW2QW, page \"Components · new (move to library)\""
+            },
+            "react": {
+                "import": "import { OptionCard } from \"@/features/shopping-card/option-card\";",
+                "component": "OptionCard",
+                "note": null
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Info box",
+                "nodeId": "56:38",
+                "file": "design file DdqoAEPoyXJZEBqOaOW2QW, page \"Components · new (move to library)\""
+            },
+            "react": {
+                "import": null,
+                "component": "InfoBox",
+                "note": "not built as a separate React component yet; composed inline in the screens"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Agent row",
+                "nodeId": "60:362",
+                "file": "design file DdqoAEPoyXJZEBqOaOW2QW, page \"Components · new (move to library)\""
+            },
+            "react": {
+                "import": null,
+                "component": "AgentRow",
+                "note": "not built as a separate React component yet; composed inline in the screens"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Nav bar/Inline",
+                "nodeId": "56:3",
+                "file": "design file DdqoAEPoyXJZEBqOaOW2QW, page \"Components · new (move to library)\""
+            },
+            "react": {
+                "import": "import { NavBar } from \"@/components/chrome/nav-bar\";",
+                "component": "NavBar",
+                "note": null
+            },
+            "props": {}
+        }
+    ],
+    "foundations": {
+        "Featured icon": {
+            "react": "import { FeaturedIcon } from \"@/components/foundations/featured-icon/featured-icon\";",
+            "note": "Figma Theme → theme (light | gradient | dark | modern | modern-neue | outline), Color → color, Size → size"
+        },
+        "Tooltip": {
+            "react": "import { Tooltip, TooltipTrigger } from \"@/components/base/tooltip/tooltip\";",
+            "note": "Figma 'Supporting text' → description, 'Arrow' → arrow"
+        },
+        "Progress bar": {
+            "react": "import { ProgressBar } from \"@/components/base/progress-indicators/progress-indicators\";"
+        },
+        "Slider": {
+            "react": "import { Slider } from \"@/components/base/slider/slider\";"
+        },
+        "Tag": {
+            "react": "import { TagGroup, TagList, Tag } from \"@/components/base/tags/tags\";"
+        },
+        "Button group": {
+            "react": "import { ButtonGroup, ButtonGroupItem } from \"@/components/base/button-group/button-group\";"
+        },
+        "Pagination": {
+            "react": "import { PaginationPageDefault, PaginationCardDefault, … } from \"@/components/application/pagination/pagination\";"
+        },
+        "Empty state": {
+            "react": "import { EmptyState } from \"@/components/application/empty-state/empty-state\";"
+        },
+        "File upload": {
+            "react": "import { FileUpload } from \"@/components/application/file-upload/file-upload-base\";"
+        },
+        "Loading indicator": {
+            "react": "import { LoadingIndicator } from \"@/components/application/loading-indicator/loading-indicator\";"
+        },
+        "Slideout menu": {
+            "react": "import { … } from \"@/components/application/slideout-menus/slideout-menu\";"
+        },
+        "Date picker": {
+            "react": "import { DatePicker } from \"@/components/application/date-picker/date-picker\";"
+        },
+        "Icons": {
+            "react": "import { IconName } from \"@untitledui/icons\";",
+            "note": "Figma icon instance name (e.g. 'plus', 'arrow-right') → PascalCase export (Plus, ArrowRight). PRO styles: @untitledui-pro/icons/{duocolor,duotone,solid}."
+        }
+    },
+    "custom": [
+        {
+            "figma": {
+                "name": "Grouped list",
+                "nodeId": null,
+                "page": "Agent on a Leash — Components",
+                "note": "React-only so far — Section header + white card that holds ListRow / RuleRow. Figma: inset grouped list frame (no component yet)."
+            },
+            "react": {
+                "import": "import { GroupedList } from \"@/components/shopping-card/grouped-list\";",
+                "component": "GroupedList"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Nav bar/Button",
+                "nodeId": null,
+                "page": "Agent on a Leash — Components",
+                "note": "React-only so far — 36 circle trailing/leading button of Nav bar."
+            },
+            "react": {
+                "import": "import { NavBarButton } from \"@/components/chrome/nav-bar\";",
+                "component": "NavBarButton"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Agent avatar",
+                "nodeId": null,
+                "page": "Agent on a Leash — Components",
+                "note": "React-only so far — Agent row leading: initial on bg-tertiary + orange 8 dot (spec §2 'Agent row')."
+            },
+            "react": {
+                "import": "import { AgentAvatar } from \"@/features/shopping-card/agent-avatar\";",
+                "component": "AgentAvatar"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Option card",
+                "nodeId": null,
+                "page": "Agent on a Leash — Components",
+                "note": "React-only so far — Single-choice option cards (2.2, 2.6, 4.3). No Figma component yet."
+            },
+            "react": {
+                "import": "import { OptionCardGroup } from \"@/features/shopping-card/option-card\";",
+                "component": "OptionCardGroup"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Segmented control",
+                "nodeId": null,
+                "page": "Agent on a Leash — Components",
+                "note": "React-only so far — Yes / No segmented control (2.5). No Figma component yet."
+            },
+            "react": {
+                "import": "import { SegmentedControl } from \"@/features/shopping-card/segmented-control\";",
+                "component": "SegmentedControl"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "Face ID",
+                "nodeId": null,
+                "page": "Agent on a Leash — Components",
+                "note": "React-only so far — Fake Face ID HUD (~800 ms) + FaceIdGlyph for buttons."
+            },
+            "react": {
+                "import": "import { FaceIdOverlay } from \"@/features/shopping-card/face-id\";",
+                "component": "FaceIdOverlay"
+            },
+            "props": {}
+        },
+        {
+            "figma": {
+                "name": "App icon",
+                "nodeId": null,
+                "page": "Agent on a Leash — Components",
+                "note": "React-only so far — Viseca one app tile (white, orange ring) used in Push banner."
+            },
+            "react": {
+                "import": "import { AppIcon } from \"@/components/shopping-card/push-banner\";",
+                "component": "AppIcon"
+            },
+            "props": {}
+        }
+    ]
+}

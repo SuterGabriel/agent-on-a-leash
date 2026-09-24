@@ -1,12 +1,14 @@
 import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import type { CreateLeashRequest, TightenRequest } from "@leash/shared";
+import type { AppCreateLeashRequest, AppResolveRequest, AppTightenRequest, CreateLeashRequest, TightenRequest } from "@leash/shared";
 import { AskError } from "../asks.js";
 import { ServiceError, type LeashService } from "../leash/service.js";
 import { VisecaError } from "../viseca/api.js";
 import type { LeashEvents } from "../store.js";
+import { AppV4, type AppV4Options } from "./appV4.js";
 
 // App API from the App API contract, plus /api/* demo control. Plain node:http, no framework.
+// /v4/app/* serves the same service in the v4 app's shapes (app-web, see packages/backend/src/http/appV4.ts).
 
 type Params = Record<string, string>;
 type Handler = (ctx: { req: IncomingMessage; res: ServerResponse; params: Params; query: URLSearchParams; body: () => Promise<Record<string, unknown>> }) => Promise<unknown> | unknown;
@@ -27,9 +29,13 @@ export interface ServerOptions {
    * the agent only ever holds decision tokens (/demo/tokens/*), which can pay but never approve.
    */
   appSecret?: string | null;
+  /** The v4 app layer (/v4/app/*): card history for "Rules from your shopping", demo card and scenario. */
+  app?: AppV4Options;
 }
 
 const MAX_BODY = 1_000_000;
+/** A handler returns this for an empty 204 answer. */
+const NO_CONTENT = Symbol("no_content");
 
 function route(method: string, path: string, handler: Handler): Route {
   const keys: string[] = [];
@@ -62,6 +68,10 @@ function sameSecret(given: string, expected: string): boolean {
 }
 
 function send(res: ServerResponse, status: number, body: unknown) {
+  if (body === NO_CONTENT) {
+    res.writeHead(204).end();
+    return;
+  }
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(body));
 }
@@ -79,6 +89,7 @@ function toError(err: unknown): { status: number; code: string; message: string;
 export function createLeashServer(service: LeashService, opts: ServerOptions = {}): Server {
   const corsOrigin = opts.corsOrigin ?? "*";
   const heartbeatMs = opts.heartbeatMs ?? 15_000;
+  const app = new AppV4(service, opts.app);
 
   const routes: Route[] = [
     route("GET", "/healthz", () => ({ status: "ok", mode: service.mode })),
@@ -131,18 +142,40 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
       return service.startRun(String(b.scenario_id ?? ""), b.use_current_leash === true);
     }),
     route("GET", "/api/status", () => service.status()),
+
+    // ── v4 app contract (app-web/handover/docs/03-backend-hookup.md). Base URL for the app: http://host:port/v4 ──
+    route("GET", "/v4/app/leash/suggest", ({ query }) => app.suggest(query.get("card_id") ?? undefined, query.get("scenario_id") ?? undefined)),
+    route("POST", "/v4/app/leash", async ({ body }) => app.createLeash((await body()) as unknown as AppCreateLeashRequest)),
+    route("GET", "/v4/app/leash", () => app.leash()),
+    route("PATCH", "/v4/app/leash/rules", async ({ body }) => app.tighten((await body()) as unknown as AppTightenRequest)),
+    route("POST", "/v4/app/leash/pause", async () => (await app.pause(), NO_CONTENT)),
+    route("DELETE", "/v4/app/leash", async () => (await app.revoke(), NO_CONTENT)),
+    route("GET", "/v4/app/feed", () => app.feed()),
+    route("GET", "/v4/app/decisions/:id", ({ params }) => app.decision(params.id as string)),
+    route("POST", "/v4/app/asks/:id/resolve", async ({ params, body }) => (await app.resolve(params.id as string, (await body()) as unknown as AppResolveRequest), NO_CONTENT)),
+    route("POST", "/v4/app/suggestions/:id/accept", async ({ params }) => (await app.acceptSuggestion(params.id as string), NO_CONTENT)),
+    route("GET", "/v4/api/scenarios", () => service.scenarios()),
+    route("POST", "/v4/api/runs", async ({ body }) => app.startRun(String((await body()).scenario_id ?? ""))),
+    route("GET", "/v4/api/status", () => service.status()),
+    route("GET", "/v4/judge/decisions", ({ query }) => service.judge(query.get("run_id") ?? undefined)),
   ];
 
   const clients = new Set<ServerResponse>();
+  const v4Clients = new Set<ServerResponse>();
   const forward = <K extends keyof LeashEvents>(event: K) => {
     service.bus.on(event, ((payload: LeashEvents[K][0]) => {
       const frame = `event: ${String(event)}\ndata: ${JSON.stringify(payload)}\n\n`;
       for (const c of clients) c.write(frame);
+      // The v4 app hears each purchase once, in its own envelopes; the frame is built even with no client listening
+      // so the "already sent" bookkeeping stays right across reconnects.
+      const v4 = app.streamFrame(event, payload);
+      if (v4) for (const c of v4Clients) c.write(v4);
     }) as never);
   };
   (["decision", "ask", "ask_expired", "leash_changed", "token"] as const).forEach(forward);
   const heartbeat = setInterval(() => {
     for (const c of clients) c.write(": ping\n\n");
+    for (const c of v4Clients) c.write(": ping\n\n");
   }, heartbeatMs);
   heartbeat.unref();
 
@@ -165,6 +198,13 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
       req.on("close", () => clients.delete(res));
       return;
     }
+    if (req.method === "GET" && url.pathname === "/v4/app/stream") {
+      res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
+      res.write(`retry: 3000\n: connected\n\n`);
+      v4Clients.add(res);
+      req.on("close", () => v4Clients.delete(res));
+      return;
+    }
 
     const candidates = routes.filter((r) => r.pattern.test(url.pathname));
     const match = candidates.find((r) => r.method === req.method);
@@ -172,7 +212,7 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
       send(res, candidates.length ? 405 : 404, { error: { code: candidates.length ? "method_not_allowed" : "not_found", message: `${req.method} ${url.pathname}` } });
       return;
     }
-    if (opts.appSecret && match.method !== "GET" && url.pathname.startsWith("/app/")) {
+    if (opts.appSecret && match.method !== "GET" && (url.pathname.startsWith("/app/") || url.pathname.startsWith("/v4/app/"))) {
       const given = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1] ?? "";
       if (!sameSecret(given, opts.appSecret)) {
         send(res, 401, { error: { code: "unauthorized", message: "Only your app can change the leash or answer a purchase." } });
@@ -183,7 +223,7 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
     const params = Object.fromEntries(match.keys.map((k, i) => [k, decodeURIComponent(values[i] ?? "")]));
     try {
       const result = await match.handler({ req, res, params, query: url.searchParams, body: () => readJson(req) });
-      send(res, req.method === "POST" && url.pathname === "/api/runs" ? 202 : 200, result);
+      send(res, req.method === "POST" && (url.pathname === "/api/runs" || url.pathname === "/v4/api/runs") ? 202 : 200, result);
     } catch (err) {
       const e = toError(err);
       send(res, e.status, { error: { code: e.code, message: e.message, ...(e.details ? { details: e.details } : {}) } });
@@ -192,6 +232,7 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
   server.on("close", () => {
     clearInterval(heartbeat);
     for (const c of clients) c.end();
+    for (const c of v4Clients) c.end();
   });
   return server;
 }

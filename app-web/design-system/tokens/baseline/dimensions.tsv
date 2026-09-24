@@ -1,0 +1,80 @@
+#collection 2. Radius	Mode 1
+radius-none	F	0
+radius-xxs	F	2
+radius-xs	F	4
+radius-sm	F	6
+radius-md	F	8
+radius-lg	F	10
+radius-xl	F	12
+radius-2xl	F	16
+radius-3xl	F	20
+radius-4xl	F	24
+radius-full	F	9999
+#collection 3. Spacing	Mode 1
+spacing-none	F	@Spacing/0 (0px)
+spacing-xxs	F	@Spacing/0․5 (2px)
+spacing-xs	F	@Spacing/1 (4px)
+spacing-sm	F	@Spacing/1․5 (6px)
+spacing-md	F	@Spacing/2 (8px)
+spacing-lg	F	@Spacing/3 (12px)
+spacing-xl	F	@Spacing/4 (16px)
+spacing-2xl	F	@Spacing/5 (20px)
+spacing-3xl	F	@Spacing/6 (24px)
+spacing-4xl	F	@Spacing/8 (32px)
+spacing-5xl	F	@Spacing/10 (40px)
+spacing-6xl	F	@Spacing/12 (48px)
+spacing-7xl	F	@Spacing/16 (64px)
+spacing-8xl	F	@Spacing/20 (80px)
+spacing-9xl	F	@Spacing/24 (96px)
+spacing-10xl	F	@Spacing/32 (128px)
+spacing-11xl	F	@Spacing/40 (160px)
+#collection 4. Widths	Mode 1
+width-xxs	F	@Spacing/80 (320px)
+width-xs	F	@Spacing/96 (384px)
+width-sm	F	@Spacing/120 (480px)
+width-md	F	@Spacing/140 (560px)
+width-lg	F	@Spacing/160 (640px)
+width-xl	F	@Spacing/192 (768px)
+width-2xl	F	@Spacing/256 (1,024px)
+width-3xl	F	@Spacing/320 (1,280px)
+width-4xl	F	@Spacing/360 (1,440px)
+width-5xl	F	@Spacing/400 (1,600px)
+width-6xl	F	@Spacing/480 (1,920px)
+paragraph-max-width	F	@Spacing/180 (720px)
+#collection 5. Containers	Value
+container-padding-mobile	F	@Spacing/4 (16px)
+container-padding-desktop	F	@Spacing/8 (32px)
+container-max-width-desktop	F	@Spacing/320 (1,280px)
+#collection 6. Typography	Value
+Font family/font-family-display	S	Inter
+Font family/font-family-body	S	Inter
+Font weight/regular	S	Regular
+Font weight/regular-italic	S	Regular italic
+Font weight/medium	S	Medium
+Font weight/medium-italic	S	Medium italic
+Font weight/semibold	S	Semibold
+Font weight/semibold-italic	S	Semibold italic
+Font weight/bold	S	Bold
+Font weight/bold-italic	S	Bold italic
+Font size/text-xs	F	12
+Line height/text-xs	F	18
+Line height/text-sm	F	20
+Line height/text-md	F	24
+Line height/text-lg	F	28
+Line height/text-xl	F	30
+Line height/display-xs	F	32
+Line height/display-sm	F	38
+Line height/display-md	F	44
+Line height/display-lg	F	60
+Line height/display-xl	F	72
+Line height/display-2xl	F	90
+Font size/text-sm	F	14
+Font size/text-md	F	16
+Font size/text-lg	F	18
+Font size/text-xl	F	20
+Font size/display-xs	F	24
+Font size/display-sm	F	30
+Font size/display-md	F	36
+Font size/display-lg	F	48
+Font size/display-xl	F	60
+Font size/display-2xl	F	72

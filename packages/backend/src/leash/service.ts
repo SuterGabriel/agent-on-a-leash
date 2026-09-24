@@ -42,6 +42,21 @@ export class ServiceError extends Error {
   }
 }
 
+/** What a new leash carries over from the customer's card: rules, learned rules, uncertainty policy. */
+export interface CardCarry {
+  rules: LeashRule[];
+  learned: LeashRule[];
+  uncertainty_policy: UncertaintyPolicy;
+}
+
+const POLICY_RANK: Record<UncertaintyPolicy, number> = { decline: 2, ask: 1, approve: 0 };
+
+/** Two policies meet: the stricter one applies (decline > ask > approve). */
+export function strictestPolicy(a: UncertaintyPolicy, b?: UncertaintyPolicy): UncertaintyPolicy {
+  if (!b) return a;
+  return POLICY_RANK[b] > POLICY_RANK[a] ? b : a;
+}
+
 /**
  * Creates a mandate draft. Viseca's format for guidance/open_questions is undocumented;
  * if it rejects them (422), the leash is created without them rather than not at all.
@@ -151,7 +166,7 @@ export class LeashService {
   private historyCache = new Map<string, Map<string, { name: string; count: number }>>();
   private seq = 0;
   private readonly api: VisecaApi;
-  private readonly pack: DataPack;
+  readonly pack: DataPack;
   private readonly inner: Engine;
   private readonly log: (line: string) => void;
   private readonly scenarioList: Map<string, ScenarioInfo>;
@@ -225,12 +240,18 @@ export class LeashService {
     return compile(instruction);
   }
 
-  async createLeash(req: CreateLeashRequest): Promise<LeashView> {
+  /**
+   * `card`: the customer's card rules to keep under the new instruction (the agent's task). Task and card rules
+   * travel together as hard_rules; the engine takes the stricter of the two, so "stricter wins" needs no merge logic.
+   */
+  async createLeash(req: CreateLeashRequest, card?: CardCarry): Promise<LeashView> {
     if (!req.confirmed) throw new ServiceError(400, "confirmation_required", "Confirm with Face ID to activate the leash.");
     const parsed = this.parse(req.instruction);
     const answers = req.answers ?? {};
-    const rules = applyAnswers(parsed, answers);
-    const uncertainty = req.uncertainty_policy ?? parsed.uncertainty_policy;
+    const taskRules = applyAnswers(parsed, answers);
+    const cardRules = card ? card.rules.map((r) => ({ ...structuredClone(r), id: r.id.startsWith("card_") ? r.id : `card_${r.id}` })) : [];
+    const rules = card ? [...taskRules, ...cardRules] : taskRules;
+    const uncertainty = strictestPolicy(req.uncertainty_policy ?? parsed.uncertainty_policy, card?.uncertainty_policy);
 
     // Loosening = a new leash. The old one is revoked first so only one leash is ever active.
     if (this.leash && !this.leash.revoked) {
@@ -243,7 +264,9 @@ export class LeashService {
       parsed,
       answers,
       rules,
-      learned: [],
+      learned: card ? card.learned.map((r) => structuredClone(r)) : [],
+      card_rules: card ? cardRules : rules,
+      task: card ? { instruction: parsed.instruction, rules: taskRules } : null,
       uncertainty_policy: uncertainty,
       revoked: false,
       paused_until: null,
@@ -285,6 +308,7 @@ export class LeashService {
         known_shops: [],
         suggestions: [],
         paused_until: null,
+        task: null,
       };
     }
     const status = leash.revoked ? "revoked" : this.isPaused(leash) ? "paused" : "active";
@@ -306,7 +330,31 @@ export class LeashService {
       known_shops: this.knownShops(leash),
       suggestions: [...this.suggestions.values()].filter((s) => s.status === "open"),
       paused_until: status === "paused" ? new Date(leash.paused_until as number).toISOString() : null,
+      task: leash.task,
     };
+  }
+
+  /** What a new leash keeps from this one: the card rules, learned rules and the uncertainty policy. */
+  cardCarry(): CardCarry | null {
+    const leash = this.leash;
+    if (!leash || leash.revoked) return null;
+    return { rules: leash.card_rules, learned: leash.learned, uncertainty_policy: leash.uncertainty_policy };
+  }
+
+  /** A merchant by id or (case-insensitive) name, from the data pack, the shops known to this leash or past decisions. */
+  findMerchant(idOrName: string): { merchant_id: string; name: string } | null {
+    const byId = this.pack.merchants.get(idOrName);
+    if (byId) return { merchant_id: idOrName, name: byId.merchant_name as string };
+    const wanted = idOrName.trim().toLowerCase();
+    for (const [id, m] of this.pack.merchants) if ((m.merchant_name as string).toLowerCase() === wanted) return { merchant_id: id, name: m.merchant_name as string };
+    for (const s of this.leash ? this.knownShops(this.leash) : []) if (s.name.toLowerCase() === wanted) return { merchant_id: s.merchant_id, name: s.name };
+    for (const d of this.store.list()) if (d.merchant.name.toLowerCase() === wanted) return { merchant_id: d.merchant.id, name: d.merchant.name };
+    return null;
+  }
+
+  /** The scenario a run replays, if we started it. */
+  scenarioOfRun(runId: string): string | undefined {
+    return this.runs.get(runId)?.scenario_id;
   }
 
   /** The tightest period budget, or null if the leash has none. */
@@ -356,6 +404,7 @@ export class LeashService {
       const rule = this.tightenRule(leash, req, now);
       await this.addHardRule(leash, rule);
       if (req.type === "lower_order_limit") leash.rules = leash.rules.filter((r) => r.key !== RULE_KEYS.order_limit);
+      if (req.type === "lower_period_budget") leash.rules = leash.rules.filter((r) => r.key !== RULE_KEYS.period_budget);
       leash.rules.push(rule);
     }
     this.worker.invalidateMandate(leash.mandate_id);
@@ -366,11 +415,22 @@ export class LeashService {
   private tightenRule(leash: LeashState, req: Exclude<TightenRequest, { type: "unsure_decline" }>, now: string): LeashRule {
     const base = { source: "you" as const, your_words: null, added_at: now };
     if (req.type === "lower_order_limit") {
-      const value = Number(req.value);
+      // Only a number or a numeric string is an amount: an array or a boolean would coerce to 1 with a bare Number().
+      const value = typeof req.value === "number" || typeof req.value === "string" ? Number(req.value) : Number.NaN;
       const current = leash.rules.filter((r) => r.key === RULE_KEYS.order_limit).map((r) => Number(r.hard_rule?.value));
       if (!(value > 0)) throw new ServiceError(400, "invalid_limit", "The limit must be a positive amount.");
       if (current.length > 0 && value >= Math.min(...current)) throw new ServiceError(400, "not_tighter", "That would loosen your leash. Start a new leash to loosen it.");
       return { ...base, id: this.nextId("r_order_limit"), key: RULE_KEYS.order_limit, label: `Each order CHF ${value} or less`, group: "limits", hard_rule: { field: RULE_FIELDS.amount, operator: "<=", value, currency: "CHF", scope: "purchase" } };
+    }
+    if (req.type === "lower_period_budget") {
+      const value = typeof req.value === "number" || typeof req.value === "string" ? Number(req.value) : Number.NaN;
+      const existing = leash.rules.filter((r) => r.key === RULE_KEYS.period_budget);
+      const days = req.period_days ?? existing[0]?.hard_rule?.period_days ?? 30;
+      const current = existing.map((r) => Number(r.hard_rule?.value));
+      if (!(value > 0)) throw new ServiceError(400, "invalid_limit", "The budget must be a positive amount.");
+      if (!(days > 0 && Number.isInteger(days))) throw new ServiceError(400, "invalid_period", "The period must be a whole number of days.");
+      if (current.length > 0 && value >= Math.min(...current)) throw new ServiceError(400, "not_tighter", "That would loosen your leash. Start a new leash to loosen it.");
+      return { ...base, id: this.nextId("r_period_budget"), key: RULE_KEYS.period_budget, label: `Any ${days} days: CHF ${value} or less in total`, group: "limits", hard_rule: { field: RULE_FIELDS.amount, operator: "<=", value, currency: "CHF", scope: "period", period_days: days } };
     }
     if (req.type === "block_shop") {
       if (!req.merchant_id) throw new ServiceError(400, "merchant_required", "Which shop should be blocked?");
@@ -584,12 +644,16 @@ export class LeashService {
 
   // ── Demo control and judge view ────────────────────────────────────────────────────────────────
 
-  async startRun(scenarioId: string, useCurrentLeash = false): Promise<RunRecord> {
+  /**
+   * `keepCardRules`: the scenario's instruction becomes the agent's task on top of the customer's current card rules
+   * (v4 app flow: the card is set up first, the task arrives with the run). Without it the scenario replaces the leash.
+   */
+  async startRun(scenarioId: string, useCurrentLeash = false, keepCardRules = false): Promise<RunRecord> {
     const scenario = this.scenarioList.get(scenarioId);
     if (!scenario) throw new ServiceError(404, "scenario_not_found", `No scenario ${scenarioId}.`);
     const running = [...this.runs.values()].find((r) => r.state === "running");
     if (running) throw new ServiceError(409, "run_in_progress", `Run ${running.run_id} is still running.`);
-    if (!useCurrentLeash) await this.createLeash({ instruction: scenario.cardholder_instruction, confirmed: true });
+    if (!useCurrentLeash) await this.createLeash({ instruction: scenario.cardholder_instruction, confirmed: true }, keepCardRules ? (this.cardCarry() ?? undefined) : undefined);
     const leash = this.requireActive();
     // Offline the data pack knows the scenario's card; live it is read from the first purchase.
     leash.card_id = scenarioAttempts(this.pack, scenarioId)[0]?.card_id ?? null;

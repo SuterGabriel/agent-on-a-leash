@@ -1,0 +1,19 @@
+name: Design tokens in sync
+
+on:
+    pull_request:
+    push:
+        branches: [main]
+
+jobs:
+    tokens:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+            - run: npm ci
+            - name: Generated token files match the Figma export
+              run: npm run tokens:check
+            - run: npm run build

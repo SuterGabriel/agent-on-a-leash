@@ -39,5 +39,6 @@
     "packages/backend/test/performance.test.ts",
     "packages/backend/test/security-hardening.test.ts",
     "packages/backend/test/helpers/**",
+    "packages/backend/test/app-v4.test.ts"
   ]
 }

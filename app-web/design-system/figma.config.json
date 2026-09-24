@@ -1,0 +1,49 @@
+{
+    "fileKey": "MevCCvqM8CUuXz9b8D2yVZ",
+    "fileUrl": "https://www.figma.com/design/MevCCvqM8CUuXz9b8D2yVZ/",
+    "_files": "Two files. 'fileKey' = the LIBRARY (Untitled UI PRO copy: variables + components). Screens live in 'designFile', which uses the library once it is published.",
+    "designFile": {
+        "fileKey": "DdqoAEPoyXJZEBqOaOW2QW",
+        "fileUrl": "https://www.figma.com/design/DdqoAEPoyXJZEBqOaOW2QW",
+        "pages": {
+            "cover": "0:1",
+            "brief-flows": "1:2",
+            "wireframes": "1:3",
+            "ui-mobile": "1:4",
+            "ui-web-judge": "1:5",
+            "prototype": "1:6",
+            "pitch": "1:7"
+        }
+    },
+    "library": "Untitled UI Figma PRO VARIABLES v8.0 (Kim's copy — the single design source for this repo)",
+    "reactLibraryVersion": "8",
+    "variableCollections": {
+        "_Primitives": "raw palettes + spacing scale (hidden from publishing). Never used directly on layers.",
+        "1. Color modes": "semantic colors, modes Light mode / Dark mode → src/styles/theme.css + figma-tokens.css",
+        "2. Radius": "radius-* → Tailwind rounded-* (names shifted, see design-system/tokens/TOKENS.md)",
+        "3. Spacing": "spacing-* → Tailwind spacing steps (4px grid)",
+        "4. Widths": "width-* → max-w-*",
+        "5. Containers": "container padding / max width",
+        "6. Typography": "font family, weights, sizes, line heights → --font-*, --text-*"
+    },
+    "pages": {
+        "variables-docs": "6520:67419",
+        "colors": "1023:36350",
+        "typography": "18:1951",
+        "buttons": "1:1183",
+        "badges": "12:539",
+        "avatars": "18:1350",
+        "inputs": "85:1269",
+        "select": "11132:11643",
+        "checkboxes": "1097:63638",
+        "toggles": "1102:4631",
+        "tabs": "43:0",
+        "modals": "172:4293",
+        "tables": "214:0",
+        "app-navigation": "82:1862"
+    },
+    "projectPages": {
+        "_note": "Product components live in the LIBRARY file on this page (so they're published with the rest). Screens live in designFile.",
+        "components": "21045:861"
+    }
+}

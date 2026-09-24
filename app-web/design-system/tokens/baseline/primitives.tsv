@@ -1,0 +1,344 @@
+#collection _Primitives	Style
+Colors/Base/white	C	#ffffff
+Colors/Neutral/50	C	#fafafa
+Colors/Neutral (alpha)/50	C	#fffffff7
+Colors/Neutral (alpha)/100	C	#fffffff5
+Colors/Neutral (alpha)/200	C	#ffffffe5
+Colors/Neutral (alpha)/300	C	#ffffffd1
+Colors/Neutral (alpha)/400	C	#ffffff9e
+Colors/Neutral (alpha)/500	C	#ffffff6e
+Colors/Neutral (alpha)/600	C	#ffffff4a
+Colors/Neutral (alpha)/700	C	#ffffff38
+Colors/Neutral (alpha)/800	C	#ffffff1f
+Colors/Neutral (alpha)/900	C	#ffffff0d
+Colors/Neutral (alpha)/950	C	#ffffff00
+Colors/Neutral/100	C	#f5f5f5
+Colors/Neutral/200	C	#e5e5e5
+Colors/Neutral/300	C	#d4d4d4
+Colors/Neutral/400	C	#a3a3a3
+Colors/Neutral/500	C	#737373
+Colors/Neutral/600	C	#525252
+Colors/Neutral/700	C	#404040
+Colors/Neutral/800	C	#262626
+Colors/Neutral/900	C	#171717
+Colors/Neutral/950	C	#0a0a0a
+Colors/Base/black	C	#000000
+Colors/Base/transparent	C	#ffffff00
+Colors/Brand/50	C	#f9f5ff
+Colors/Brand/100	C	#f4ebff
+Colors/Brand/200	C	#e9d7fe
+Colors/Brand/300	C	#d6bbfb
+Colors/Brand/400	C	#b692f6
+Colors/Brand/500	C	#9e77ed
+Colors/Brand/600	C	#7f56d9
+Colors/Brand/700	C	#6941c6
+Colors/Brand/800	C	#53389e
+Colors/Brand/900	C	#42307d
+Colors/Brand/950	C	#2c1c5f
+Colors/Red/50	C	#fef2f2
+Colors/Red/100	C	#fee2e2
+Colors/Red/200	C	#fecaca
+Colors/Red/300	C	#fca5a5
+Colors/Red/400	C	#f87171
+Colors/Red/500	C	#ef4444
+Colors/Red/600	C	#dc2626
+Colors/Red/700	C	#b91c1c
+Colors/Red/800	C	#991b1b
+Colors/Red/900	C	#7f1d1d
+Colors/Red/950	C	#450a0a
+Colors/Orange/50	C	#fff7ed
+Colors/Orange/100	C	#ffedd5
+Colors/Orange/200	C	#fed7aa
+Colors/Orange/300	C	#fdba74
+Colors/Orange/400	C	#fb923c
+Colors/Orange/500	C	#f97316
+Colors/Orange/600	C	#ea580c
+Colors/Orange/700	C	#c2410c
+Colors/Orange/800	C	#9a3412
+Colors/Orange/900	C	#7c2d12
+Colors/Orange/950	C	#431407
+Colors/Amber/50	C	#fffbeb
+Colors/Amber/100	C	#fef3c7
+Colors/Amber/200	C	#fde68a
+Colors/Amber/300	C	#fcd34d
+Colors/Amber/400	C	#fbbf24
+Colors/Amber/500	C	#f59e0b
+Colors/Amber/600	C	#d97706
+Colors/Amber/700	C	#b45309
+Colors/Amber/800	C	#92400e
+Colors/Amber/900	C	#78350f
+Colors/Amber/950	C	#451a03
+Colors/Yellow/50	C	#fefce8
+Colors/Yellow/100	C	#fef9c3
+Colors/Yellow/200	C	#fef08a
+Colors/Yellow/300	C	#fde047
+Colors/Yellow/400	C	#facc15
+Colors/Yellow/500	C	#eab308
+Colors/Yellow/600	C	#ca8a04
+Colors/Yellow/700	C	#a16207
+Colors/Yellow/800	C	#854d0e
+Colors/Yellow/900	C	#713f12
+Colors/Yellow/950	C	#422006
+Colors/Lime/50	C	#f7fee7
+Colors/Lime/100	C	#ecfccb
+Colors/Lime/200	C	#d9f99d
+Colors/Lime/300	C	#bef264
+Colors/Lime/400	C	#a3e635
+Colors/Lime/500	C	#84cc16
+Colors/Lime/600	C	#65a30d
+Colors/Lime/700	C	#4d7c0f
+Colors/Lime/800	C	#3f6212
+Colors/Lime/900	C	#365314
+Colors/Lime/950	C	#1a2e05
+Colors/Green/50	C	#f0fdf4
+Colors/Green/100	C	#dcfce7
+Colors/Green/200	C	#bbf7d0
+Colors/Green/300	C	#86efac
+Colors/Green/400	C	#4ade80
+Colors/Green/500	C	#22c55e
+Colors/Green/600	C	#16a34a
+Colors/Green/700	C	#15803d
+Colors/Green/800	C	#166534
+Colors/Green/900	C	#14532d
+Colors/Green/950	C	#052e16
+Colors/Emerald/50	C	#ecfdf5
+Colors/Emerald/100	C	#d1fae5
+Colors/Emerald/200	C	#a7f3d0
+Colors/Emerald/300	C	#6ee7b7
+Colors/Emerald/400	C	#34d399
+Colors/Emerald/500	C	#10b981
+Colors/Emerald/600	C	#059669
+Colors/Emerald/700	C	#047857
+Colors/Emerald/800	C	#065f46
+Colors/Emerald/900	C	#064e3b
+Colors/Emerald/950	C	#022c22
+Colors/Teal/50	C	#f0fdfa
+Colors/Teal/100	C	#ccfbf1
+Colors/Teal/200	C	#99f6e4
+Colors/Teal/300	C	#5eead4
+Colors/Teal/400	C	#2dd4bf
+Colors/Teal/500	C	#14b8a6
+Colors/Teal/600	C	#0d9488
+Colors/Teal/700	C	#0f766e
+Colors/Teal/800	C	#115e59
+Colors/Teal/900	C	#134e4a
+Colors/Teal/950	C	#042f2e
+Colors/Cyan/50	C	#ecfeff
+Colors/Cyan/100	C	#cffafe
+Colors/Cyan/200	C	#a5f3fc
+Colors/Cyan/300	C	#67e8f9
+Colors/Cyan/400	C	#22d3ee
+Colors/Cyan/500	C	#06b6d4
+Colors/Cyan/600	C	#0891b2
+Colors/Cyan/700	C	#0e7490
+Colors/Cyan/800	C	#155e75
+Colors/Cyan/900	C	#164e63
+Colors/Cyan/950	C	#083344
+Colors/Sky/50	C	#f0f9ff
+Colors/Sky/100	C	#e0f2fe
+Colors/Sky/200	C	#bae6fd
+Colors/Sky/300	C	#7dd3fc
+Colors/Sky/400	C	#38bdf8
+Colors/Sky/500	C	#0ea5e9
+Colors/Sky/600	C	#0284c7
+Colors/Sky/700	C	#0369a1
+Colors/Sky/800	C	#075985
+Colors/Sky/900	C	#0c4a6e
+Colors/Sky/950	C	#082f49
+Colors/Blue/50	C	#eff6ff
+Colors/Blue/100	C	#dbeafe
+Colors/Blue/200	C	#bfdbfe
+Colors/Blue/300	C	#93c5fd
+Colors/Blue/400	C	#60a5fa
+Colors/Blue/500	C	#3b82f6
+Colors/Blue/600	C	#2563eb
+Colors/Blue/700	C	#1d4ed8
+Colors/Blue/800	C	#1e40af
+Colors/Blue/900	C	#1e3a8a
+Colors/Blue/950	C	#172554
+Colors/Indigo/50	C	#eef2ff
+Colors/Indigo/100	C	#e0e7ff
+Colors/Indigo/200	C	#c7d2fe
+Colors/Indigo/300	C	#a5b4fc
+Colors/Indigo/400	C	#818cf8
+Colors/Indigo/500	C	#6366f1
+Colors/Indigo/600	C	#4f46e5
+Colors/Indigo/700	C	#4338ca
+Colors/Indigo/800	C	#3730a3
+Colors/Indigo/900	C	#312e81
+Colors/Indigo/950	C	#1e1b4b
+Colors/Violet/50	C	#f5f3ff
+Colors/Violet/100	C	#ede9fe
+Colors/Violet/200	C	#ddd6fe
+Colors/Violet/300	C	#c4b5fd
+Colors/Violet/400	C	#a78bfa
+Colors/Violet/500	C	#8b5cf6
+Colors/Violet/600	C	#7c3aed
+Colors/Violet/700	C	#6d28d9
+Colors/Violet/800	C	#5b21b6
+Colors/Violet/900	C	#4c1d95
+Colors/Violet/950	C	#2e1065
+Colors/Purple/50	C	#faf5ff
+Colors/Purple/100	C	#f3e8ff
+Colors/Purple/200	C	#e9d5ff
+Colors/Purple/300	C	#d8b4fe
+Colors/Purple/400	C	#c084fc
+Colors/Purple/500	C	#a855f7
+Colors/Purple/600	C	#9333ea
+Colors/Purple/700	C	#7e22ce
+Colors/Purple/800	C	#6b21a8
+Colors/Purple/900	C	#581c87
+Colors/Purple/950	C	#3b0764
+Colors/Fuchsia/50	C	#fdf4ff
+Colors/Fuchsia/100	C	#fae8ff
+Colors/Fuchsia/200	C	#f5d0fe
+Colors/Fuchsia/300	C	#f0abfc
+Colors/Fuchsia/400	C	#e879f9
+Colors/Fuchsia/500	C	#d946ef
+Colors/Fuchsia/600	C	#c026d3
+Colors/Fuchsia/700	C	#a21caf
+Colors/Fuchsia/800	C	#86198f
+Colors/Fuchsia/900	C	#701a75
+Colors/Fuchsia/950	C	#4a044e
+Colors/Pink/50	C	#fdf2f8
+Colors/Pink/100	C	#fce7f3
+Colors/Pink/200	C	#fbcfe8
+Colors/Pink/300	C	#f9a8d4
+Colors/Pink/400	C	#f472b6
+Colors/Pink/500	C	#ec4899
+Colors/Pink/600	C	#db2777
+Colors/Pink/700	C	#be185d
+Colors/Pink/800	C	#9d174d
+Colors/Pink/900	C	#831843
+Colors/Pink/950	C	#500724
+Colors/Rose/50	C	#fff1f2
+Colors/Rose/100	C	#ffe4e6
+Colors/Rose/200	C	#fecdd3
+Colors/Rose/300	C	#fda4af
+Colors/Rose/400	C	#fb7185
+Colors/Rose/500	C	#f43f5e
+Colors/Rose/600	C	#e11d48
+Colors/Rose/700	C	#be123c
+Colors/Rose/800	C	#9f1239
+Colors/Rose/900	C	#881337
+Colors/Rose/950	C	#4c0519
+Colors/Slate/50	C	#f8fafc
+Colors/Slate/100	C	#f1f5f9
+Colors/Slate/200	C	#e2e8f0
+Colors/Slate/300	C	#cbd5e1
+Colors/Slate/400	C	#94a3b8
+Colors/Slate/500	C	#64748b
+Colors/Slate/600	C	#475569
+Colors/Slate/700	C	#334155
+Colors/Slate/800	C	#1e293b
+Colors/Slate/900	C	#0f172a
+Colors/Slate/950	C	#020617
+Colors/Gray/50	C	#f9fafb
+Colors/Zinc/50	C	#fafafa
+Colors/Zinc/100	C	#f4f4f5
+Colors/Zinc/200	C	#e4e4e7
+Colors/Zinc/300	C	#d4d4d8
+Colors/Zinc/400	C	#a1a1aa
+Colors/Zinc/500	C	#71717a
+Colors/Zinc/600	C	#52525b
+Colors/Zinc/700	C	#3f3f46
+Colors/Zinc/800	C	#27272a
+Colors/Zinc/900	C	#18181b
+Colors/Zinc/950	C	#09090b
+Colors/Gray/100	C	#f3f4f6
+Colors/Gray/200	C	#e5e7eb
+Colors/Gray/300	C	#d1d5db
+Colors/Gray/400	C	#9ca3af
+Colors/Gray/500	C	#6b7280
+Colors/Gray/600	C	#4b5563
+Colors/Gray/700	C	#374151
+Colors/Gray/800	C	#1f2937
+Colors/Gray/900	C	#111827
+Colors/Gray/950	C	#030712
+Colors/Stone/50	C	#fafaf9
+Colors/Stone/100	C	#f5f5f4
+Colors/Stone/200	C	#e7e5e4
+Colors/Stone/300	C	#d6d3d1
+Colors/Stone/400	C	#a8a29e
+Colors/Stone/500	C	#78716c
+Colors/Stone/600	C	#57534e
+Colors/Stone/700	C	#44403c
+Colors/Stone/800	C	#292524
+Colors/Stone/900	C	#1c1917
+Colors/Stone/950	C	#0c0a09
+Spacing/0 (0px)	F	0
+Spacing/0․5 (2px)	F	2
+Spacing/1 (4px)	F	4
+Spacing/1․5 (6px)	F	6
+Spacing/2 (8px)	F	8
+Spacing/3 (12px)	F	12
+Spacing/4 (16px)	F	16
+Spacing/5 (20px)	F	20
+Spacing/6 (24px)	F	24
+Spacing/8 (32px)	F	32
+Spacing/10 (40px)	F	40
+Spacing/12 (48px)	F	48
+Spacing/16 (64px)	F	64
+Spacing/20 (80px)	F	80
+Spacing/24 (96px)	F	96
+Spacing/32 (128px)	F	128
+Spacing/40 (160px)	F	160
+Spacing/48 (192px)	F	192
+Spacing/56 (224px)	F	224
+Spacing/64 (256px)	F	256
+Spacing/80 (320px)	F	320
+Spacing/96 (384px)	F	384
+Spacing/120 (480px)	F	480
+Spacing/140 (560px)	F	560
+Spacing/160 (640px)	F	640
+Spacing/180 (720px)	F	720
+Spacing/192 (768px)	F	768
+Spacing/256 (1,024px)	F	1024
+Spacing/320 (1,280px)	F	1280
+Spacing/360 (1,440px)	F	1440
+Spacing/400 (1,600px)	F	1600
+Spacing/480 (1,920px)	F	1920
+Colors/Taupe/50	C	#fbfaf9
+Colors/Taupe/100	C	#f3f1f1
+Colors/Taupe/200	C	#e8e4e3
+Colors/Taupe/300	C	#d8d2d0
+Colors/Taupe/400	C	#aba09c
+Colors/Taupe/500	C	#7c6d67
+Colors/Taupe/600	C	#5b4f4b
+Colors/Taupe/700	C	#473c39
+Colors/Taupe/800	C	#2b2422
+Colors/Taupe/900	C	#1d1816
+Colors/Taupe/950	C	#0c0a09
+Colors/Mauve/50	C	#fafafa
+Colors/Mauve/100	C	#f3f1f3
+Colors/Mauve/200	C	#e7e4e7
+Colors/Mauve/300	C	#d7d0d7
+Colors/Mauve/400	C	#a89ea9
+Colors/Mauve/500	C	#79697b
+Colors/Mauve/600	C	#594c5b
+Colors/Mauve/700	C	#463947
+Colors/Mauve/800	C	#2a212c
+Colors/Mauve/900	C	#1d161e
+Colors/Mauve/950	C	#0c090c
+Colors/Mist/50	C	#f9fbfb
+Colors/Mist/100	C	#f1f3f3
+Colors/Mist/200	C	#e3e7e8
+Colors/Mist/300	C	#d0d6d8
+Colors/Mist/400	C	#9ca8ab
+Colors/Mist/500	C	#67787c
+Colors/Mist/600	C	#4b585b
+Colors/Mist/700	C	#394447
+Colors/Mist/800	C	#22292b
+Colors/Mist/900	C	#161b1d
+Colors/Mist/950	C	#090b0c
+Colors/Olive/50	C	#fbfbf9
+Colors/Olive/100	C	#f4f4f0
+Colors/Olive/200	C	#e8e8e3
+Colors/Olive/300	C	#d8d8d0
+Colors/Olive/400	C	#abab9c
+Colors/Olive/500	C	#7c7c67
+Colors/Olive/600	C	#5b5b4b
+Colors/Olive/700	C	#474739
+Colors/Olive/800	C	#2b2b22
+Colors/Olive/900	C	#1d1d16
+Colors/Olive/950	C	#0c0c09
