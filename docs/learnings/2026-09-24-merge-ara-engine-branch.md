@@ -39,3 +39,20 @@ nights only, and writes `Stay in Lyon` / `3 nights` chips with hard rules `order
 - Duplicate object keys the auto-merge produced (`service.ts` per_unit_limit, `ruleFields.ts` unit_limit) were removed.
 - `learned-shop-text.test.ts` imports the engine, so it is checked under `tsconfig.engine.json` like the other engine tests.
 - After the merge: typecheck clean, 258 tests pass. `npm run live-review` was not run (no `data/live/atlas` in the repo).
+
+## Live re-run after the merge (23:40, `npm run api-atlas` + `npm run live-review`)
+
+236 saved live purchases from 22 runs, re-decided offline with the merged engine. 11 change (13 rows, two are
+redeliveries), all in the expected direction:
+
+- SCEN0113 Night Owl Kitchen (8) and SCEN0106 PixelHarbour (1): live we declined, now we ask. That is the
+  lookalike decision above; `no_shop_history` asks anyway, so under your rule these would also be asks, only
+  without the `lookalike_shop` reason. Nothing in the atlas carries Relay's expected verdict, so the data does
+  not settle the question either way.
+- SCEN0124 "hotel in Munich for 3 nights, at most CHF 200 per night": IsarNest Hotel CHF 687.76 was approved live
+  and now declines (229 per night, above the 10 % band), SummitStay in Lucerne was approved live and now declines
+  (`wrong_destination`). Both are your travel guard working; both look right against the instruction.
+
+The other 225 decide as they did live. The report header in `liveReview.ts` still says "identical name = same
+brand"; adjust it if the lookalike decision stands. The report is written in Spanish (`reports/live-review.md`,
+git-ignored).
