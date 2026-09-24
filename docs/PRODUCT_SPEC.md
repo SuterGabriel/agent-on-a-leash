@@ -1,7 +1,7 @@
 # Agent on a Leash — Product and Engineering Spec
 
 Swiss {ai} Weeks Zurich 2026 · Viseca challenge "Agent on a Leash"
-Status: draft v2, 24 September 2026 (v2 adds trust tiers, chip definitions, met/broken/unknown, paraphrase-robust compiler, write order, new expert questions). Owner: Gabriel. Reviewers: Kim, Dev 1, Dev 2.
+Status: draft v2.1, 24 September 2026 (v2.1 adds decision-bound tokens §3.8; v2 adds trust tiers, chip definitions, met/broken/unknown, paraphrase-robust compiler, write order, new expert questions). Owner: Gabriel. Reviewers: Kim, Dev 1, Dev 2.
 
 Scope markers used throughout: **P0** must ship before feature freeze (Fri 11:00), **P1** if time allows, **P2** after the hackathon.
 
@@ -130,6 +130,7 @@ Looks like the 3-D Secure confirmation sheet customers already know.
 | Evidence | Shop never used on this card · CHF 340 · 27-inch monitor · same device as usual | `evidence[]` |
 | Uncertainty | None: clear rule. / The shop didn't state a return policy. | `evidence[]` with `type: uncertainty` |
 | Action | OK · Report shop · Tighten: block lookalike shops | derived from reason code |
+| Token (approvals only) | DEMO token ••f1f0 · only at PixelHarbor · up to CHF 303.45 · one payment · 15 min · status: used (CHF 289.00 charged) | `decision.token` (see §3.8) |
 
 **P1**
 - Group bursts: consecutive declines within 15 minutes collapse into one row "4 orders stopped between 02:14 and 02:24. Was this you?" with one Ask-me for the group.
@@ -271,6 +272,25 @@ Reason codes are the customer-facing catalogue; the copy per code lives in `pack
   "engine_version": "leash-0.1.0"
 }
 ```
+
+### 3.8 Decision-bound tokens (enforcement after the decision)
+
+**The rules decide; the token enforces the decision.** An approval alone does not stop a fooled or hijacked agent from paying more, somewhere else, later, or twice. So every approval, by the engine or by the customer on the Ask-me sheet, issues a token for exactly that purchase. It is Revolut's one-time card idea, made stricter: a one-time card limits *how often* a number can be used; our token also knows *what* was approved.
+
+| Property | Value | Why |
+|---|---|---|
+| Shop | the approved `merchant_id` only | a leaked token is useless at a lookalike shop |
+| Maximum | approved amount + 5 % rounding room, capped by the per-order limit and by what is left of the period budget | shop text like "pre-authorised up to CHF 900" cannot raise it |
+| Payments | exactly one | a replayed charge is refused |
+| Lifetime | 15 minutes | an unused token cannot be spent later |
+| Revoke | revoking the leash kills every unused token at once | the kill switch reaches money already approved |
+| Refunds | allowed up to the charged amount | ordinary returns keep working |
+
+Every refusal has one customer sentence ("This token only works at PixelHarbor."). Every token keeps a trail (issued, charged, declined, refunded, expired, revoked) that the decision card and the judge view show.
+
+**Implementation:** `packages/backend/src/tokens/vault.ts` (token service stand-in), issued in `LeashService.issueToken` after every approval, exposed as `GET /app/tokens`, `GET /app/tokens/:id`, and on each decision as `decision.token`. Demo charges: `POST /demo/tokens/:id/charge` and `/refund`. Story on real data: `npm run demo:tokens`.
+
+**Honest limits:** simulated. Viseca's sandbox API has no token issuing; it only receives approve, decline or step_up. Token IDs are demo IDs, no card numbers, no network. In production the issuer does this: the one app already manages tokenised cards, and the card networks' agent programmes issue agent-specific network tokens with controls. The token does not replace the engine: it cannot tell a wrong item or an injection, it only enforces what the rules approved.
 
 ---
 
@@ -571,8 +591,9 @@ Voice (P1) is added only after the 17:00 checkpoint passes with the touch path.
 
 1. **Pitch (60 s)**: the problem in one sentence, the leash in one sentence, then the screen: speak the groceries instruction, confirm the chips. Start SCEN0001. Approvals scroll quietly, the budget bar moves. One Ask-me appears (fragrance gift set), decline it, tighten "block cosmetics" in one tap.
 2. **Wow moment**: switch to SCEN0004. AU0037 declined with the quoted shop text in the grey box. AU0040 asks, the injection sentence is shown, we decline. AU0039 lookalike declined.
-3. **Control**: open Leash detail, revoke. Show the judge view: 45 decisions, median latency, zero deadline misses, model status column.
-4. **Q&A anchors**: how we decide (every check is met, broken or unknown; broken declines, a small break asks, unknown follows the customer's choice), what if the shop lies (shop text is a claim, it can only make us stricter), what if you phrase the rule differently (paraphrase test set), what happens if the model fails (same answers, shown in the column), how retries and duplicates are told apart (live ID vs item signature), why small overshoots ask (customer stays in control without friction), what we would ship in the Viseca one app (screens ①–⑤ as they are, engine in the backend).
+   **Token beat (20 s, right after):** open the approved AU0035 (PixelHarbor, CHF 289.00). The decision card shows the token: only at PixelHarbor, up to CHF 303.45, one payment, 15 minutes. Then play the hijacked agent with `npm run demo:tokens` (or the demo charge buttons): second charge → refused "It pays once"; CHF 900 because the shop text said "pre-authorised" → refused; token used at PixelHarbour → refused "only works at PixelHarbor". Line: *"Even if the agent is fooled after we said yes, the money cannot move anywhere else."*
+3. **Control**: open Leash detail, revoke. Every unused token stops working at once; show one refused charge after the revoke. Show the judge view: 45 decisions, median latency, zero deadline misses, model status column.
+4. **Q&A anchors**: what if the agent is compromised after the approval (the decision-bound token: one shop, one amount, one payment, 15 minutes, dies on revoke; in production the one app issues it as a network token), how we decide (every check is met, broken or unknown; broken declines, a small break asks, unknown follows the customer's choice), what if the shop lies (shop text is a claim, it can only make us stricter), what if you phrase the rule differently (paraphrase test set), what happens if the model fails (same answers, shown in the column), how retries and duplicates are told apart (live ID vs item signature), why small overshoots ask (customer stays in control without friction), what we would ship in the Viseca one app (screens ①–⑤ as they are, engine in the backend).
 
 Backup: a 90-second screen recording of the same flow, offline mode, in case the live API or Wi-Fi fails.
 

@@ -25,12 +25,15 @@ You keep the team on schedule, get answers from Viseca, and own the story.
 1. Problem in one sentence. 2. The leash in one sentence, in Viseca's own words ("kontrollierte digitale Freiheit").
 3. Live: groceries leash → quiet approvals → one question → decline → **leash proposes to tighten** → rerun, fewer questions.
 4. Wow: manipulated shop text quoted and ignored; lookalike shop stopped.
-5. Control: revoke. Jury view: 45 decisions, 0 deadline misses, model on/off identical.
+   Then the token beat: the approved monitor gets a one-time pass (only PixelHarbor, up to CHF 303.45, one payment, 15 min). The hijacked agent tries a second charge, CHF 900 "pre-authorised", and the lookalike shop: all refused. `npm run demo:tokens` plays it on real data.
+5. Control: revoke, and every unused pass dies with it. Jury view: 45 decisions, 0 deadline misses, model on/off identical.
 
 Headline claim we can prove and Relay could not: **"Safe on every run, and less friction on the next one."**
 
 ## Q&A prep
 
+- What if the agent is compromised *after* we approve? → the decision-bound token: one shop, one amount, one payment, 15 minutes, dies on revoke. Rules decide, the token enforces. Simulated here; in production the one app issues it as a network token.
+- Isn't that just Revolut's one-time card? → A one-time card limits how often a number is used. Our pass also knows what was approved: shop, amount, time.
 - What if the model fails? → same answers, shown in the jury view.
 - How do you avoid overfitting to the 45? → red-team suite, 0 approved.
 - Why no score? → five-part explanation; Viseca wants "unspektakulär, weil es einfach funktioniert".
