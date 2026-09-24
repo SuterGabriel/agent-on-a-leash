@@ -8,6 +8,8 @@
   "scripts": {
     "check-key": "tsx packages/backend/src/cli/checkKey.ts",
     "scenario": "tsx packages/backend/src/cli/runScenario.ts",
+    "api": "tsx packages/backend/src/cli/api.ts",
+    "demo:tokens": "tsx packages/backend/src/cli/demoTokens.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

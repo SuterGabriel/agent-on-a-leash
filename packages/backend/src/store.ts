@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { Decision } from "@leash/shared";
+import type { Decision, DecisionToken } from "@leash/shared";
 
 export interface StoredDecision extends Decision {
   /** Whether Viseca accepted our automated decision. */
@@ -28,12 +28,13 @@ export class InMemoryDecisionStore implements DecisionStore {
   }
 }
 
-/** Events the app stream (SSE) forwards: decision, ask, ask_expired, leash_changed. */
+/** Events the app stream (SSE) forwards: decision, ask, ask_expired, leash_changed, token. */
 export interface LeashEvents {
   decision: [StoredDecision];
   ask: [StoredDecision];
   ask_expired: [StoredDecision];
   leash_changed: [{ mandate_id: string }];
+  token: [DecisionToken];
 }
 
 export class LeashBus extends EventEmitter<LeashEvents> {}
