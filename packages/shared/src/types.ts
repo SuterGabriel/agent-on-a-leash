@@ -108,6 +108,9 @@ export interface Policy {
   blockedCategories: string[] | null; // "no gift cards" -> gift_card
   blockedKeywords: string[] | null; // "no alcohol" -> wine, beer, … (item name, category, clean shop text)
   refundableRequired: boolean; // "refundable rate only", "only if it can be returned"
+  destinationCity: string | null; // "a hotel in Lyon" -> "Lyon" (compared with a lodging shop's city)
+  stayNights: number | null; // "for 2 nights", or the nights between the stated dates
+  stayDates: { from: string; to: string } | null; // "4 March to 7 March" -> { from: "03-04", to: "03-07" }
   uncertainty: UncertaintyPolicy;
   overshootTolerance: number; // 0.10 = a limit exceeded by <= 10 % asks instead of declining
   assumptions: string[];

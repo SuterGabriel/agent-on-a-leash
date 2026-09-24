@@ -2,6 +2,8 @@
 // the name of a shop this customer trusts, is an imitation.
 // Also compared with every ESTABLISHED shop at the issuer (approved purchases in the history, same category),
 // so a customer with little or no history is protected too.
+// An IDENTICAL normalised name ("Night Owl Kitchen" / "NightOwl Kitchen") is the same brand, not an imitation:
+// only 0.85 <= similarity < 1.0 counts. Whether the customer knows that shop is the familiarity guard's job.
 import type { Guard } from "../types";
 
 const norm = (s: string) => s.toLowerCase().normalize("NFKC").replace(/[^a-z0-9]/g, "");
@@ -29,11 +31,13 @@ const THRESHOLD = 0.85;
 
 type Match = { id: string; name: string; score: number };
 
+/** The most similar shop below an identical name; null when the name is identical to one of them (same brand). */
 function closest(name: string, category: string, selfId: string, ids: Iterable<string>, names: Map<string, { name: string; category: string }>): Match | null {
   let best: Match | null = null;
   for (const id of ids) {
     const other = names.get(id);
     if (!other || id === selfId || other.category !== category) continue;
+    if (norm(name) === norm(other.name)) return null;
     const score = similarity(name, other.name);
     if (!best || score > best.score) best = { id, name: other.name, score };
   }

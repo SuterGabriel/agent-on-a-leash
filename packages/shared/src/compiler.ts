@@ -55,6 +55,56 @@ const EXCLUSIONS: Array<{ re: RegExp; categories?: string[]; keywords: string[] 
 
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
+// ---------- travel: destination, nights, dates ----------
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const MONTH = String.raw`(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)`;
+const DAY = String.raw`(\d{1,2})(?:st|nd|rd|th)?`;
+const RANGE = String.raw`\s*(?:-|–|to|until|till|through)\s*`;
+const monthIndex = (m: string) => MONTHS.indexOf(m.toLowerCase().slice(0, 3));
+const mmdd = (m: number, d: number) => `${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+const CAPITALISED = String.raw`([A-Z][\p{L}'’.-]+(?:\s+[A-Z][\p{L}'’.-]+)*)`;
+const NOT_A_PLACE = new RegExp(String.raw`^${MONTH}$|^(monday|tuesday|wednesday|thursday|friday|saturday|sunday|chf|eur|usd|gbp)$`, "i");
+
+function stayFrom(instruction: string): { city: string | null; nights: number | null; dates: { from: string; to: string } | null; conflict: string | null } {
+  let city: string | null = null;
+  for (const re of [
+    // No "i" flag: the city is recognised by its capital letter, so the keywords list both cases.
+    new RegExp(String.raw`\b(?:[Hh]otels?|[Hh]ostels?|[Rr]ooms?|[Ss]tays?|[Aa]ccommodation|[Aa]partments?|[Gg]uesthouses?|[Bb]&[Bb]s?|[Ll]odging)\s+(?:[Ii]n|[Aa]t)\s+${CAPITALISED}`, "u"),
+    new RegExp(String.raw`\b(?:[Tt]rip|[Tt]ravel|[Jj]ourney|[Hh]oliday|[Vv]acation|[Gg]etaway)\s+[Tt]o\s+${CAPITALISED}`, "u"),
+  ]) {
+    const m = instruction.match(re);
+    if (m?.[1] && !NOT_A_PLACE.test(m[1])) {
+      city = m[1];
+      break;
+    }
+  }
+
+  let dates: { from: string; to: string } | null = null;
+  let dateNights: number | null = null;
+  const both = instruction.match(new RegExp(String.raw`${DAY}\s+${MONTH}${RANGE}${DAY}\s+${MONTH}`, "i")); // 10 September to 13 September
+  const oneMonth = instruction.match(new RegExp(String.raw`${DAY}${RANGE}${DAY}\s+${MONTH}`, "i")); // 10 to 13 September
+  const monthFirst = instruction.match(new RegExp(String.raw`${MONTH}\s+${DAY}${RANGE}(?:${MONTH}\s+)?${DAY}`, "i")); // September 10 to 13
+  let span: [number, number, number, number] | null = null; // month1, day1, month2, day2
+  if (both) span = [monthIndex(both[2]), Number(both[1]), monthIndex(both[4]), Number(both[3])];
+  else if (oneMonth) span = [monthIndex(oneMonth[3]), Number(oneMonth[1]), monthIndex(oneMonth[3]), Number(oneMonth[2])];
+  else if (monthFirst) span = [monthIndex(monthFirst[1]), Number(monthFirst[2]), monthIndex(monthFirst[3] ?? monthFirst[1]), Number(monthFirst[4])];
+  if (span && span[0] >= 0 && span[2] >= 0) {
+    const [m1, d1, m2, d2] = span;
+    let diff = (Date.UTC(2001, m2, d2) - Date.UTC(2001, m1, d1)) / 86_400_000;
+    if (diff < 0) diff += 365; // across new year
+    if (diff > 0) {
+      dates = { from: mmdd(m1, d1), to: mmdd(m2, d2) };
+      dateNights = diff;
+    }
+  }
+
+  const n = instruction.match(/\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|fourteen)[-\s]nights?\b/i);
+  const statedNights = n ? toNumber(n[1]) : null;
+  const conflict = statedNights !== null && dateNights !== null && statedNights !== dateNights ? `You wrote ${statedNights} nights, but the dates give ${dateNights}. Which is right?` : null;
+  return { city, nights: statedNights ?? dateNights, dates, conflict };
+}
+
 const STOPWORDS = new Set(["the", "a", "an", "my", "one", "new", "worn", "old", "i", "me", "for", "of"]);
 
 /** Lowercase word stems, used to compare a requested item with a cart line. */
@@ -237,6 +287,19 @@ export function compilePolicy(instruction: string): Policy {
   const noExtras = /(do\s+not|don't|never)\s+add\s+anything|nothing\s+extra|no\s+extras|nothing\s+else\s+in\s+the\s+(basket|cart|order)|only\s+(that|this|the\s+one)\s+item/i.test(instruction);
   if (noExtras) assumptions.push("Add-ons you did not ask for (protection plans, subscriptions) are declined.");
 
+  // --- Travel: where, how many nights, which dates.
+  const stay = stayFrom(instruction);
+  const destinationCity = stay.city;
+  const stayNights = stay.nights;
+  const stayDates = stay.dates;
+  if (destinationCity) assumptions.push(`The stay must be in ${destinationCity}: a hotel elsewhere is declined.`);
+  if (stayNights !== null) {
+    assumptions.push(
+      `${stayNights} night(s)${stayDates ? ` (${stayDates.from} → ${stayDates.to})` : ""}: a per-night limit is checked on the total divided by ${stayNights}.`,
+    );
+  }
+  if (stay.conflict) openQuestions.push(stay.conflict);
+
   const sessionIntegrity =
     /someone\s+other\s+than\s+me|not\s+me\b|driving\s+the\s+session|someone\s+else|session\s+(looks?|seems?)\s+(unusual|odd|strange|off|suspicious)|(doesn't|does\s+not|don't)\s+look\s+like\s+me|unusual\s+(session|activity)/i.test(instruction);
   if (sessionIntegrity) {
@@ -279,6 +342,9 @@ export function compilePolicy(instruction: string): Policy {
     blockedCategories,
     blockedKeywords,
     refundableRequired,
+    destinationCity,
+    stayNights,
+    stayDates,
     uncertainty,
     overshootTolerance: 0.1,
     assumptions,
@@ -318,6 +384,8 @@ export function toHardRules(p: Policy): HardRule[] {
   if (p.blockedCategories) rules.push({ field: "items.item_category", operator: "not_in", value: p.blockedCategories });
   if (p.blockedKeywords) rules.push({ field: "items.keywords", operator: "not_in", value: p.blockedKeywords });
   if (p.refundableRequired) rules.push({ field: "order.refundable", operator: "=", value: "true" });
+  if (p.destinationCity) rules.push({ field: "order.destination_city", operator: "=", value: p.destinationCity });
+  if (p.stayNights !== null) rules.push({ field: "order.nights", operator: "=", value: p.stayNights });
   return rules;
 }
 

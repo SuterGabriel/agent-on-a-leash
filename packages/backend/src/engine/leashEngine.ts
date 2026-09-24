@@ -133,6 +133,14 @@ function tighten(p: Policy, r: MandateRule): boolean {
       if (str !== "true") return false;
       p.refundableRequired = true;
       return true;
+    case "order.destination_city =":
+      if (str === null) return false;
+      p.destinationCity ??= str;
+      return p.destinationCity === str; // two different destinations cannot both hold
+    case "order.nights =":
+      if (num === null) return false;
+      p.stayNights ??= num;
+      return p.stayNights === num;
     default:
       return false;
   }
@@ -169,6 +177,7 @@ const HEADLINES: Record<string, string> = {
   not_refundable: "Not refundable",
   no_shop_history: "No history to check the shop",
   over_card_limit: "Above your card's limit",
+  wrong_destination: "Not where you are going",
   guard_error: "Please check this purchase",
 };
 const FALLBACK_HEADLINE: Record<EngineDecisionValue, string> = {
@@ -199,6 +208,7 @@ const CHECKS: Record<string, { label: string; source: CheckSource }> = {
   blocked: { label: "Things you excluded", source: "you" },
   refundable: { label: "Refundable only", source: "you" },
   issuer_limits: { label: "Card limit per purchase", source: "built_in" },
+  destination: { label: "Where the stay is", source: "you" },
 };
 
 function checkResult(g: GuardResult): CheckResult {
