@@ -272,6 +272,7 @@ export const checksFor = (decisionId: string) => {
                 label: o.label ?? c.label,
                 fact: o.fact ?? c.fact ?? "",
                 yourWords: o.yourWords !== undefined ? o.yourWords : c.your_words,
+                family: c.family,
                 result: c.result,
             };
         })

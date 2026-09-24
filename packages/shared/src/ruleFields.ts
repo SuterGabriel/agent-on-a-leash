@@ -59,11 +59,11 @@ export const RULE_KEYS = {
  * (ENGINE_READABLE_RULES below still lists only the original set: it decides which learned rules D1 may OFFER,
  *  and widening it changes what the app suggests. Agree with the app before adding to it.)
  *
+ * Read by the engine as learned rules: merchant.text_instructions = "decline", merchant.lookalike = "decline".
+ *
  * Written by tighten / learned rules, NOT read by the engine yet (would make every purchase an ask):
  * items.item_category               not_in  [..]                           blocked_category
  * merchant.merchant_id              not_in  [..]                           blocked_shop
- * merchant.text_instructions        =       "decline"                      learned
- * merchant.lookalike                =       "decline"                      learned (the lookalike guard already declines)
  * session.new_device_at_night       =       "decline"                      learned
  * orders.combine_within_minutes     =       10                             learned (the split-order guard is always on)
  *
@@ -104,6 +104,7 @@ export const ENGINE_READABLE_RULES = new Set([
   "order.addons_allowed =",
   "session.integrity =",
   "merchant.text_instructions =",
+  "merchant.lookalike =",
 ]);
 
 /** Always on for every leash. The engine reports them as checks with source "built_in". */

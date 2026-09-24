@@ -4,6 +4,8 @@ import type { DecisionToken } from "./token.js";
 export type EngineDecisionValue = "approve" | "decline" | "step_up";
 export type CheckResult = "pass" | "fail" | "unsure";
 export type CheckSource = "you" | "built_in" | "learned";
+/** The five families every check belongs to, for the strip in the app and the judge view. */
+export type CheckFamily = "money" | "item" | "shop" | "session" | "manipulation";
 
 export interface Check {
   /** "order_limit", "known_shop", "shop_text" ... */
@@ -13,6 +15,8 @@ export interface Check {
   /** Filled by the backend from the rules store; null for built-in protections. */
   your_words: string | null;
   source: CheckSource;
+  /** Missing only on synthetic checks (e.g. "rules we could not check"). */
+  family?: CheckFamily;
   result: CheckResult;
   /** "CHF 126.00 (groceries 118 + delivery 8)" */
   fact: string | null;

@@ -158,7 +158,11 @@ describe("app API, offline end to end", () => {
   it("D1: an add-on suggestion is offered, and accepting adds a learned rule the engine reads", async () => {
     const draft = suggestionFor({ reason_codes: ["unrequested_addon"], items: [] });
     expect(draft).toEqual({ reason_code: "unrequested_addon", text: "Always decline when something is added I didn't ask for", rule: { field: "order.addons_allowed", operator: "=", value: "false" } });
-    expect(suggestionFor({ reason_codes: ["lookalike_shop"], items: [] })).toBeNull();
+    // Lookalikes and shop text are learned rules the engine reads; the two it cannot read yet are never offered.
+    expect(suggestionFor({ reason_codes: ["lookalike_shop"], items: [] })?.rule).toEqual({ field: "merchant.lookalike", operator: "=", value: "decline" });
+    expect(suggestionFor({ reason_codes: ["shop_text_manipulation"], items: [] })?.rule).toEqual({ field: "merchant.text_instructions", operator: "=", value: "decline" });
+    expect(suggestionFor({ reason_codes: ["possible_split_order"], items: [] })).toBeNull();
+    expect(suggestionFor({ reason_codes: ["session_not_you"], items: [] })).toBeNull();
   });
 
   it("S8: tighten only ever tightens", async () => {

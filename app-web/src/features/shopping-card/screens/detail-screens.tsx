@@ -29,6 +29,16 @@ import { Hero, InfoCard, Screen } from "@/features/shopping-card/screens/screen"
 import { SettingRow } from "@/features/shopping-card/setting-row";
 import { ShopTextBox } from "@/features/shopping-card/shop-text-box";
 import { ShoppingCard } from "@/features/shopping-card/shopping-card";
+import type { CheckFamily } from "@/types/decision";
+
+const FAMILY_ORDER: CheckFamily[] = ["money", "item", "shop", "session", "manipulation"];
+const FAMILY_TITLE: Record<CheckFamily, string> = { money: "Money", item: "Item and terms", shop: "Shop", session: "Looks like you", manipulation: "Repeats and manipulation" };
+
+/** Live decisions carry a family per check: one list per family, in a fixed order. Prototype data has none: one list. */
+function checkFamilies<T extends { family?: CheckFamily }>(checks: T[]): [CheckFamily | "all", T[]][] {
+    if (!checks.some((c) => c.family)) return checks.length ? [["all", checks]] : [];
+    return FAMILY_ORDER.map((f) => [f, checks.filter((c) => c.family === f)] as [CheckFamily, T[]]).filter(([, rows]) => rows.length > 0);
+}
 
 /** 5.2 Payment details: headline, because, checklist (failing first, your words on the failing rule), details, actions. */
 export const PaymentDetailsScreen = () => {
@@ -59,11 +69,13 @@ export const PaymentDetailsScreen = () => {
 
             {quote && <ShopTextBox surface="primary" quote={quote} />}
 
-            <GroupedList title="Checked against your rules">
-                {checks.map((c) => (
-                    <RuleRow key={c.key} mode="result" result={c.result} label={c.label} fact={c.fact} yourWords={c.result === "fail" ? c.yourWords : null} />
-                ))}
-            </GroupedList>
+            {checkFamilies(checks).map(([family, rows]) => (
+                <GroupedList key={family} title={family === "all" ? "Checked against your rules" : FAMILY_TITLE[family]}>
+                    {rows.map((c) => (
+                        <RuleRow key={c.key} mode="result" result={c.result} label={c.label} fact={c.fact} yourWords={c.result === "fail" ? c.yourWords : null} />
+                    ))}
+                </GroupedList>
+            ))}
 
             <GroupedList>
                 <ListRow plainTitle title="Item" value={d.items[0]?.name} />

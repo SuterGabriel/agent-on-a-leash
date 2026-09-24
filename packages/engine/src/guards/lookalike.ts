@@ -40,7 +40,9 @@ function closest(name: string, category: string, selfId: string, ids: Iterable<s
   return best;
 }
 
-export const lookalikeMerchant: Guard = ({ auth, base, customerId, ledger }) => {
+// The learned rule "Block shops that look like my known shops" turns both questions below into declines.
+export const lookalikeMerchant: Guard = ({ auth, base, customerId, ledger, policy }) => {
+  const ask = policy.lookalikeAction === "decline" ? "DECLINE" : "STEP_UP";
   const m = auth.merchant;
   const known = customerId ? base.customerMerchants.get(customerId) : undefined;
   if (known?.has(m.merchant_id)) return { guard: "lookalike", verdict: "PASS", evidence: [] };
@@ -59,7 +61,7 @@ export const lookalikeMerchant: Guard = ({ auth, base, customerId, ledger }) => 
     ];
     return {
       guard: "lookalike",
-      verdict: issuerCount === 0 ? "DECLINE" : "STEP_UP",
+      verdict: issuerCount === 0 ? "DECLINE" : ask,
       reason_code: "lookalike_shop",
       evidence,
       message: `"${m.merchant_name}" is not "${mine.name}", where you bought before.${issuerCount === 0 ? " No customer of ours has ever bought there." : ""}`,
@@ -75,7 +77,7 @@ export const lookalikeMerchant: Guard = ({ auth, base, customerId, ledger }) => 
   if (!established || established.score < THRESHOLD) return { guard: "lookalike", verdict: "PASS", evidence: [] };
   return {
     guard: "lookalike",
-    verdict: "STEP_UP",
+    verdict: ask,
     reason_code: "lookalike_shop",
     evidence: [
       { fact: "name_similarity", value: Math.round(established.score * 100) / 100, comparator: ">=", threshold: THRESHOLD, source: `${m.merchant_name} vs ${established.name} (established shop)` },

@@ -766,6 +766,12 @@ export class LeashService {
         deadline_misses: rows.filter((d) => d.deadline_missed).length,
         post_failures: rows.filter((d) => d.post_status === "post_failed").length,
         rules: this.leash?.mandate_id === run.mandate_id ? [...this.leash.rules, ...this.leash.learned].map((r) => r.label) : [],
+        // Decision-bound tokens of this run: every approval got one, and every history chain must verify.
+        tokens: (() => {
+          const ts = rows.flatMap((d) => (d.token ? [d.token] : []));
+          const verified = ts.map((t) => this.tokens.verify(t.id));
+          return { issued: ts.length, charged: ts.filter((t) => t.status === "charged").length, chains_ok: verified.filter((v) => v.ok).length, chains_broken: verified.filter((v) => !v.ok).length };
+        })(),
       },
       rows: rows.map((d, i) => ({
         n: i + 1,

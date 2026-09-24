@@ -15,11 +15,15 @@ export type CheckResult = "pass" | "fail" | "unsure";
 
 export type RuleSource = "you" | "built_in" | "learned";
 
+export type CheckFamily = "money" | "item" | "shop" | "session" | "manipulation";
+
 export interface Check {
     key: string;
     label: string;
     your_words: string | null;
     source: RuleSource;
+    /** money · item · shop · session · manipulation; set by the engine, absent on prototype data. */
+    family?: CheckFamily;
     result: CheckResult;
     fact: string | null;
 }

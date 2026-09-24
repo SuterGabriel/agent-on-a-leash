@@ -448,6 +448,7 @@ export function compilePolicy(instruction: string): Policy {
     sessionIntegrity,
     sessionAction,
     shopTextAction: "ask",
+    lookalikeAction: "ask",
     perUnitLimit,
     maxOrdersPerPeriod,
     allowedWeekdays,

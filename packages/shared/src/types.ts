@@ -104,6 +104,7 @@ export interface Policy {
   sessionIntegrity: boolean; // "pause anything that looks like someone other than me"
   sessionAction: "stop" | "ask"; // three or more signals: "stop" declines, "ask" asks ("... stop and ask me")
   shopTextAction: "ask" | "decline"; // shop text that instructs the agent: "ask" (default) or "decline" (learned rule)
+  lookalikeAction: "ask" | "decline"; // a lookalike the guard would only ask about: "ask" (default) or "decline" (learned rule)
   perUnitLimit: { amountChf: number; unit: string } | null; // "CHF 200 per night": compared with each line's unit price
   maxOrdersPerPeriod: { count: number; days: number } | null; // "one a day" -> { count: 1, days: 1 }
   allowedWeekdays: number[] | null; // Swiss local weekday, 0 = Sunday … 6 = Saturday

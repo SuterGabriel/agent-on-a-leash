@@ -13,8 +13,8 @@ const STATIC: Record<string, Omit<SuggestionDraft, "reason_code">> = {
   unrequested_addon: { text: "Always decline when something is added I didn't ask for", rule: { field: RULE_FIELDS.addonsAllowed, operator: "=", value: "false" } },
   shop_text_manipulation: { text: "Always decline when a shop's text gives orders", rule: { field: RULE_FIELDS.shopTextInstructions, operator: "=", value: "decline" } },
   lookalike_shop: { text: "Block shops that look like my known shops", rule: { field: RULE_FIELDS.lookalike, operator: "=", value: "decline" } },
-  possible_split_order: { text: "Treat orders within 10 minutes as one order", rule: { field: RULE_FIELDS.combineWithin, operator: "=", value: 10 } },
-  session_not_you: { text: "Always decline purchases from a new phone at night", rule: { field: RULE_FIELDS.newDeviceAtNight, operator: "=", value: "decline" } },
+  // Not offered: "treat orders within 10 minutes as one" and "decline a new phone at night". The engine has no
+  // rule for either yet, and a learned rule the engine cannot read would show in the app without doing anything.
   new_shop: { text: "Only buy from shops I've used with this card", rule: { field: RULE_FIELDS.familiarOnCard, operator: "=", value: "true" } },
 };
 

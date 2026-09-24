@@ -6,7 +6,7 @@ import type {
   AuthorizationEvent,
   Check,
   CheckResult,
-  CheckSource,
+  CheckFamily, CheckSource,
   EngineDecisionValue,
   EngineVerdict,
   EventMandate,
@@ -156,6 +156,11 @@ function tighten(p: Policy, r: MandateRule): boolean {
       if (str !== "decline") return false;
       p.shopTextAction = "decline";
       return true;
+    case "merchant.lookalike =":
+      // The learned rule after a declined lookalike ask: a lookalike is declined even where the guard would ask.
+      if (str !== "decline") return false;
+      p.lookalikeAction = "decline";
+      return true;
     case "items.unit_price_chf <=":
       if (num === null || (r.currency && r.currency !== "CHF")) return false;
       p.perUnitLimit = { amountChf: Math.min(p.perUnitLimit?.amountChf ?? num, num), unit: p.perUnitLimit?.unit ?? "item" };
@@ -253,6 +258,16 @@ const CHECKS: Record<string, { label: string; source: CheckSource }> = {
   issuer_limits: { label: "Card limit per purchase", source: "built_in" },
 };
 
+/** Guard → family. Money: amounts and budgets. Item: what is in the basket and on what terms. Shop: who sells.
+ *  Session: whether it looks like the customer. Manipulation: repeats and text aimed at the agent. */
+const FAMILY: Record<string, CheckFamily> = {
+  per_order_limit: "money", period_budget: "money", split_order: "money", per_unit_limit: "money", order_frequency: "money", issuer_limits: "money",
+  item_scope: "item", requested_item: "item", addon: "item", return_terms: "item", blocked: "item", refundable: "item",
+  merchant_type: "shop", familiarity: "shop", lookalike: "shop", shop_track_record: "shop",
+  session: "session", weekday: "session",
+  shop_text: "manipulation", duplicate: "manipulation", requote: "manipulation",
+};
+
 function checkResult(g: GuardResult): CheckResult {
   if (g.verdict === "PASS") return "pass";
   // No history is a missing fact, not a failed check: the card shows it as unsure, and the customer is asked.
@@ -269,6 +284,7 @@ function toCheck(g: GuardResult): Check {
     label: meta?.label ?? g.guard,
     your_words: null, // filled by the backend from the rules store (Step 4)
     source: meta?.source ?? "built_in",
+    family: FAMILY[g.guard],
     result: checkResult(g),
     fact: g.evidence.length ? g.evidence.map(formatEvidence).join("; ") : (g.message ?? null),
   };
@@ -335,6 +351,7 @@ export function trackRecordCheck(merchantId: string, b: Baselines): Check | null
   const worthALook = payments >= TRACK_RECORD_MIN_PAYMENTS && refunds / payments >= TRACK_RECORD_REFUND_SHARE;
   return {
     key: "shop_track_record",
+    family: "shop",
     label: "Shop's history with Viseca cardholders",
     your_words: null,
     source: "built_in",

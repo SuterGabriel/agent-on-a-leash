@@ -35,6 +35,16 @@ describe("the stricter of the frozen and the current mandate", () => {
     expect(policyFor(mandate("SCEN0001"), higher(mandate("SCEN0001"))).policy.perOrderLimitChf).toBe(120);
   });
 
+  it("learned rules: shop text and lookalikes decline instead of asking", () => {
+    const m = mandate("SCEN0001");
+    const learned = { ...m, hard_rules: [...m.hard_rules, { field: "merchant.text_instructions", operator: "=", value: "decline" }, { field: "merchant.lookalike", operator: "=", value: "decline" }] } as EventMandate;
+    const { policy, notApplied } = policyFor(m, learned);
+    expect(policy.shopTextAction).toBe("decline");
+    expect(policy.lookalikeAction).toBe("decline");
+    expect(notApplied).toEqual([]);
+    expect(policyFor(m, m).policy.lookalikeAction).toBe("ask");
+  });
+
   it("uncertainty: decline beats ask, approve never loosens ask", () => {
     expect(policyFor(mandate("SCEN0001"), mandate("SCEN0001", { uncertainty_policy: "decline" })).policy.uncertainty).toBe("decline");
     expect(policyFor(mandate("SCEN0001"), mandate("SCEN0001", { uncertainty_policy: "approve" })).policy.uncertainty).toBe("ask");

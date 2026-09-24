@@ -270,6 +270,13 @@ describe("lookalike against every established shop at the issuer", () => {
     expect(r.decision).toBe("step_up");
     expect(r.reason_codes).toContain("lookalike_shop");
   });
+  it("with the learned rule, both questions become declines", () => {
+    const strict = compilePolicy(I);
+    strict.lookalikeAction = "decline";
+    const r = decide(event(I, at("ME_FAKE", "Harbourlime Grocers")), strict, new Ledger(), base);
+    expect(r.decision).toBe("decline");
+    expect(r.reason_codes).toContain("lookalike_shop");
+  });
   it("two established shops with similar names are just two shops", () => {
     expect(run(I, event(I, at("ME_TWIN", "Harbourline Grocer")), new Ledger(), base).reason_codes).not.toContain("lookalike_shop");
   });
