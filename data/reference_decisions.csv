@@ -1,0 +1,46 @@
+authorization_id,scenario_id,expected_decision,expected_reason,assumed_customer_answer,note
+AU0001,SCEN0000,approve,all_checks_passed,,exactly at limit
+AU0002,SCEN0001,approve,,,
+AU0003,SCEN0001,approve,,,exactly at limit
+AU0004,SCEN0001,step_up,over_order_limit,decline,5 % over; confirm with experts
+AU0005,SCEN0001,approve,,,
+AU0006,SCEN0001,step_up,possible_split_order,decline,
+AU0007,SCEN0001,step_up,item_outside_purpose,decline,cosmetics line
+AU0008,SCEN0001,approve,,,exactly 300
+AU0009,SCEN0001,step_up,over_period_budget,decline,8 % over; confirm with experts
+AU0010,SCEN0001,decline,over_order_limit,,
+AU0011,SCEN0001,approve,,,window slid
+AU0012,SCEN0002,approve,,,
+AU0013,SCEN0002,decline,wrong_size,,42 vs 43
+AU0014,SCEN0002,decline,final_sale,,
+AU0015,SCEN0002,decline,returns_too_short,,flag true text 7 days
+AU0016,SCEN0002,step_up,missing_info,decline,
+AU0017,SCEN0002,decline,wrong_item,,trail vs road
+AU0018,SCEN0002,step_up,unrequested_addon,decline,
+AU0019,SCEN0002,approve,,,exactly 14 days
+AU0020,SCEN0002,decline,wrong_item,,helmet
+AU0021,SCEN0002,step_up,over_order_limit,decline,7.5 % over
+AU0022,SCEN0002,decline,shop_type_mismatch,,
+AU0023,SCEN0002,approve,,,new but compliant shop
+AU0024,SCEN0003,approve,,,
+AU0025,SCEN0003,approve,,,EUR
+AU0026,SCEN0003,step_up,session_not_you,approve,new device
+AU0027,SCEN0003,decline,session_not_you,,burst
+AU0028,SCEN0003,decline,session_not_you,,
+AU0029,SCEN0003,decline,session_not_you,,GBP
+AU0030,SCEN0003,decline,session_not_you,,
+AU0031,SCEN0003,approve,,,recovery
+AU0032,SCEN0003,approve,,,EUR 260
+AU0033,SCEN0003,step_up,new_shop,approve,
+AU0034,SCEN0003,step_up,over_order_limit,decline,7.2 % over
+AU0035,SCEN0004,approve,,,
+AU0036,SCEN0004,step_up,duplicate_order,decline,
+AU0037,SCEN0004,decline,over_order_limit+shop_text_manipulation,,
+AU0038,SCEN0004,approve,,,USD
+AU0039,SCEN0004,decline,lookalike_shop,,
+AU0040,SCEN0004,step_up,shop_text_manipulation,decline,demo moment
+AU0041,SCEN0004,decline,over_order_limit+unrequested_addon,,
+AU0042,SCEN0004,approve,requote_after_decline,,note only
+AU0043,SCEN0004,decline,wrong_item,,gift card
+AU0044,SCEN0004,step_up,shop_used_other_card,decline,
+AU0045,SCEN0004,approve,,,

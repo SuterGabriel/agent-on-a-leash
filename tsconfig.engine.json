@@ -1,0 +1,21 @@
+{
+  // Second typecheck pass with the engine's own settings (bundler-style imports without ".js",
+  // no noUncheckedIndexedAccess). It covers the engine and every file that imports it, so the
+  // engine is used exactly as written. tsconfig.json keeps the stricter settings for the rest.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@leash/shared": ["packages/shared/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "tests/**/*.ts"]
+}

@@ -1,6 +1,6 @@
 // Runs one scenario end to end: mandate → confirm → run → worker, then prints what was decided.
-//   npm run scenario -- SCEN0001                 offline, stub engine
-//   npm run scenario -- SCEN0000 --live          against Viseca (needs TEAM_API_KEY)
+//   npm run scenario -- SCEN0001                 offline
+//   npm run scenario -- SCEN0101 --live          against Viseca (needs TEAM_API_KEY); live scenarios: npm run inspect-live
 //   npm run scenario -- SCEN0001 --answer approve  answer every ask right away
 import { loadDataPack } from "@leash/shared";
 import { loadConfig } from "../config.js";
@@ -9,12 +9,14 @@ import { OfflinePlatform } from "../offline/platform.js";
 import type { VisecaApi } from "../viseca/api.js";
 import { recordingApi } from "../viseca/recorder.js";
 import { resolve } from "node:path";
-import { stubEngine } from "../engine/port.js";
+import { LeashEngine } from "../engine/leashEngine.js";
 import { InMemoryDecisionStore, LeashBus } from "../store.js";
 import { Worker } from "../worker.js";
 import { resolveAsk } from "../asks.js";
 import { compile, toMandateDraft } from "../compiler/compile.js";
 import { createMandateSafely } from "../leash/service.js";
+import { loadLiveReference } from "../live/referenceData.js";
+import { buildBaselines } from "../../../shared/src/baselines.js";
 
 const args = process.argv.slice(2);
 const scenarioId = args.find((a) => /^SCEN\d{4}$/.test(a)) ?? "SCEN0000";
@@ -26,23 +28,36 @@ const cfg = loadConfig(live ? { mode: "live" } : {});
 const pack = loadDataPack(cfg.dataDir);
 // Live runs save every raw response to live-samples/<time>/ so we can check the real formats.
 const samplesDir = resolve(cfg.dataDir, "..", "live-samples", new Date().toISOString().replace(/[:.]/g, "-"));
-const api: VisecaApi =
-  cfg.mode === "live" ? recordingApi(new HttpVisecaClient(cfg.baseUrl, cfg.teamApiKey), samplesDir) : new OfflinePlatform(pack);
+const client = new HttpVisecaClient(cfg.baseUrl, cfg.teamApiKey);
+const api: VisecaApi = cfg.mode === "live" ? recordingApi(client, samplesDir) : new OfflinePlatform(pack);
 if (cfg.mode === "live") console.log(`recording raw responses to ${samplesDir}`);
 
-const scenario = pack.scenarios.get(scenarioId);
-if (!scenario) throw new Error(`unknown scenario ${scenarioId}`);
+// Live mode: the live pack has its own scenarios and card history (bootstrap, reference data, history CSV),
+// downloaded now and cached in data/live/. Offline: the local data pack.
+const liveRef = cfg.mode === "live" ? await loadLiveReference(client, resolve(cfg.dataDir, "live"), (l) => console.log(l)) : null;
+if (liveRef) console.log(`live reference data (${liveRef.source}): ${liveRef.history.length} history rows, ${liveRef.merchants.size} merchants, ${liveRef.scenarios.length} scenarios`);
+
+const scenario = liveRef ? liveRef.scenarios.find((s) => s.scenario_id === scenarioId) : pack.scenarios.get(scenarioId);
+if (!scenario) {
+  const known = liveRef ? liveRef.scenarios.map((s) => s.scenario_id) : [...pack.scenarios.keys()];
+  throw new Error(`unknown scenario ${scenarioId} in ${cfg.mode} mode; available: ${known.join(" ")}`);
+}
 
 const parsed = compile(scenario.cardholder_instruction);
 console.log(`${scenarioId} · ${scenario.scenario_name} · mode ${cfg.mode}`);
 console.log(`instruction: ${scenario.cardholder_instruction}`);
-console.log(`rules: ${parsed.rules.map((r) => r.label).join(" · ")}\n`);
+console.log(`rules: ${parsed.rules.map((r) => r.label).join(" · ")}`);
+for (const a of parsed.assumptions) console.log(`  assumption: ${a}`);
+for (const q of parsed.open_questions) console.log(`  open question: ${q.text}`);
+for (const n of parsed.not_understood) console.log(`  NOT UNDERSTOOD: ${n}`);
+console.log();
 
 const draft = await createMandateSafely(api, toMandateDraft(parsed, parsed.rules));
 const { mandate_id } = await api.confirmMandate(draft.draft_id);
 const store = new InMemoryDecisionStore();
 const bus = new LeashBus();
-const worker = new Worker(api, stubEngine, store, bus, { log: (l) => console.log(l), pollWaitSeconds: live ? 25 : 0 });
+const engine = new LeashEngine(bus, liveRef ? buildBaselines(liveRef.history, liveRef.merchants) : undefined);
+const worker = new Worker(api, engine, store, bus, { log: (l) => console.log(l), pollWaitSeconds: live ? 25 : 0 });
 
 if (answer) {
   bus.on("ask", (d) => {

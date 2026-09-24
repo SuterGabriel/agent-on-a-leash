@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # Raw responses from live runs (npm run scenario -- ... --live)
 live-samples/
+
+# Live pack reference data, downloaded at startup in live mode (npm run inspect-live / scenario --live)
+data/live/

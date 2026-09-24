@@ -57,6 +57,12 @@ export class HttpVisecaClient implements VisecaApi {
   async referenceData() {
     return (await this.request("GET", "/v1/reference-data")).body;
   }
+  /** Card history of the live pack, as CSV text. */
+  async authorizationHistoryCsv(): Promise<string> {
+    const body = (await this.request("GET", "/v1/reference-data/authorization-history.csv")).body;
+    if (typeof body !== "string") throw new Error("authorization history: expected CSV text");
+    return body;
+  }
   async createMandate(body: MandateDraftRequest) {
     const res = (await this.request("POST", "/v1/mandates", body)).body;
     const draftId = pick<string>(res, "draft_id");
