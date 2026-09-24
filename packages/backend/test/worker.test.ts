@@ -8,7 +8,7 @@ import { InMemoryDecisionStore, LeashBus, type StoredDecision } from "../src/sto
 import { Worker } from "../src/worker.js";
 import { resolveAsk, AskError } from "../src/asks.js";
 import { VisecaError, type VisecaApi } from "../src/viseca/api.js";
-import { seedRules } from "../src/compiler/priceRule.js";
+import { parseLeash } from "../src/app/parseLeash.js";
 
 const dataDir = fileURLToPath(new URL("../../../data", import.meta.url));
 const pack = loadDataPack(dataDir);
@@ -30,7 +30,8 @@ const approveAll: Engine = {
 async function setup(scenarioId: string, engine: Engine = stubEngine, platformOpts = {}, workerOpts = {}) {
   const platform = new OfflinePlatform(pack, platformOpts);
   const instruction = pack.scenarios.get(scenarioId)!.cardholder_instruction;
-  const draft = await platform.createMandate({ instruction, ...seedRules(instruction), guidance: [], open_questions: [] });
+  const { hard_rules, uncertainty_policy } = parseLeash({ instruction });
+  const draft = await platform.createMandate({ instruction, hard_rules, uncertainty_policy, guidance: [], open_questions: [] });
   const { mandate_id } = await platform.confirmMandate(draft.draft_id);
   const store = new InMemoryDecisionStore();
   const bus = new LeashBus();
@@ -67,8 +68,8 @@ describe("data pack and events", () => {
   });
 
   it("seeds the per-order price rule from the instruction", () => {
-    expect(seedRules(pack.scenarios.get("SCEN0001")!.cardholder_instruction).hard_rules[0]!.value).toBe(120);
-    expect(seedRules(pack.scenarios.get("SCEN0000")!.cardholder_instruction).hard_rules[0]!.value).toBe(20);
+    expect(parseLeash({ instruction: pack.scenarios.get("SCEN0001")!.cardholder_instruction }).hard_rules[0]!.value).toBe(120);
+    expect(parseLeash({ instruction: pack.scenarios.get("SCEN0000")!.cardholder_instruction }).hard_rules[0]!.value).toBe(20);
   });
 });
 

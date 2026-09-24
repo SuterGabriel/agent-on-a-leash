@@ -1,0 +1,9 @@
+{
+  "name": "@leash/engine",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "csv-parse": "^7.0.2"
+  }
+}

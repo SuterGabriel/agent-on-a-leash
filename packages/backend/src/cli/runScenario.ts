@@ -1,5 +1,5 @@
 // Runs one scenario end to end: mandate → confirm → run → worker, then prints what was decided.
-//   npm run scenario -- SCEN0001                 offline, stub engine
+//   npm run scenario -- SCEN0001                 offline
 //   npm run scenario -- SCEN0000 --live          against Viseca (needs TEAM_API_KEY)
 //   npm run scenario -- SCEN0001 --answer approve  answer every ask right away
 import { loadDataPack } from "@leash/shared";
@@ -9,11 +9,11 @@ import { OfflinePlatform } from "../offline/platform.js";
 import type { VisecaApi } from "../viseca/api.js";
 import { recordingApi } from "../viseca/recorder.js";
 import { resolve } from "node:path";
-import { stubEngine } from "../engine/port.js";
+import { LeashEngine } from "../engine/leashEngine.js";
 import { InMemoryDecisionStore, LeashBus } from "../store.js";
 import { Worker } from "../worker.js";
 import { resolveAsk } from "../asks.js";
-import { seedRules } from "../compiler/priceRule.js";
+import { parseLeash } from "../app/parseLeash.js";
 
 const args = process.argv.slice(2);
 const scenarioId = args.find((a) => /^SCEN\d{4}$/.test(a)) ?? "SCEN0000";
@@ -32,16 +32,20 @@ if (cfg.mode === "live") console.log(`recording raw responses to ${samplesDir}`)
 const scenario = pack.scenarios.get(scenarioId);
 if (!scenario) throw new Error(`unknown scenario ${scenarioId}`);
 
-const { hard_rules, uncertainty_policy } = seedRules(scenario.cardholder_instruction);
+const { hard_rules, uncertainty_policy, assumptions, open_questions } = parseLeash({ instruction: scenario.cardholder_instruction });
 console.log(`${scenarioId} · ${scenario.scenario_name} · mode ${cfg.mode}`);
 console.log(`instruction: ${scenario.cardholder_instruction}`);
-console.log(`hard_rules (placeholder until the compiler): ${JSON.stringify(hard_rules)}\n`);
+console.log(`hard_rules: ${JSON.stringify(hard_rules)}`);
+for (const a of assumptions) console.log(`  assumption: ${a}`);
+for (const q of open_questions) console.log(`  open question: ${q}`);
+console.log();
 
 const draft = await api.createMandate({ instruction: scenario.cardholder_instruction, hard_rules, uncertainty_policy, guidance: [], open_questions: [] });
 const { mandate_id } = await api.confirmMandate(draft.draft_id);
 const store = new InMemoryDecisionStore();
 const bus = new LeashBus();
-const worker = new Worker(api, stubEngine, store, bus, { log: (l) => console.log(l), pollWaitSeconds: live ? 25 : 0 });
+const engine = new LeashEngine(bus);
+const worker = new Worker(api, engine, store, bus, { log: (l) => console.log(l), pollWaitSeconds: live ? 25 : 0 });
 
 if (answer) {
   bus.on("ask", (d) => {
