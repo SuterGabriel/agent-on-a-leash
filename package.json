@@ -12,6 +12,7 @@
     "web": "npm --prefix app-web run dev",
     "web:build": "npm --prefix app-web run build",
     "demo:tokens": "tsx packages/backend/src/cli/demoTokens.ts",
+    "voice:agent": "tsx packages/backend/src/cli/voiceAgent.ts",
     "api-atlas": "tsx packages/backend/src/cli/apiAtlas.ts",
     "live-results": "tsx packages/backend/src/cli/liveResults.ts",
     "test": "vitest run",
