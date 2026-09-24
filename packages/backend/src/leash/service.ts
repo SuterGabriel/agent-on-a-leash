@@ -11,6 +11,7 @@ import {
   type KnownShop,
   type LeashRule,
   type LeashView,
+  type Budget,
   type ChargeResult,
   type DecisionToken,
   type ParseResult,
@@ -127,6 +128,8 @@ export class LeashService {
   private leash: LeashState | null = null;
   private runs = new Map<string, RunRecord>();
   private suggestions = new Map<string, Suggestion>();
+  /** Approvals on their way to Viseca: decision id → CHF. Counted against the budget until they land. */
+  private approving = new Map<string, number>();
   private historyCache = new Map<string, Map<string, { name: string; count: number }>>();
   private seq = 0;
   private readonly api: VisecaApi;
@@ -267,9 +270,6 @@ export class LeashService {
       };
     }
     const status = leash.revoked ? "revoked" : this.isPaused(leash) ? "paused" : "active";
-    const decisions = this.leashDecisions();
-    const period = [...leash.rules, ...leash.learned].filter((r) => r.hard_rule?.scope === "period");
-    const tightest = period.sort((a, b) => Number(a.hard_rule!.value) - Number(b.hard_rule!.value))[0];
     const card = leash.card_id ? this.pack.cards.get(leash.card_id) : undefined;
     return {
       status,
@@ -281,11 +281,18 @@ export class LeashService {
       learned_rules: leash.learned,
       built_in: BUILT_IN_PROTECTIONS,
       uncertainty_policy: leash.uncertainty_policy,
-      budget: tightest ? computeBudget(Number(tightest.hard_rule!.value), tightest.hard_rule!.period_days ?? 7, decisions) : null,
+      budget: this.budget(leash),
       known_shops: this.knownShops(leash),
       suggestions: [...this.suggestions.values()].filter((s) => s.status === "open"),
       paused_until: status === "paused" ? new Date(leash.paused_until as number).toISOString() : null,
     };
+  }
+
+  /** The tightest period budget, or null if the leash has none. */
+  private budget(leash: LeashState): Budget | null {
+    const period = [...leash.rules, ...leash.learned].filter((r) => r.hard_rule?.scope === "period");
+    const tightest = period.sort((a, b) => Number(a.hard_rule!.value) - Number(b.hard_rule!.value))[0];
+    return tightest ? computeBudget(Number(tightest.hard_rule!.value), tightest.hard_rule!.period_days ?? 7, this.leashDecisions()) : null;
   }
 
   private leashDecisions(): StoredDecision[] {
@@ -409,9 +416,15 @@ export class LeashService {
     return this.feed().filter((d) => d.status === "waiting_for_you");
   }
 
-  async resolve(id: string, answer: "approve" | "decline", acceptSuggestion = false): Promise<StoredDecision> {
+  async resolve(id: string, answer: "approve" | "decline", acceptSuggestion = false, overBudgetOk = false): Promise<StoredDecision> {
     if (answer !== "approve" && answer !== "decline") throw new ServiceError(400, "invalid_answer", "Answer approve or decline.");
-    const d = await resolveAsk(this.api, this.store, this.bus, id, answer);
+    const reserved = answer === "approve" ? this.reserveBudget(id, overBudgetOk) : false;
+    let d: StoredDecision;
+    try {
+      d = await resolveAsk(this.api, this.store, this.bus, id, answer);
+    } finally {
+      if (reserved) this.approving.delete(id);
+    }
     if (answer === "decline") {
       const purpose = this.leash?.rules.filter((r) => r.key === RULE_KEYS.purpose).flatMap((r) => (Array.isArray(r.hard_rule?.value) ? r.hard_rule.value : [])) ?? [];
       const draft = suggestionFor(d, purpose);
@@ -425,6 +438,25 @@ export class LeashService {
       }
     }
     return this.store.get(id) as StoredDecision;
+  }
+
+  /**
+   * Each ask fit the budget when it was checked, but two approved together may not. Re-checked at the moment
+   * of approval, counting approvals still on their way to Viseca; check and reservation run before any await,
+   * so two taps at once can't both see the same money left. Returns whether something was reserved.
+   */
+  private reserveBudget(id: string, overBudgetOk: boolean): boolean {
+    const d = this.store.get(id);
+    const budget = this.leash ? this.budget(this.leash) : null;
+    if (!d || d.status !== "waiting_for_you" || !budget || this.approving.has(id)) return false; // resolveAsk reports these
+    const inFlight = [...this.approving.values()].reduce((s, chf) => s + chf, 0);
+    const left = Math.round((budget.left_chf - inFlight) * 100) / 100;
+    const over = Math.round((d.amount.chf - left) * 100) / 100;
+    if (over > 0 && !overBudgetOk) {
+      throw new ServiceError(409, "over_budget", `This puts you CHF ${over.toFixed(2)} over your ${budget.period_days}-day budget (CHF ${Math.max(0, left).toFixed(2)} left). Approve again to buy it anyway.`);
+    }
+    this.approving.set(id, d.amount.chf);
+    return true;
   }
 
   private alreadyHasRule(rule: Suggestion["rule"]) {

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { CreateLeashRequest, TightenRequest } from "@leash/shared";
 import { AskError } from "../asks.js";
@@ -21,6 +22,11 @@ export interface ServerOptions {
   /** Allowed browser origin for Kim's dev server; "*" by default. */
   corsOrigin?: string;
   heartbeatMs?: number;
+  /**
+   * When set, every write under /app/* needs "Authorization: Bearer <appSecret>". Only the customer's app holds it;
+   * the agent only ever holds decision tokens (/demo/tokens/*), which can pay but never approve.
+   */
+  appSecret?: string | null;
 }
 
 const MAX_BODY = 1_000_000;
@@ -47,6 +53,12 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   } catch {
     throw new ServiceError(400, "invalid_json", "Body must be a JSON object.");
   }
+}
+
+function sameSecret(given: string, expected: string): boolean {
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 function send(res: ServerResponse, status: number, body: unknown) {
@@ -89,7 +101,7 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
     route("GET", "/app/asks", () => service.asks()),
     route("POST", "/app/asks/:id/resolve", async ({ params, body }) => {
       const b = await body();
-      return service.resolve(params.id as string, b.decision as "approve" | "decline", b.accept_suggestion === true);
+      return service.resolve(params.id as string, b.decision as "approve" | "decline", b.accept_suggestion === true, b.over_budget_ok === true);
     }),
     route("POST", "/app/suggestions/:id/accept", ({ params }) => service.acceptSuggestion(params.id as string)),
     route("POST", "/app/suggestions/:id/dismiss", ({ params }) => service.dismissSuggestion(params.id as string)),
@@ -136,7 +148,8 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
   const server = createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", corsOrigin);
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (corsOrigin !== "*") res.setHeader("Vary", "Origin");
     if (req.method === "OPTIONS") {
       res.writeHead(204).end();
       return;
@@ -157,6 +170,13 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
     if (!match) {
       send(res, candidates.length ? 405 : 404, { error: { code: candidates.length ? "method_not_allowed" : "not_found", message: `${req.method} ${url.pathname}` } });
       return;
+    }
+    if (opts.appSecret && match.method !== "GET" && url.pathname.startsWith("/app/")) {
+      const given = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1] ?? "";
+      if (!sameSecret(given, opts.appSecret)) {
+        send(res, 401, { error: { code: "unauthorized", message: "Only your app can change the leash or answer a purchase." } });
+        return;
+      }
     }
     const values = url.pathname.match(match.pattern)!.slice(1);
     const params = Object.fromEntries(match.keys.map((k, i) => [k, decodeURIComponent(values[i] ?? "")]));

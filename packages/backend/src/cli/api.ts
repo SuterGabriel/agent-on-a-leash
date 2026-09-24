@@ -33,7 +33,16 @@ const service = new LeashService({
 // The engine keeps one ledger per run; it has to hear the customer's answers.
 engine.follow(service.bus);
 
-createLeashServer(service, { corsOrigin: process.env.CORS_ORIGIN ?? "*" }).listen(port, () => {
+// Live moves money on Viseca's side, so it refuses to start open. Offline stays open for local development.
+const appSecret = process.env.APP_SECRET?.trim() || null;
+const corsOrigin = process.env.CORS_ORIGIN?.trim() || (cfg.mode === "live" ? null : "*");
+if (cfg.mode === "live" && (!appSecret || !corsOrigin || corsOrigin === "*")) {
+  console.error("Live mode needs APP_SECRET and CORS_ORIGIN (the app's origin, not *). See .env.example.");
+  process.exit(1);
+}
+if (!appSecret) console.warn("APP_SECRET is not set: anyone who reaches this server can answer purchases.");
+
+createLeashServer(service, { corsOrigin: corsOrigin as string, appSecret }).listen(port, () => {
   console.log(`Leash API on http://localhost:${port} · mode ${cfg.mode} · engine ${engine.version}`);
   console.log(`  scenarios: ${service.scenarios().map((s) => s.scenario_id).join(" ")}`);
   console.log(`  GET  /app/leash · /app/feed · /app/asks · /app/stream (SSE) · /app/tokens · /judge/decisions · /api/status`);
