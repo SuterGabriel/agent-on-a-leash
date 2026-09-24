@@ -153,9 +153,10 @@ Details that matter for the app:
 - `POST /api/runs {scenario_id}` creates a fresh leash from the scenario's instruction and starts the run (worker runs in the background).
   `{scenario_id, use_current_leash: true}` keeps the leash the customer built in S1–S3 instead.
 - `PATCH /app/leash/rules` bodies: `{type:"lower_order_limit", value}`, `{type:"block_shop", merchant_id}`, `{type:"block_category", category}`, `{type:"unsure_decline"}`. A looser limit is refused with `not_tighter`.
-- `POST /app/asks/:id/resolve {decision, accept_suggestion?}`. After a decline, the decision carries `suggestion {id, text}` ("Never buy cosmetics") when one fits.
+- `POST /app/asks/:id/resolve {decision, accept_suggestion?, over_budget_ok?}`. After a decline, the decision carries `suggestion {id, text}` ("Never buy cosmetics") when one fits.
+  An approval that no longer fits the budget is refused with `over_budget` until the app sends it again with `over_budget_ok: true` (see App API security).
 - Checks come back with `your_words` filled from the leash (the backend adds them; the engine only returns keys).
-- Errors: `{error: {code, message}}`. 400 bad input, 404 unknown, 409 conflict (revoked leash, already answered, run in progress), 410 ask expired, 502 Viseca error.
+- Errors: `{error: {code, message}}`. 400 bad input, 401 missing app secret, 404 unknown, 409 conflict (revoked leash, already answered, answer already on its way `busy`, `over_budget`, run in progress), 410 ask expired, 502 Viseca error.
 - Known shops = approved purchases on the scenario card in the history, plus shops the customer approved (`new: true`). A one-item leash (`q_close_after_first: "Yes"`) revokes itself after the first approval.
 
 Realtime is **SSE from our backend**, not Supabase Realtime: it carries `ask_expired` and `leash_changed`, and the Supabase service key never leaves the server.
@@ -200,6 +201,34 @@ whole story on SCEN0004 data for the pitch or the backup recording.
 Pitch line: *"Our rules decide what's allowed. Every approval becomes a token for one shop, one amount, one use, so even a
 fooled agent can't spend more, somewhere else, later, or twice."*
 
+## App API security ✅ done
+
+Three fixes from the security review (the full list and what we skipped: `docs/learnings/2026-09-24-security-review.md`).
+Tested in `test/security.test.ts`; each test fails on the code before the fix.
+
+- **One answer per ask** (`asks.ts`). The ask is claimed before the call to Viseca's `/resolve`. A second answer
+  while the first is on its way gets 409 `busy`, so a double tap, or app and voice at once, can't send approve and
+  decline both. If Viseca fails, the claim is released and the ask stays waiting. Node runs one piece of code at a
+  time, so check and claim can't interleave: the same job `SELECT … FOR UPDATE` does in a database.
+- **The budget is checked again when the customer approves** (`LeashService.reserveBudget`). Each ask fit the budget
+  when the engine checked it, but two approved together may not (two asks of CHF 250 with CHF 300 left). Approvals
+  still on their way to Viseca count as spent until they land; check and reservation happen before any `await`, so
+  two taps at once can't both see the same money left. Over budget → 409 `over_budget` with the message
+  *"This puts you CHF 200.00 over your 7-day budget (CHF 50.00 left). Approve again to buy it anyway."* It's the
+  customer's money, so the app may resend with `over_budget_ok: true`.
+- **Only the app can write** (`server.ts`, `cli/api.ts`). With `APP_SECRET` set, every POST/PATCH/DELETE under
+  `/app/*` needs `Authorization: Bearer <APP_SECRET>`, otherwise 401 `unauthorized` (compared in constant time).
+  Reads, `/app/stream` and `/demo/tokens/*` stay open: the agent holds only decision tokens, which can pay but never
+  approve. `CORS_ORIGIN` names the one browser origin allowed. A header, not a cookie, so CSRF doesn't apply.
+
+| Setting | Offline | Live |
+|---|---|---|
+| `APP_SECRET` | optional; unset = open, with a warning | required, `npm run api` refuses to start without it |
+| `CORS_ORIGIN` | defaults to `*` | required, and not `*` |
+
+**Limit, honestly:** the secret ships in the app's bundle, so whoever has the built frontend can read it. It keeps
+the agent and outsiders out; it is not a user login. Per-user sessions come with Supabase Auth (Step 4).
+
 ## Step 7 — Resilience checklist
 
 - Decision post fails → retry once after 250 ms, then log `post_failed`. ✅
@@ -207,6 +236,8 @@ fooled agent can't spend more, somewhere else, later, or twice."*
 - Duplicate delivery → stored answer, counted once. ✅
 - Human window expires → mark `expired`, send nothing, emit `ask_expired`. ✅
 - Revoke with pending step_up → do not fake a cancellation (expert question Q5). ✅ (asks stay as they are)
+- Two answers to one ask at once → one goes to Viseca, the other gets `busy`. ✅
+- Approvals together over the budget → `over_budget` until the customer confirms. ✅
 
 ## Step 8 — Model service client (P1, after Thu 21:00)
 

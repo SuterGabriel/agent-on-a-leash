@@ -44,6 +44,14 @@ Someone outside the team must understand why in 5 seconds.
 Realtime subscription on `decisions`; step_up rows open ③ automatically with the countdown.
 Keep a mock mode switch for the backup demo.
 
+**What the backend expects from the app** (details: `02_DEV2_BACKEND.md`, App API security):
+- Put `APP_SECRET` and `CORS_ORIGIN` (your dev server, e.g. `http://localhost:5173`) in `.env`, and give the app the same secret.
+- Send `Authorization: Bearer <APP_SECRET>` on every POST, PATCH and DELETE. GETs and `/app/stream` need nothing.
+- Answering an ask (`POST /app/asks/:id/resolve`) can return two new 409s:
+  - `busy`: an answer is already on its way. Ignore it; the stream brings the result.
+  - `over_budget`: show `error.message` ("This puts you CHF … over your 7-day budget") with a **Buy anyway** button that sends the same request with `over_budget_ok: true`.
+- Shop text reaches the app inside messages (`because`, `evidence`). Render it as text, never with `dangerouslySetInnerHTML`.
+
 ## Checkpoints
 
 | When | You show |
