@@ -113,6 +113,8 @@ export class TokenVault {
     if (t.status === "expired") return refuse("token_expired", "This token expired unused.");
     if (t.status === "revoked") return refuse("token_revoked", "You revoked the leash, so this token no longer works.");
     if (merchantId !== t.merchant_id) return refuse("wrong_merchant", `This token only works at ${t.merchant_name}.`);
+    // A charge is a positive, finite amount. Zero, negative, NaN or infinite never reach the amount check below.
+    if (!Number.isFinite(amountChf) || amountChf <= 0) return refuse("invalid_amount", "A charge must be a positive amount.");
     if (amountChf > t.max_chf) return refuse("over_amount", `${chf(amountChf)} is more than this token allows (${chf(t.max_chf)}).`);
     t.status = "used";
     t.charged_chf = round2(amountChf);

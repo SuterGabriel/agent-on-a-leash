@@ -34,6 +34,10 @@
     "packages/backend/test/engine.test.ts",
     "packages/backend/test/live-reference.test.ts",
     "packages/backend/test/app-engine.test.ts",
-    "packages/backend/test/engine-no-history.test.ts"
+    "packages/backend/test/engine-no-history.test.ts",
+    "packages/backend/test/paraphrases.test.ts",
+    "packages/backend/test/performance.test.ts",
+    "packages/backend/test/security-hardening.test.ts",
+    "packages/backend/test/helpers/**",
   ]
 }

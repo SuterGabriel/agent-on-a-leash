@@ -28,7 +28,7 @@ export interface DecisionToken {
   history: TokenEvent[];
 }
 
-export type TokenRefusal = "unknown_token" | "token_used" | "token_expired" | "token_revoked" | "wrong_merchant" | "over_amount";
+export type TokenRefusal = "unknown_token" | "token_used" | "token_expired" | "token_revoked" | "wrong_merchant" | "over_amount" | "invalid_amount";
 
 /** Result of a (simulated) merchant charge against a token. */
 export interface ChargeResult {
