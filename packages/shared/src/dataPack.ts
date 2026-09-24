@@ -25,6 +25,7 @@ export interface DataPack {
   scenarios: Map<string, Scenario>;
   authorities: Map<string, Authority>;
   merchants: Map<string, Row>;
+  cards: Map<string, Row>;
   /** purchase_attempts.csv rows keyed by AU id. */
   attempts: Map<string, Row>;
   /** cart lines keyed by AU id, sorted by line_no. */
@@ -74,10 +75,23 @@ export function loadDataPack(dir: string): DataPack {
     scenarios,
     authorities,
     merchants: byKey(readCsv(dir, "merchants.csv"), "merchant_id"),
+    cards: byKey(readCsv(dir, "cards.csv"), "card_id"),
     attempts: byKey(readCsv(dir, "purchase_attempts.csv"), "authorization_id"),
     attemptItems,
     fx,
   };
+}
+
+/** Approved purchases per merchant on one card, from authorization_history.csv (4,701 rows, read once per call). */
+export function approvedPurchasesByMerchant(dir: string, cardId: string): Map<string, { name: string; count: number }> {
+  const out = new Map<string, { name: string; count: number }>();
+  for (const r of readCsv(dir, "authorization_history.csv")) {
+    if (r.card_id !== cardId || r.status !== "approved" || r.transaction_type !== "purchase") continue;
+    const id = r.merchant_id as string;
+    const prev = out.get(id);
+    out.set(id, { name: r.merchant_name as string, count: (prev?.count ?? 0) + 1 });
+  }
+  return out;
 }
 
 /** Attempts of one scenario in delivery order. */

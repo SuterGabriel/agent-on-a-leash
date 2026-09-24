@@ -1,4 +1,5 @@
 // Decision shapes shared by engine, backend and app. Source: the App API contract.
+import type { DecisionToken } from "./token.js";
 
 export type EngineDecisionValue = "approve" | "decline" | "step_up";
 export type CheckResult = "pass" | "fail" | "unsure";
@@ -60,6 +61,8 @@ export interface Decision extends Omit<EngineVerdict, "engine_version"> {
   deadline_at?: string;
   actions: string[];
   engine_version: string;
+  /** Set after an approval: the single-use token the agent pays with (demo). */
+  token?: DecisionToken;
 }
 
 export function statusFor(decision: EngineDecisionValue): DecisionStatus {
