@@ -28,7 +28,8 @@ The bootstrap response holds the decision deadline (8 s) and the human window (1
 | `packages/shared/src/dataPack.ts`, `buildEvent.ts`, `fx.ts` | CSV loaders, CSV row → live event, half-even CHF conversion |
 | `packages/backend/src/viseca/` | `VisecaApi` interface, live HTTP client |
 | `packages/backend/src/offline/platform.ts` | Offline clone of the platform |
-| `packages/backend/src/engine/port.ts` | `Engine` interface Dev 1 implements, `stubEngine` (always step_up), fallback verdict |
+| `packages/backend/src/engine/port.ts` | `Engine` interface, `stubEngine` (always step_up, for tests), fallback verdict |
+| `packages/backend/src/engine/leashEngine.ts` | Ara's engine (`packages/engine`) behind the port: policy from the stricter mandate, one ledger per run, verdict for the app |
 | `packages/backend/src/worker.ts`, `asks.ts`, `store.ts` | Worker loop, customer answers, in-memory store + event bus |
 | `packages/shared/src/leash.ts` | App shapes: `ParseResult`, `LeashRule`, `LeashView`, `Budget`, `Suggestion`, `TightenRequest` (for Kim) |
 | `packages/shared/src/ruleFields.ts` | **Rule conventions between compiler and engine** (hard_rule field names, rule keys, built-in protections). Ara reads these. |
@@ -38,7 +39,7 @@ The bootstrap response holds the decision deadline (8 s) and the human window (1
 | `packages/backend/src/tokens/vault.ts` | Decision-bound tokens (demo), see below |
 | `packages/backend/test/` | 47 tests: compiler, worker, retries, timeouts, resolve, expiry, PATCH rules, live response shapes, tokens, full API flow over HTTP |
 
-`npm test` runs them. `npm run api` starts the app API on http://localhost:8787 (offline; `npm run api -- --live` for Viseca).
+`npm test` runs them. `npm run api` starts the app API on http://localhost:8787 with Ara's engine (offline; `npm run api -- --live` for Viseca, which loads the live scenarios and card history).
 `npm run scenario -- SCEN0001 --answer approve` runs a scenario from the command line.
 
 **Confirmed on the live API (24 Sep 2026, SCEN0000 + SCEN0001 green, 31–157 ms per decision):**
@@ -58,7 +59,7 @@ The bootstrap response holds the decision deadline (8 s) and the human window (1
 (bootstrap, reference data, mandates create/confirm/get/patch/delete, scenario runs, decision-requests/next, decision, resolve, authorizations, events, team reset).
 30 s timeout, errors thrown as `VisecaError` with status and body. The client and the offline platform implement the same `VisecaApi` interface.
 
-## Step 2 — Worker, end to end ✅ done (with stub engine)
+## Step 2 — Worker, end to end ✅ done (with Ara's engine)
 
 `packages/backend/src/worker.ts`
 ```
@@ -158,6 +159,20 @@ Details that matter for the app:
 - Known shops = approved purchases on the scenario card in the history, plus shops the customer approved (`new: true`). A one-item leash (`q_close_after_first: "Yes"`) revokes itself after the first approval.
 
 Realtime is **SSE from our backend**, not Supabase Realtime: it carries `ask_expired` and `leash_changed`, and the Supabase service key never leaves the server.
+
+## Engine integration ✅ done
+
+Ara's engine (`packages/engine`, leash-0.2.0) decides in the app API, the scenario runner and the token demo.
+- **One contract for rules:** the compiler writes hard_rules with the field names the engine reads (`ruleFields.ts`).
+  A rule the engine can't read is never ignored: the purchase is asked (`rule_not_applied`). Guarded by
+  `test/app-engine.test.ts`: compiler → mandate → worker → engine matches the reference on 45/45.
+- **Customer's words on checks:** the engine names checks after its guards (`per_order_limit`, `item_scope`, …);
+  `CHECK_TO_RULE` in `leash/service.ts` maps them to the leash rules so `your_words` shows on the decision card.
+- **Not readable by the engine yet (ask Ara):** `items.item_category not_in` (block a category, "Never buy cosmetics"),
+  `merchant.merchant_id not_in` (block a shop) and the learned flags. Tighten still writes them, which makes later
+  purchases asks; suggestions only offer rules the engine reads (today: no add-ons, known shops only).
+- **Live mode:** the live API has its own scenarios (e.g. `SCEN0101`) and card history; `npm run api -- --live` loads
+  them, `/api/scenarios` lists them, and the card is read from the first purchase.
 
 ## Decision-bound tokens (demo) ✅ done
 

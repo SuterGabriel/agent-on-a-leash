@@ -84,8 +84,13 @@ export function loadDataPack(dir: string): DataPack {
 
 /** Approved purchases per merchant on one card, from authorization_history.csv (4,701 rows, read once per call). */
 export function approvedPurchasesByMerchant(dir: string, cardId: string): Map<string, { name: string; count: number }> {
+  return approvedPurchasesByMerchantFromRows(readCsv(dir, "authorization_history.csv"), cardId);
+}
+
+/** Same, from history rows already loaded (for example the live history). */
+export function approvedPurchasesByMerchantFromRows(rows: Row[], cardId: string): Map<string, { name: string; count: number }> {
   const out = new Map<string, { name: string; count: number }>();
-  for (const r of readCsv(dir, "authorization_history.csv")) {
+  for (const r of rows) {
     if (r.card_id !== cardId || r.status !== "approved" || r.transaction_type !== "purchase") continue;
     const id = r.merchant_id as string;
     const prev = out.get(id);

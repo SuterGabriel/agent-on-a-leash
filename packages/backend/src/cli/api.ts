@@ -1,28 +1,41 @@
 // Starts the app API: npm run api  (offline by default, LEASH_MODE=live or --live for Viseca)
+import { resolve } from "node:path";
 import { loadDataPack } from "@leash/shared";
 import { loadConfig } from "../config.js";
 import { HttpVisecaClient } from "../viseca/client.js";
 import { OfflinePlatform } from "../offline/platform.js";
-import { stubEngine } from "../engine/port.js";
+import { LeashEngine } from "../engine/leashEngine.js";
 import { LeashService } from "../leash/service.js";
 import { createLeashServer } from "../http/server.js";
+import { loadLiveReference } from "../live/referenceData.js";
+import { buildBaselines } from "../../../shared/src/baselines.js";
 
 const cfg = loadConfig(process.argv.includes("--live") ? { mode: "live" } : {});
 const port = Number(process.env.PORT ?? 8787);
 const pack = loadDataPack(cfg.dataDir);
-const api = cfg.mode === "live" ? new HttpVisecaClient(cfg.baseUrl, cfg.teamApiKey) : new OfflinePlatform(pack);
+const client = new HttpVisecaClient(cfg.baseUrl, cfg.teamApiKey);
+const log = (line: string) => console.log(`[worker] ${line}`);
+
+// Live: the live pack has its own scenarios and card history, downloaded now and cached in data/live/.
+const liveRef = cfg.mode === "live" ? await loadLiveReference(client, resolve(cfg.dataDir, "live"), log) : null;
+const engine = new LeashEngine(undefined, liveRef ? buildBaselines(liveRef.history, liveRef.merchants) : undefined);
 
 const service = new LeashService({
-  api,
+  api: cfg.mode === "live" ? client : new OfflinePlatform(pack),
   pack,
-  engine: stubEngine, // Ara's engine plugs in here.
+  engine,
   mode: cfg.mode,
   worker: { pollWaitSeconds: cfg.mode === "live" ? 25 : 0 },
-  log: (line) => console.log(`[worker] ${line}`),
+  scenarios: liveRef?.scenarios,
+  historyRows: liveRef?.history,
+  log,
 });
+// The engine keeps one ledger per run; it has to hear the customer's answers.
+engine.follow(service.bus);
 
 createLeashServer(service, { corsOrigin: process.env.CORS_ORIGIN ?? "*" }).listen(port, () => {
-  console.log(`Leash API on http://localhost:${port} · mode ${cfg.mode} · engine ${stubEngine.version}`);
-  console.log(`  GET  /app/leash · /app/feed · /app/asks · /app/stream (SSE) · /judge/decisions · /api/status`);
-  console.log(`  POST /app/leash/parse · /app/leash · /app/asks/:id/resolve · /api/runs {"scenario_id":"SCEN0001"}`);
+  console.log(`Leash API on http://localhost:${port} · mode ${cfg.mode} · engine ${engine.version}`);
+  console.log(`  scenarios: ${service.scenarios().map((s) => s.scenario_id).join(" ")}`);
+  console.log(`  GET  /app/leash · /app/feed · /app/asks · /app/stream (SSE) · /app/tokens · /judge/decisions · /api/status`);
+  console.log(`  POST /app/leash/parse · /app/leash · /app/asks/:id/resolve · /api/runs {"scenario_id":"..."}`);
 });

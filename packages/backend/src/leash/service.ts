@@ -1,5 +1,6 @@
 import {
   approvedPurchasesByMerchant,
+  approvedPurchasesByMerchantFromRows,
   BUILT_IN_PROTECTIONS,
   RULE_FIELDS,
   RULE_KEYS,
@@ -13,6 +14,7 @@ import {
   type ChargeResult,
   type DecisionToken,
   type ParseResult,
+  type Row,
   type Suggestion,
   type TightenRequest,
   type UncertaintyPolicy,
@@ -84,8 +86,35 @@ export interface LeashServiceOptions {
   worker?: WorkerOptions;
   store?: DecisionStore;
   tokens?: TokenVault;
+  /** Live mode: the live scenario catalogue (its IDs differ from the local pack). */
+  scenarios?: ScenarioInfo[];
+  /** Live mode: the live card history, for known shops. */
+  historyRows?: Row[];
   log?: (line: string) => void;
 }
+
+export interface ScenarioInfo {
+  scenario_id: string;
+  scenario_name: string;
+  cardholder_instruction: string;
+  event_count: number;
+}
+
+/**
+ * The engine names its checks after its guards; the leash names rules after what the customer said.
+ * This map lets the backend put the customer's own words on each check.
+ */
+export const CHECK_TO_RULE: Record<string, string> = {
+  per_order_limit: RULE_KEYS.order_limit,
+  period_budget: RULE_KEYS.period_budget,
+  item_scope: RULE_KEYS.purpose,
+  requested_item: RULE_KEYS.requested_item,
+  addon: RULE_KEYS.no_extras,
+  return_terms: RULE_KEYS.return_window,
+  merchant_type: RULE_KEYS.merchant_type,
+  familiarity: RULE_KEYS.known_shop,
+  session: RULE_KEYS.session,
+};
 
 const APPROVED = new Set(["approved", "approved_by_you"]);
 
@@ -104,6 +133,8 @@ export class LeashService {
   private readonly pack: DataPack;
   private readonly inner: Engine;
   private readonly log: (line: string) => void;
+  private readonly scenarioList: Map<string, ScenarioInfo>;
+  private readonly historyRows: Row[] | null;
   readonly mode: "offline" | "live";
 
   constructor(opts: LeashServiceOptions) {
@@ -112,6 +143,8 @@ export class LeashService {
     this.inner = opts.engine;
     this.mode = opts.mode;
     this.log = opts.log ?? (() => {});
+    this.scenarioList = new Map((opts.scenarios ?? [...this.pack.scenarios.values()]).map((sc) => [sc.scenario_id, sc]));
+    this.historyRows = opts.historyRows ?? null;
     this.store = opts.store ?? new InMemoryDecisionStore();
     this.tokens = opts.tokens ?? new TokenVault();
     this.worker = new Worker(this.api, this.leashEngine(), this.store, this.bus, { log: this.log, ...opts.worker });
@@ -143,12 +176,18 @@ export class LeashService {
             engine_version: this.inner.version,
           };
         }
+        // Live scenarios don't say which card they use; the first purchase does.
+        if (leash && !leash.card_id && leash.mandate_id === event.mandate.mandate_id) leash.card_id = event.authorization.card_id;
         const verdict = await this.inner.decide(event, ctx);
         // The engine returns rule keys; the customer's own words live only in our store.
         const rules = leash ? [...leash.rules, ...leash.learned] : [];
         return {
           ...verdict,
-          checks: verdict.checks.map((c) => (c.your_words === null && c.source !== "built_in" ? { ...c, your_words: rules.find((r) => r.key === c.key)?.your_words?.text ?? null } : c)),
+          checks: verdict.checks.map((c) => {
+            if (c.your_words !== null || c.source === "built_in") return c;
+            const key = CHECK_TO_RULE[c.key] ?? c.key;
+            return { ...c, your_words: rules.find((r) => r.key === key)?.your_words?.text ?? null };
+          }),
         };
       },
     };
@@ -269,7 +308,7 @@ export class LeashService {
   private history(cardId: string) {
     let h = this.historyCache.get(cardId);
     if (!h) {
-      h = approvedPurchasesByMerchant(this.pack.dir, cardId);
+      h = this.historyRows ? approvedPurchasesByMerchantFromRows(this.historyRows, cardId) : approvedPurchasesByMerchant(this.pack.dir, cardId);
       this.historyCache.set(cardId, h);
     }
     return h;
@@ -493,12 +532,13 @@ export class LeashService {
   // ── Demo control and judge view ────────────────────────────────────────────────────────────────
 
   async startRun(scenarioId: string, useCurrentLeash = false): Promise<RunRecord> {
-    const scenario = this.pack.scenarios.get(scenarioId);
+    const scenario = this.scenarioList.get(scenarioId);
     if (!scenario) throw new ServiceError(404, "scenario_not_found", `No scenario ${scenarioId}.`);
     const running = [...this.runs.values()].find((r) => r.state === "running");
     if (running) throw new ServiceError(409, "run_in_progress", `Run ${running.run_id} is still running.`);
     if (!useCurrentLeash) await this.createLeash({ instruction: scenario.cardholder_instruction, confirmed: true });
     const leash = this.requireActive();
+    // Offline the data pack knows the scenario's card; live it is read from the first purchase.
     leash.card_id = scenarioAttempts(this.pack, scenarioId)[0]?.card_id ?? null;
 
     const run = await this.api.startRun({ scenario_id: scenarioId, mandate_id: leash.mandate_id });
@@ -537,8 +577,8 @@ export class LeashService {
     return { mode: this.mode, engine_version: this.inner.version, leash: this.getLeash().status, latest_run: latest ? { ...latest, platform } : null, runs };
   }
 
-  scenarios() {
-    return [...this.pack.scenarios.values()];
+  scenarios(): ScenarioInfo[] {
+    return [...this.scenarioList.values()];
   }
 
   judge(runId?: string) {
