@@ -503,3 +503,38 @@ describe("A9 when the leash ends: 'until Friday', 'bis 30.09.', 'for the next tw
     expect("Max CHF 100 per order, valid until Friday, shoes only.".slice(r.start, r.end)).toBe(r.text);
   });
 });
+
+describe("cold start: session without history", () => {
+  const row = (i: number): Row => ({
+    card_id: "CA_H", customer_id: "CU_H", account_id: "AC_H", transaction_type: "purchase", status: "approved", merchant_id: "ME_H",
+    merchant_name: "Home Shop", merchant_category: "electronics", customer_device_id: "DV_H", recurring: "false",
+    timestamp: `2026-06-${String(1 + i).padStart(2, "0")}T12:00:00Z`, merchant_country: "CH",
+  });
+  const base = buildBaselines(Array.from({ length: 12 }, (_, i) => row(i)), new Map());
+  const I = "Stop anything that doesn't look like me. When in doubt, decline.";
+  const who = (card: string, customer: string, over: Partial<AuthorizationEvent["authorization"]> = {}) => (e: AuthorizationEvent) => {
+    Object.assign(e.authorization, { card_id: card, ...over });
+    e.mandate.customer_id = customer;
+  };
+
+  it("unknown device, hour, country or shop: asks, even with 'decline when unsure'", () => {
+    const r = run(I, event(I, who("CA_NONE", "CU_NONE", { recent_attempt_count_10m: 0 })), new Ledger(), base);
+    expect(r.decision).toBe("step_up");
+    expect(r.reason_codes).toContain("no_session_history");
+    expect(r.reason_codes).not.toContain("session_not_you");
+  });
+
+  it("a burst of orders is real data: flagged without history too", () => {
+    const r = run(I, event(I, who("CA_NONE", "CU_NONE", { recent_attempt_count_10m: 4 })), new Ledger(), base);
+    expect(r.reason_codes).toContain("session_not_you");
+  });
+
+  it("with history, a burst plus a new device and a new country still declines", () => {
+    const r = run(I, event(I, (e) => {
+      who("CA_H", "CU_H", { recent_attempt_count_10m: 3, customer_device_id: "DV_NEW" })(e);
+      Object.assign(e.authorization.merchant, { merchant_id: "ME_H", merchant_country: "DE" });
+    }), new Ledger(), base);
+    expect(r.decision).toBe("decline");
+    expect(r.guards.find((g) => g.guard === "session")?.signals).toEqual(expect.arrayContaining(["quick_series", "new_device", "new_country"]));
+  });
+});

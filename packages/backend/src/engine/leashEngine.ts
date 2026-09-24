@@ -220,6 +220,7 @@ const HEADLINES: Record<string, string> = {
   blocked_item: "Something you excluded",
   not_refundable: "Not refundable",
   no_shop_history: "No history to check the shop",
+  no_session_history: "No history to compare with",
   over_card_limit: "Above your card's limit",
   guard_error: "Please check this purchase",
 };
@@ -256,7 +257,7 @@ const CHECKS: Record<string, { label: string; source: CheckSource }> = {
 function checkResult(g: GuardResult): CheckResult {
   if (g.verdict === "PASS") return "pass";
   // No history is a missing fact, not a failed check: the card shows it as unsure, and the customer is asked.
-  if (g.verdict === "UNCERTAIN" || g.reason_code === "guard_error" || g.reason_code === "no_shop_history") return "unsure";
+  if (g.verdict === "UNCERTAIN" || g.reason_code === "guard_error" || g.reason_code === "no_shop_history" || g.reason_code === "no_session_history") return "unsure";
   return "fail";
 }
 

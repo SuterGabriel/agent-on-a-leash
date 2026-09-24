@@ -1,7 +1,8 @@
 // Guard 15: session integrity. Does this look like the customer? Judged against THIS card's history,
 // or all the customer's cards when the card has little ("baseline: customer").
 // 1–2 signals: ask. 3 or more: stop. Signals are per purchase, so a clean purchase after a burst passes.
-// With no history at all every signal would fire; that is missing data, not proof, so it only asks.
+// No history to compare with (device, hour, country, shop unknown): that is missing data, not proof, so it asks
+// (STEP_UP), even when the customer said "decline when unsure". A burst of orders is real data and keeps its weight.
 import { swissHour } from "../../../shared/src/baselines";
 import type { Guard } from "../types";
 
@@ -14,8 +15,8 @@ export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScop
   const signals: string[] = [];
   const text: string[] = [];
 
-  // No history for this card (live scenario cards): device, country and shop can't be "new" against nothing.
-  // Only the burst signal stands on its own; the rest is unknown and goes to the uncertainty policy.
+  // No history for this card or its customer (live scenario cards): device, country and shop can't be "new" against
+  // nothing. Only the burst signal stands on its own; the rest is unknown, and unknown is an ask, never a decline.
   if (card.purchases === 0) {
     const evidence = [
       { fact: "card_history_purchases", value: 0, comparator: ">=", threshold: 1, source: "authorization_history" },
@@ -33,8 +34,8 @@ export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScop
     }
     return {
       guard: "session",
-      verdict: "UNCERTAIN",
-      reason_code: "missing_info",
+      verdict: "STEP_UP",
+      reason_code: "no_session_history",
       evidence,
       message: "We don't have any purchase history for this card yet, so we can't compare this with how you usually shop.",
     };
