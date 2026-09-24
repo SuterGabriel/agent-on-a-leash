@@ -1,0 +1,34 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-09-24T10:00:00Z"},
+  "title": "Agent on a Leash — Wireframes",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1280, "h": 540, "title": "Flow", "is_interactive": true},
+    "Parts.dc.html": {"x": 1360, "y": 0, "w": 900, "h": 640, "title": "Shared parts"},
+    "Create.dc.html": {"x": 0, "y": 1000, "w": 393, "h": 852, "title": "1 · Create leash", "is_interactive": true},
+    "Understood.dc.html": {"x": 473, "y": 1000, "w": 393, "h": 1080, "title": "2 · Here's what I understood", "is_interactive": true},
+    "Active.dc.html": {"x": 946, "y": 1000, "w": 393, "h": 852, "title": "3 · Leash active (History)", "is_interactive": true},
+    "Revoked.dc.html": {"x": 1419, "y": 1000, "w": 393, "h": 852, "title": "3 · After revoke: Revoked · token off", "is_interactive": true},
+    "Push.dc.html": {"x": 0, "y": 2480, "w": 393, "h": 852, "title": "Push notification → 4", "is_interactive": true},
+    "Ask.dc.html": {"x": 473, "y": 2480, "w": 393, "h": 852, "title": "4 · Ask-me sheet", "is_interactive": true},
+    "AskShop.dc.html": {"x": 946, "y": 2480, "w": 393, "h": 852, "title": "5 · Ask-me sheet, manipulated shop"},
+    "HistoryMixed.dc.html": {"x": 1419, "y": 2480, "w": 393, "h": 900, "title": "7 · History, mixed", "is_interactive": true},
+    "Decision.dc.html": {"x": 1892, "y": 2480, "w": 393, "h": 900, "title": "6 · Decision card", "is_interactive": true},
+    "Rules.dc.html": {"x": 0, "y": 3780, "w": 393, "h": 1440, "title": "8 · Leash detail (Rules)", "is_interactive": true},
+    "RevokeConfirm.dc.html": {"x": 473, "y": 3780, "w": 393, "h": 852, "title": "8 · Revoke confirmation", "is_interactive": true},
+    "Judge.dc.html": {"x": 0, "y": 5620, "w": 1440, "h": 1500, "title": "9 · Judge view (web)", "is_interactive": true}
+  },
+  "order": ["Main.dc.html", "Parts.dc.html", "Create.dc.html", "Understood.dc.html", "Active.dc.html", "Revoked.dc.html", "Push.dc.html", "Ask.dc.html", "AskShop.dc.html", "HistoryMixed.dc.html", "Decision.dc.html", "Rules.dc.html", "RevokeConfirm.dc.html", "Judge.dc.html"],
+  "notes": {
+    "t0": {"x": 0, "y": -300, "text": "Agent on a Leash · flow and shared parts", "kind": "title1", "maxW": 2260},
+    "t1": {"x": 0, "y": 700, "text": "Set up the leash", "kind": "title1", "maxW": 1812},
+    "t2": {"x": 0, "y": 2180, "text": "When the agent buys", "kind": "title1", "maxW": 2285},
+    "t3": {"x": 0, "y": 3480, "text": "Tighten or revoke", "kind": "title1", "maxW": 866},
+    "t4": {"x": 0, "y": 5320, "text": "Judge view (web, 1440)", "kind": "title1", "maxW": 1440},
+    "s1": {"x": 0, "y": 1892, "w": 393, "maxH": 220, "text": "Frame 1 · the microphone label has three states: Listening, Thinking, Speaking. Switch them in this frame's Tweaks.", "fill": "gray"},
+    "s2": {"x": 946, "y": 3780, "w": 393, "maxH": 360, "text": "Flow · Revoke leash → confirmation → back to frame 3 with the pill 'Revoked · token off'.\n\n'Decline and block cosmetics' on sheet 4 opens Rules with 'Block a category · cosmetics' preselected.\n\nTightening applies on the agent's next run. Loosening always creates a new leash you confirm again.", "fill": "gray"}
+  },
+  "designSystems": []
+}
