@@ -1,16 +1,38 @@
 // Guard 11: "only shops I have used". Known = at least one approved purchase on THIS card.
 // A shop used only with the customer's other card is a question, not a yes.
+// A card with little history is judged on all the customer's cards ("baseline: customer").
+// No history at all: we cannot tell, so we ask. Never a decline on missing history.
 import type { Guard } from "../types";
 
-export const merchantFamiliarity: Guard = ({ auth, policy, card, base, customerId }) => {
+export const merchantFamiliarity: Guard = ({ auth, policy, card, base, customerId, habits, habitsScope }) => {
   if (!policy.familiarShopsOnly) return { guard: "familiarity", verdict: "SKIP", evidence: [] };
   const mId = auth.merchant.merchant_id;
+  const baseline = { fact: "baseline", value: habitsScope, comparator: null, threshold: null, source: "authorization_history" };
+
+  if (habitsScope === "none") {
+    return {
+      guard: "familiarity",
+      verdict: "STEP_UP",
+      reason_code: "no_shop_history",
+      evidence: [baseline],
+      message: `We have no purchase history for this card or its owner, so we cannot tell whether you know ${auth.merchant.merchant_name}. Is it a shop you use?`,
+    };
+  }
+
+  if (habitsScope === "customer") {
+    const onAnyCard = habits.merchants.get(mId) ?? 0;
+    const evidence = [{ fact: "approved_purchases_any_card", value: onAnyCard, comparator: ">=", threshold: 1, source: "authorization_history" }, baseline];
+    if (onAnyCard > 0) return { guard: "familiarity", verdict: "PASS", evidence };
+    return { guard: "familiarity", verdict: "STEP_UP", reason_code: "new_shop", evidence, message: `You have never bought at ${auth.merchant.merchant_name}. You asked for shops you have used before.` };
+  }
+
   const onCard = card.merchants.get(mId) ?? 0;
   const onCustomer = customerId ? base.customerMerchants.get(customerId)?.get(mId) ?? 0 : 0;
   const onOtherCards = onCustomer - onCard;
   const evidence = [
     { fact: "approved_purchases_this_card", value: onCard, comparator: ">=", threshold: 1, source: "authorization_history" },
     { fact: "approved_purchases_other_cards", value: onOtherCards, comparator: null, threshold: null, source: "authorization_history" },
+    baseline,
   ];
   if (onCard > 0) return { guard: "familiarity", verdict: "PASS", evidence };
   if (onOtherCards > 0) {

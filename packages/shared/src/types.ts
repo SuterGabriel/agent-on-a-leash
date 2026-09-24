@@ -102,6 +102,12 @@ export interface Policy {
   familiarShopsOnly: boolean; // "shops I have used before"
   noExtras: boolean; // "do not add anything I did not ask for"
   sessionIntegrity: boolean; // "pause anything that looks like someone other than me"
+  perUnitLimit: { amountChf: number; unit: string } | null; // "CHF 200 per night": compared with each line's unit price
+  maxOrdersPerPeriod: { count: number; days: number } | null; // "one a day" -> { count: 1, days: 1 }
+  allowedWeekdays: number[] | null; // Swiss local weekday, 0 = Sunday … 6 = Saturday
+  blockedCategories: string[] | null; // "no gift cards" -> gift_card
+  blockedKeywords: string[] | null; // "no alcohol" -> wine, beer, … (item name, category, clean shop text)
+  refundableRequired: boolean; // "refundable rate only", "only if it can be returned"
   uncertainty: UncertaintyPolicy;
   overshootTolerance: number; // 0.10 = a limit exceeded by <= 10 % asks instead of declining
   assumptions: string[];

@@ -17,7 +17,7 @@ import { decide, ENGINE_VERSION } from "../../../engine/src/decide.js";
 import { Ledger } from "../../../engine/src/ledger.js";
 import type { DecisionResult, GuardResult } from "../../../engine/src/types.js";
 import { buildBaselines, type Baselines } from "../../../shared/src/baselines.js";
-import { compilePolicy, itemTokens } from "../../../shared/src/compiler.js";
+import { compilePolicy, itemTokens, WEEKDAYS } from "../../../shared/src/compiler.js";
 import { loadDataPack } from "../../../shared/src/loaders.js";
 import type { AuthorizationEvent as EngineEvent, Evidence, Policy } from "../../../shared/src/types.js";
 import type { LeashBus } from "../store.js";
@@ -104,6 +104,35 @@ function tighten(p: Policy, r: MandateRule): boolean {
       if (str !== "required") return false;
       p.sessionIntegrity = true;
       return true;
+    case "items.unit_price_chf <=":
+      if (num === null || (r.currency && r.currency !== "CHF")) return false;
+      p.perUnitLimit = { amountChf: Math.min(p.perUnitLimit?.amountChf ?? num, num), unit: p.perUnitLimit?.unit ?? "item" };
+      return true;
+    case "orders.count <=":
+      if (num === null || !r.period_days) return false;
+      // Same merge as the period budget: the smaller count over the longer window is stricter than both.
+      p.maxOrdersPerPeriod = p.maxOrdersPerPeriod
+        ? { count: Math.min(p.maxOrdersPerPeriod.count, num), days: Math.max(p.maxOrdersPerPeriod.days, r.period_days) }
+        : { count: num, days: r.period_days };
+      return true;
+    case "authorization.weekday in": {
+      const days = list?.map((d) => WEEKDAYS.indexOf(d)).filter((d) => d >= 0);
+      if (!days || days.length !== list?.length) return false;
+      p.allowedWeekdays = p.allowedWeekdays ? p.allowedWeekdays.filter((d) => days.includes(d)) : days;
+      return true;
+    }
+    case "items.item_category not_in":
+      if (!list) return false;
+      p.blockedCategories = [...new Set([...(p.blockedCategories ?? []), ...list])];
+      return true;
+    case "items.keywords not_in":
+      if (!list) return false;
+      p.blockedKeywords = [...new Set([...(p.blockedKeywords ?? []), ...list])];
+      return true;
+    case "order.refundable =":
+      if (str !== "true") return false;
+      p.refundableRequired = true;
+      return true;
     default:
       return false;
   }
@@ -133,6 +162,12 @@ const HEADLINES: Record<string, string> = {
   session_not_you: "This does not look like you",
   shop_text_manipulation: "Shop text tried to instruct us",
   requote_after_decline: "Same order after a decline",
+  over_unit_limit: "Above your per-item limit",
+  too_many_orders: "Too many orders for the period",
+  not_allowed_day: "Not on a day you allowed",
+  blocked_item: "Something you excluded",
+  not_refundable: "Not refundable",
+  no_shop_history: "No history to check the shop",
   guard_error: "Please check this purchase",
 };
 const FALLBACK_HEADLINE: Record<EngineDecisionValue, string> = {
@@ -157,6 +192,11 @@ const CHECKS: Record<string, { label: string; source: CheckSource }> = {
   session: { label: "Looks like you", source: "you" },
   shop_text: { label: "Shop text is never obeyed", source: "built_in" },
   requote: { label: "No new price after a decline", source: "built_in" },
+  per_unit_limit: { label: "Price per item, night or unit", source: "you" },
+  order_frequency: { label: "How many orders per period", source: "you" },
+  weekday: { label: "Days you allowed", source: "you" },
+  blocked: { label: "Things you excluded", source: "you" },
+  refundable: { label: "Refundable only", source: "you" },
 };
 
 function checkResult(g: GuardResult): CheckResult {

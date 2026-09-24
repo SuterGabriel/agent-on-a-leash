@@ -39,6 +39,18 @@ describe("the stricter of the frozen and the current mandate", () => {
     expect(policyFor(mandate("SCEN0001"), mandate("SCEN0001", { uncertainty_policy: "approve" })).policy.uncertainty).toBe("ask");
   });
 
+  it("every rule the compiler writes is understood when it comes back in a mandate", () => {
+    const instruction = "Up to EUR 60 per night, at most two bookings per week, weekdays only. No gift cards, no insurance. Refundable only. Ask me when unsure.";
+    const { hard_rules, uncertainty_policy } = parseLeash({ instruction });
+    const m = { ...mandate("SCEN0001"), instruction, hard_rules, uncertainty_policy };
+    const { policy, notApplied } = policyFor(m, m);
+    expect(notApplied).toEqual([]);
+    expect(policy.perUnitLimit?.amountChf).toBe(57);
+    expect(policy.maxOrdersPerPeriod).toEqual({ count: 2, days: 7 });
+    expect(policy.blockedCategories).toContain("gift_card");
+    expect(policy.refundableRequired).toBe(true);
+  });
+
   it("two different period limits merge into one stricter than both", () => {
     const m = mandate("SCEN0001");
     const monthly = { ...m, hard_rules: [{ field: "authorization.billing_amount_chf", operator: "<=" as const, value: 250, currency: "CHF" as const, scope: "period" as const, period_days: 30 }] };
@@ -70,7 +82,7 @@ describe("LeashEngine through the worker port", () => {
   });
 
   it("a rule the engine cannot express is never ignored: it asks", () => {
-    const extra = { field: "items.item_category", operator: "not_in" as const, value: ["cosmetics"] };
+    const extra = { field: "merchant.rating", operator: ">=" as const, value: 4 };
     const v = engine.decide(event(), { runId: "r2", currentMandate: { ...snapshot, hard_rules: [...snapshot.hard_rules, extra] } });
     expect(v.decision).toBe("step_up");
     expect(v.reason_codes).toEqual(["rule_not_applied"]);
