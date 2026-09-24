@@ -65,6 +65,17 @@ const PERIOD_WITH_UNIT = [
   re(String.raw`(?<u>Wochen|Monats)(?:budget|limite|limit)\s+(?:von\s+)?(?:${LIMIT}\s*)?${AMT}`),
   re(String.raw`${LIMIT}\s*${BARE}\s*(?:per|a|pro|je)\s*(?<u>week|Woche|month|Monat)\b`),
 ];
+// "CHF 200 per night", "EUR 60 a night", "CHF 25 each": a limit on one unit, not on the order. Read before the order limit,
+// whose "at most CHF 200" would otherwise swallow it and decline every three-night booking.
+const UNIT_WORD: [RegExp, string][] = [
+  [/^n(?:ight|ächt|acht)/i, "night"],
+  [/^(?:person|guest|head)/i, "person"],
+  [/^(?:item|unit|piece|stück|artikel|einheit)/i, "item"],
+];
+const UNIT_LIMIT = [
+  re(String.raw`(?:${LIMIT}\s*)?${AMT}\s*(?:per|a|an|each|every|pro|je)\s+(?<unit>nights?|Nacht|Nächte|persons?|guests?|heads?|items?|units?|pieces?|Stück|Artikel|Einheit)\b`),
+  re(String.raw`(?:${LIMIT}\s*)?${AMT}\s+(?<unit>each|apiece|per\s+unit)\b`),
+];
 const ORDER_LIMIT = [
   re(String.raw`(?:each|every|per|jede|pro|je)\s+${ORDER}\s*(?:at or below|of|up to|under|no more than|max(?:imum)?(?: of)?|${LIMIT})?\s*:?\s*${AMT}${INC}`),
   re(String.raw`(?:${LIMIT}\s*)?${AMT}\s*${PER}\s*${ORDER}${INC}`),
@@ -258,8 +269,27 @@ export function compile(instruction: string): ParseResult {
     b.assumptions.push(`"Any ${days} days" is a rolling window: approved purchases of the last ${days} days count; purchases waiting for your answer don't.`);
   }
 
+  // Per-unit limit ("per night", "each"): its span is kept out of the order-limit search.
+  const unitSpans: Span[] = [];
+  // "purchases of up to CHF 70 each" is a limit per order, not per unit: the word before the amount says so.
+  const perUnit = b.first(UNIT_LIMIT, periodSpans, (m) => !/\b(?:purchases?|orders?|Bestellung(?:en)?|Einkäufe?|Käufe?)\b(?:\s+\S+){0,3}\s*$/i.test(text.slice(0, m.index)));
+  if (perUnit) {
+    const limit = amountOf(perUnit);
+    bareAmount ||= isBare(perUnit);
+    const raw = String(perUnit.groups?.unit ?? "item").replace(/^per\s+/i, "");
+    const unit = UNIT_WORD.find(([r]) => r.test(raw))?.[1] ?? "item";
+    b.add(RULE_KEYS.unit_limit, `${chf(limit)} per ${unit} or less`, "limits", b.words(perUnit), {
+      field: RULE_FIELDS.unitPrice,
+      operator: "<=",
+      value: limit,
+      currency: "CHF",
+    });
+    unitSpans.push({ start: perUnit.index, end: perUnit.index + perUnit[0].length });
+    b.assumptions.push(`${chf(limit)} is the limit per ${unit}, compared with each line's unit price, not with the order total.`);
+  }
+
   // Per-order limit.
-  const order = b.first(ORDER_LIMIT, periodSpans);
+  const order = b.first(ORDER_LIMIT, [...periodSpans, ...unitSpans]);
   if (order) {
     const limit = amountOf(order);
     bareAmount ||= isBare(order);

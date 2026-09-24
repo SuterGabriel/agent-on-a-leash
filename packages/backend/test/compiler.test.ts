@@ -63,3 +63,33 @@ describe("policy compiler", () => {
     expect(toMandateDraft(parsed, rules, { [QUESTION_IDS.splitOrders]: "Yes", [QUESTION_IDS.otherCard]: "Yes" }).open_questions).toEqual([]);
   });
 });
+
+describe("a limit per night or per item is not a limit per order", () => {
+  const hard = (text: string) => {
+    const p = compile(text);
+    return toMandateDraft(p, p.rules).hard_rules;
+  };
+
+  it("'at most CHF 200 per night' writes a unit-price rule and no order limit", () => {
+    const rules = hard("Book a hotel for 3 nights, at most CHF 200 per night, refundable rate only. Ask me when uncertain.");
+    expect(rules.find((r) => r.field === "items.unit_price_chf")).toMatchObject({ operator: "<=", value: 200 });
+    expect(rules.find((r) => r.field === "authorization.billing_amount_chf")).toBeUndefined();
+    const parsed = compile("Book a hotel for 3 nights, at most CHF 200 per night, refundable rate only. Ask me when uncertain.");
+    expect(parsed.rules.find((r) => r.key === "unit_limit")?.label).toBe("CHF 200 per night or less");
+    expect(parsed.rules.find((r) => r.key === "unit_limit")?.your_words?.text).toBe("at most CHF 200 per night");
+  });
+
+  it("'CHF 60 a night' and 'CHF 25 each' are unit limits; 'purchases up to CHF 70 each' stays an order limit", () => {
+    expect(hard("Rooms for up to CHF 60 a night.").find((r) => r.field === "items.unit_price_chf")).toMatchObject({ operator: "<=", value: 60 });
+    expect(hard("Tickets at CHF 25 each.").find((r) => r.field === "items.unit_price_chf")).toMatchObject({ value: 25 });
+    const orders = hard("Purchases of up to CHF 70 each.");
+    expect(orders.find((r) => r.field === "items.unit_price_chf")).toBeUndefined();
+    expect(orders.find((r) => r.field === "authorization.billing_amount_chf")).toMatchObject({ value: 70, scope: "purchase" });
+  });
+
+  it("an order limit next to a unit limit is still read", () => {
+    const rules = hard("Each order at or below CHF 500, and no more than CHF 120 per item.");
+    expect(rules.find((r) => r.field === "authorization.billing_amount_chf")).toMatchObject({ value: 500 });
+    expect(rules.find((r) => r.field === "items.unit_price_chf")).toMatchObject({ value: 120 });
+  });
+});

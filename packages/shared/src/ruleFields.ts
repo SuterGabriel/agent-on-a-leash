@@ -6,6 +6,7 @@ import type { BuiltInProtection } from "./leash.js";
 /** Rule keys. A check the engine returns uses the same key, so the backend can attach the customer's words. */
 export const RULE_KEYS = {
   order_limit: "order_limit",
+  unit_limit: "unit_limit",
   period_budget: "period_budget",
   purpose: "purpose",
   delivery: "delivery",
@@ -29,6 +30,7 @@ export const RULE_KEYS = {
  * Read by the engine today:
  * authorization.billing_amount_chf  <=  N  scope "purchase"               order_limit: total incl. delivery
  * authorization.billing_amount_chf  <=  N  scope "period", period_days D  period_budget: rolling window, approved only
+ * items.unit_price_chf              <=  N                                  unit_limit: "CHF 200 per night", each line's unit price
  * items.item_category               in      [..]                           purpose: every basket line must match
  * items.requested_item              =       "road-running shoes"           requested_item
  * items.size                        =       "43"                           item_size: from item_details
@@ -50,6 +52,7 @@ export const RULE_KEYS = {
  */
 export const RULE_FIELDS = {
   amount: "authorization.billing_amount_chf",
+  unitPrice: "items.unit_price_chf",
   itemCategory: "items.item_category",
   fulfillment: "authorization.fulfillment_method",
   requestedItem: "items.requested_item",
@@ -70,6 +73,7 @@ export const RULE_FIELDS = {
 /** "field operator" pairs the engine can read. Anything else would make every purchase an ask. */
 export const ENGINE_READABLE_RULES = new Set([
   "authorization.billing_amount_chf <=",
+  "items.unit_price_chf <=",
   "items.item_category in",
   "items.requested_item =",
   "items.size =",

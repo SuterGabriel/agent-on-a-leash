@@ -140,6 +140,7 @@ export interface ScenarioInfo {
  */
 export const CHECK_TO_RULE: Record<string, string> = {
   per_order_limit: RULE_KEYS.order_limit,
+  per_unit_limit: RULE_KEYS.unit_limit,
   period_budget: RULE_KEYS.period_budget,
   item_scope: RULE_KEYS.purpose,
   requested_item: RULE_KEYS.requested_item,
