@@ -13,7 +13,8 @@ import { stubEngine } from "../engine/port.js";
 import { InMemoryDecisionStore, LeashBus } from "../store.js";
 import { Worker } from "../worker.js";
 import { resolveAsk } from "../asks.js";
-import { seedRules } from "../compiler/priceRule.js";
+import { compile, toMandateDraft } from "../compiler/compile.js";
+import { createMandateSafely } from "../leash/service.js";
 
 const args = process.argv.slice(2);
 const scenarioId = args.find((a) => /^SCEN\d{4}$/.test(a)) ?? "SCEN0000";
@@ -32,12 +33,12 @@ if (cfg.mode === "live") console.log(`recording raw responses to ${samplesDir}`)
 const scenario = pack.scenarios.get(scenarioId);
 if (!scenario) throw new Error(`unknown scenario ${scenarioId}`);
 
-const { hard_rules, uncertainty_policy } = seedRules(scenario.cardholder_instruction);
+const parsed = compile(scenario.cardholder_instruction);
 console.log(`${scenarioId} · ${scenario.scenario_name} · mode ${cfg.mode}`);
 console.log(`instruction: ${scenario.cardholder_instruction}`);
-console.log(`hard_rules (placeholder until the compiler): ${JSON.stringify(hard_rules)}\n`);
+console.log(`rules: ${parsed.rules.map((r) => r.label).join(" · ")}\n`);
 
-const draft = await api.createMandate({ instruction: scenario.cardholder_instruction, hard_rules, uncertainty_policy, guidance: [], open_questions: [] });
+const draft = await createMandateSafely(api, toMandateDraft(parsed, parsed.rules));
 const { mandate_id } = await api.confirmMandate(draft.draft_id);
 const store = new InMemoryDecisionStore();
 const bus = new LeashBus();
