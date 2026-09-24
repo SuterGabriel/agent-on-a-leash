@@ -276,7 +276,10 @@ export class LeashService {
       token: status === "active" ? "on" : "off",
       mandate_id: leash.mandate_id,
       instruction: leash.parsed.instruction,
-      card: card ? { id: leash.card_id as string, label: `${card.card_type === "credit" ? "Credit" : "Debit"} card •• ${(leash.card_id as string).slice(-4)}` } : null,
+      // Live cards (e.g. CA1331) are not in the local card table; show them anyway, without the type.
+      card: leash.card_id
+        ? { id: leash.card_id, label: `${card ? (card.card_type === "credit" ? "Credit card" : "Debit card") : "Card"} •• ${leash.card_id.slice(-4)}` }
+        : null,
       rules: leash.rules,
       learned_rules: leash.learned,
       built_in: BUILT_IN_PROTECTIONS,

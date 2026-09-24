@@ -51,7 +51,10 @@ The bootstrap response holds the decision deadline (8 s) and the human window (1
 - `event_id` in the poll envelope is a number.
 - Real responses are kept as test fixtures in `packages/backend/test/fixtures/live/`. Live runs write new ones to `live-samples/` (git-ignored).
 
-**Still assumptions in the offline clone:** the period for `approved_spend_in_period_chf` is the longest period rule (else 7 days); an unanswered ask ends as `cancelled`.
+- An unanswered ask ends as `declined` with reason `step_up_expired` (seen live); the offline clone does the same. In the app it shows as `expired`.
+- The live history (`/v1/reference-data/authorization-history.csv`) is the public file: live scenario cards (e.g. CA1331) and shops are not in it, so "shops I use" can't be confirmed live. Asked Viseca whether that is intended.
+
+**Still an assumption in the offline clone:** the period for `approved_spend_in_period_chf` is the longest period rule (else 7 days).
 
 ## Step 1 — Viseca client ✅ done (tested live)
 
