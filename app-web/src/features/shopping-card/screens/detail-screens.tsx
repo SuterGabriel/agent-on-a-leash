@@ -32,6 +32,7 @@ import { ShoppingCard } from "@/features/shopping-card/shopping-card";
 import type { CheckFamily } from "@/types/decision";
 
 const FAMILY_ORDER: CheckFamily[] = ["money", "item", "shop", "session", "manipulation"];
+// Kim: these five titles are placeholder wording from the backend side; change them here, nothing else depends on them.
 const FAMILY_TITLE: Record<CheckFamily, string> = { money: "Money", item: "Item and terms", shop: "Shop", session: "Looks like you", manipulation: "Repeats and manipulation" };
 
 /** Live decisions carry a family per check: one list per family, in a fixed order. Prototype data has none: one list. */

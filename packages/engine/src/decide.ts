@@ -159,6 +159,8 @@ export function decide(
     amount_chf: auth.billing_amount_chf,
     merchant_id: auth.merchant.merchant_id,
     item_signature: auth.items.map((i) => `${i.item_id}x${i.quantity}`).sort().join("|"),
+    device_id: auth.customer_device_id,
+    country: auth.merchant.merchant_country,
     sim_time: facts.simTime,
     stored_result: result,
   });

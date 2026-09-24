@@ -11,6 +11,8 @@ export interface LedgerEntry {
   amount_chf: number;
   merchant_id: string;
   item_signature: string;
+  device_id: string | null;
+  country: string;
   sim_time: number;
   stored_result: unknown; // the exact answer we sent, replayed on retry
 }
@@ -56,6 +58,21 @@ export class Ledger {
   }
 
   /** Approved purchases at this shop in this run, whatever the time: the customer said yes here, so the shop is known. */
+  /** Approved purchases in this run from this device: the customer said yes once, so the device is theirs for the run. */
+  approvedOnDevice(deviceId: string | null): number {
+    if (!deviceId) return 0;
+    let n = 0;
+    for (const e of this.entries.values()) if (e.final_status === "approved" && e.device_id === deviceId) n++;
+    return n;
+  }
+
+  /** Approved purchases in this run at shops in this country. */
+  approvedInCountry(country: string): number {
+    let n = 0;
+    for (const e of this.entries.values()) if (e.final_status === "approved" && e.country === country) n++;
+    return n;
+  }
+
   approvedAtMerchant(merchantId: string): number {
     let n = 0;
     for (const e of this.entries.values()) if (e.final_status === "approved" && e.merchant_id === merchantId) n++;

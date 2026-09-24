@@ -2,12 +2,15 @@
 // or all the customer's cards when the card has little ("baseline: customer").
 // 1–2 signals: ask. 3 or more: stop. Signals are per purchase, so a clean purchase after a burst passes.
 // With no history at all every signal would fire; that is missing data, not proof, so it only asks.
+// With no history, a purchase the customer approved earlier in this run becomes the baseline: the same device in the
+// same country is then the customer for the rest of the run. With history, the history stays the baseline, a yes to one
+// purchase does not vouch for the device: the public burst scenario still stops the purchases after an approved one.
 import { swissHour } from "../../../shared/src/baselines";
 import type { Guard } from "../types";
 
 const MIN_HISTORY_FOR_HOURS = 30;
 
-export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScope }) => {
+export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScope, ledger }) => {
   if (!policy.sessionIntegrity) return { guard: "session", verdict: "SKIP", evidence: [] };
 
   const hour = swissHour(auth.timestamp);
@@ -16,10 +19,14 @@ export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScop
 
   // No history for this card (live scenario cards): device, country and shop can't be "new" against nothing.
   // Only the burst signal stands on its own; the rest is unknown and goes to the uncertainty policy.
+  const deviceApproved = ledger.approvedOnDevice(auth.customer_device_id);
+  const countryApproved = ledger.approvedInCountry(auth.merchant.merchant_country);
   if (card.purchases === 0) {
     const evidence = [
       { fact: "card_history_purchases", value: 0, comparator: ">=", threshold: 1, source: "authorization_history" },
       { fact: "recent_attempt_count_10m", value: auth.recent_attempt_count_10m, comparator: "<", threshold: 2, source: "authorization" },
+      { fact: "approved_in_this_run_same_device", value: deviceApproved, comparator: ">=", threshold: 1, source: "ledger" },
+      { fact: "approved_in_this_run_same_country", value: countryApproved, comparator: ">=", threshold: 1, source: "ledger" },
     ];
     if (auth.recent_attempt_count_10m >= 2) {
       return {
@@ -31,6 +38,7 @@ export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScop
         message: `Is this you? ${auth.recent_attempt_count_10m} other attempts in 10 minutes.`,
       };
     }
+    if (deviceApproved > 0 && countryApproved > 0) return { guard: "session", verdict: "PASS", evidence, signals: [] };
     return {
       guard: "session",
       verdict: "UNCERTAIN",

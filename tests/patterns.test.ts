@@ -236,6 +236,35 @@ describe("C card with little history", () => {
     const r = run(I, event(I, onCard("CA_NONE", "ME_KNOWN", "CU_NONE")), new Ledger(), base);
     expect(r.decision).toBe("step_up");
   });
+
+  it("no history: a yes teaches the device and the country for the rest of the run", () => {
+    const I = "Stop anything that doesn't look like me.";
+    const ledger = new Ledger();
+    const first = run(I, event(I, onCard("CA_NONE", "ME_KNOWN", "CU_NONE"), "same-run"), ledger, base);
+    expect(first.decision).toBe("step_up");
+    ledger.resolve(first.authorization_id, "approve");
+    const second = run(I, event(I, (e) => { onCard("CA_NONE", "ME_KNOWN", "CU_NONE")(e); e.authorization.authorization_id = "AU_SECOND"; e.authorization.items[0]!.item_id = "IT_SECOND"; }, "same-run"), ledger, base);
+    expect(second.guards.find((g) => g.guard === "session")!.verdict).toBe("PASS");
+    expect(second.decision).toBe("approve");
+    // Another device is still unknown, and a declined answer teaches nothing.
+    const other = run(I, event(I, (e) => { onCard("CA_NONE", "ME_KNOWN", "CU_NONE")(e); e.authorization.authorization_id = "AU_THIRD"; e.authorization.items[0]!.item_id = "IT_THIRD"; e.authorization.customer_device_id = "DV_STRANGER"; }, "same-run"), ledger, base);
+    expect(other.decision).toBe("step_up");
+    const cold = new Ledger();
+    const declined = run(I, event(I, onCard("CA_NONE", "ME_KNOWN", "CU_NONE"), "cold"), cold, base);
+    cold.resolve(declined.authorization_id, "decline");
+    expect(run(I, event(I, (e) => { onCard("CA_NONE", "ME_KNOWN", "CU_NONE")(e); e.authorization.authorization_id = "AU_COLD2"; e.authorization.items[0]!.item_id = "IT_COLD2"; }, "cold"), cold, base).decision).toBe("step_up");
+  });
+
+  it("with history: a yes on a new device does not vouch for the device, the history stays the baseline", () => {
+    const I = "Stop anything that doesn't look like me.";
+    const ledger = new Ledger();
+    const onNewDevice = (e: AuthorizationEvent) => { onCard("CA_BIG", "ME_KNOWN", "CU_T")(e); e.authorization.customer_device_id = "DV_NEW"; };
+    const first = run(I, event(I, onNewDevice, "dev-run"), ledger, base);
+    expect(first.reason_codes).toContain("session_not_you");
+    ledger.resolve(first.authorization_id, "approve");
+    const second = run(I, event(I, (e) => { onNewDevice(e); e.authorization.authorization_id = "AU_DEV2"; e.authorization.items[0]!.item_id = "IT_DEV2"; }, "dev-run"), ledger, base);
+    expect(second.reason_codes).toContain("session_not_you");
+  });
 });
 
 describe("lookalike against every established shop at the issuer", () => {
