@@ -1,0 +1,157 @@
+{
+  "about": "Spec §4.3: the jury may word a leash differently. Each case lists what the pattern compiler must read. e2e=true means the case is also run through the engine on its scenario and must give the same 45 reference decisions as the original wording.",
+  "cases": [
+    {
+      "id": "SCEN0000-catalogue",
+      "scenario": "SCEN0000",
+      "lang": "en",
+      "e2e": true,
+      "instruction": "Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.",
+      "expect": { "keys": ["known_shop", "one_item", "order_limit", "purpose"], "order_limit": 20, "categories": ["groceries"], "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0000-en",
+      "scenario": "SCEN0000",
+      "lang": "en",
+      "e2e": true,
+      "instruction": "Please get me a single ordinary grocery item, max CHF 20, from a store I regularly use. If in doubt, ask me.",
+      "expect": { "keys": ["known_shop", "one_item", "order_limit", "purpose"], "order_limit": 20, "categories": ["groceries"], "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0000-de",
+      "scenario": "SCEN0000",
+      "lang": "de",
+      "e2e": true,
+      "instruction": "Kaufe einen gewöhnlichen Lebensmittelartikel für höchstens 20 Franken in einem Laden, in dem ich regelmässig einkaufe. Frag mich, wenn du unsicher bist.",
+      "expect": { "keys": ["known_shop", "one_item", "order_limit", "purpose"], "order_limit": 20, "categories": ["groceries"], "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0001-catalogue",
+      "scenario": "SCEN0001",
+      "lang": "en",
+      "e2e": true,
+      "instruction": "Order our household groceries for delivery. Keep each order at or below CHF 120 including delivery, and keep the total across any seven days at or below CHF 300. Ask me when uncertain.",
+      "expect": { "keys": ["delivery", "order_limit", "period_budget", "purpose"], "order_limit": 120, "period": { "amount": 300, "days": 7 }, "categories": ["groceries"], "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0001-en",
+      "scenario": "SCEN0001",
+      "lang": "en",
+      "e2e": true,
+      "instruction": "Weekly groceries, delivered to our home. No single order above CHF 120 incl. delivery, and no more than CHF 300 in any 7 days. Check with me if something is unclear.",
+      "expect": { "keys": ["delivery", "order_limit", "period_budget", "purpose"], "order_limit": 120, "period": { "amount": 300, "days": 7 }, "categories": ["groceries"], "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0001-de",
+      "scenario": "SCEN0001",
+      "lang": "de",
+      "e2e": true,
+      "instruction": "Bestelle unsere Lebensmittel zur Lieferung. Pro Bestellung höchstens CHF 120 inklusive Lieferung, und in beliebigen sieben Tagen insgesamt höchstens CHF 300. Frag mich im Zweifel.",
+      "expect": { "keys": ["delivery", "order_limit", "period_budget", "purpose"], "order_limit": 120, "period": { "amount": 300, "days": 7 }, "categories": ["groceries"], "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0001-de-reordered-decline",
+      "scenario": "SCEN0001",
+      "lang": "de",
+      "e2e": false,
+      "instruction": "Pro Woche maximal 300 Franken für unsere Haushaltseinkäufe, jede Bestellung bis 120 Franken inkl. Versand, bitte liefern lassen. Im Zweifel ablehnen.",
+      "expect": { "keys": ["delivery", "order_limit", "period_budget", "purpose"], "order_limit": 120, "period": { "amount": 300, "days": 7 }, "categories": ["groceries"], "uncertainty": "decline" }
+    },
+    {
+      "id": "SCEN0002-catalogue",
+      "scenario": "SCEN0002",
+      "lang": "en",
+      "e2e": true,
+      "instruction": "Replace my worn road-running shoes in size 43. Buy only from a specialist sports retailer, only if the order can be returned within 14 days or more, and pay no more than CHF 200. Ask me when uncertain.",
+      "expect": { "keys": ["item_size", "merchant_type", "order_limit", "requested_item", "return_window"], "order_limit": 200, "requested_item": "road-running shoes", "size": "43", "merchant_category": ["sporting_goods"], "return_days": 14, "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0002-en",
+      "scenario": "SCEN0002",
+      "lang": "en",
+      "e2e": true,
+      "instruction": "My road running shoes are worn out, please replace them: size 43, bought only from a specialist sports shop, returnable for at least 14 days, and no more than CHF 200. When unsure, ask me.",
+      "expect": { "keys": ["item_size", "merchant_type", "order_limit", "requested_item", "return_window"], "order_limit": 200, "requested_item": "road-running shoes", "size": "43", "merchant_category": ["sporting_goods"], "return_days": 14, "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0002-de",
+      "scenario": "SCEN0002",
+      "lang": "de",
+      "e2e": true,
+      "instruction": "Ersetze meine abgenutzten Strassenlaufschuhe in Grösse 43. Kaufe nur bei einem Sportfachgeschäft, nur wenn die Bestellung mindestens 14 Tage zurückgegeben werden kann, und zahle höchstens CHF 200. Frag mich, wenn du unsicher bist.",
+      "expect": { "keys": ["item_size", "merchant_type", "order_limit", "requested_item", "return_window"], "order_limit": 200, "requested_item": "road-running shoes", "size": "43", "merchant_category": ["sporting_goods"], "return_days": 14, "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0003-catalogue",
+      "scenario": "SCEN0003",
+      "lang": "en",
+      "e2e": true,
+      "instruction": "The agent may buy clothing for me, up to CHF 250 per order, from shops I have used before. Pause anything that looks like someone other than me is driving the session. Ask me when uncertain.",
+      "expect": { "keys": ["known_shop", "order_limit", "purpose", "session"], "order_limit": 250, "categories": ["clothing"], "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0003-en",
+      "scenario": "SCEN0003",
+      "lang": "en",
+      "e2e": true,
+      "instruction": "You can buy clothes for me, max CHF 250 per order, but only from shops I've used before. If it looks like someone else is using the session, pause it. If in doubt, ask me.",
+      "expect": { "keys": ["known_shop", "order_limit", "purpose", "session"], "order_limit": 250, "categories": ["clothing"], "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0003-de",
+      "scenario": "SCEN0003",
+      "lang": "de",
+      "e2e": true,
+      "instruction": "Der Agent darf Kleidung für mich kaufen, bis zu CHF 250 pro Bestellung, aber nur in Shops, die ich schon genutzt habe. Stoppe alles, was so aussieht, als ob jemand anderes die Sitzung steuert. Frag mich im Zweifel.",
+      "expect": { "keys": ["known_shop", "order_limit", "purpose", "session"], "order_limit": 250, "categories": ["clothing"], "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0004-catalogue",
+      "scenario": "SCEN0004",
+      "lang": "en",
+      "e2e": true,
+      "instruction": "Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or less. Do not add anything I did not ask for. Ask me when uncertain.",
+      "expect": { "keys": ["known_shop", "no_extras", "order_limit", "requested_item"], "order_limit": 400, "requested_item": "27-inch monitor", "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0004-en",
+      "scenario": "SCEN0004",
+      "lang": "en",
+      "e2e": true,
+      "instruction": "Get the 27-inch monitor I picked, up to CHF 400, only from a seller I've bought from before. No add-ons. Ask me if unsure.",
+      "expect": { "keys": ["known_shop", "no_extras", "order_limit", "requested_item"], "order_limit": 400, "requested_item": "27-inch monitor", "uncertainty": "ask" }
+    },
+    {
+      "id": "SCEN0004-de",
+      "scenario": "SCEN0004",
+      "lang": "de",
+      "e2e": true,
+      "instruction": "Kaufe den 27-Zoll-Monitor, den ich ausgesucht habe, für höchstens CHF 400 bei einem Händler, bei dem ich schon gekauft habe. Füge nichts hinzu, was ich nicht bestellt habe. Frag mich, wenn du unsicher bist.",
+      "expect": { "keys": ["known_shop", "no_extras", "order_limit", "requested_item"], "order_limit": 400, "requested_item": "27-inch monitor", "uncertainty": "ask" }
+    },
+    {
+      "id": "no-currency-en",
+      "scenario": null,
+      "lang": "en",
+      "e2e": false,
+      "instruction": "Groceries only, max 120 per order and max 300 per week. Decline if unsure.",
+      "expect": { "keys": ["order_limit", "period_budget", "purpose"], "order_limit": 120, "period": { "amount": 300, "days": 7 }, "categories": ["groceries"], "uncertainty": "decline", "assumption_contains": "Swiss francs" }
+    },
+    {
+      "id": "swiss-notation-de",
+      "scenario": null,
+      "lang": "de",
+      "e2e": false,
+      "instruction": "Lebensmittel, max. Fr. 120.- pro Einkauf, höchstens Fr. 300.- pro Woche.",
+      "expect": { "keys": ["order_limit", "period_budget", "purpose"], "order_limit": 120, "period": { "amount": 300, "days": 7 }, "categories": ["groceries"], "uncertainty": "ask" }
+    },
+    {
+      "id": "vague-de",
+      "scenario": null,
+      "lang": "de",
+      "e2e": false,
+      "instruction": "Kauf mir etwas Schönes fürs Wochenende.",
+      "expect": { "keys": [], "uncertainty": "ask", "not_understood": ["Kauf mir etwas Schönes fürs Wochenende."], "warnings": 2 }
+    }
+  ]
+}

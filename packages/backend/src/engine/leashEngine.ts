@@ -41,6 +41,10 @@ export interface MandatePolicy {
  */
 export function policyFor(snapshot: EventMandate, current: EventMandate | null): MandatePolicy {
   const policy = compilePolicy(snapshot.instruction);
+  // The re-read above is English-only and can misread reworded or German text (e.g. "the monitor I picked" as the
+  // item). Where the customer confirmed a rule for a field, that rule is the policy for it: drop the text guess first.
+  // The rules below then tighten from there, so the result is still at least as strict as each confirmed mandate.
+  dropGuessesCoveredByRules(policy, current ? [...snapshot.hard_rules, ...current.hard_rules] : snapshot.hard_rules);
   const notApplied = new Set<string>();
   let inactive: MandatePolicy["inactive"] = null;
   for (const m of current ? [snapshot, current] : [snapshot]) {
@@ -52,6 +56,33 @@ export function policyFor(snapshot: EventMandate, current: EventMandate | null):
 }
 
 const intersect = (a: string[] | null, b: string[]) => (a ? a.filter((x) => b.includes(x)) : [...b]);
+
+/** Clears what the text re-read guessed for every field a confirmed hard rule covers. Only guesses are cleared; rules are applied afterwards. */
+function dropGuessesCoveredByRules(p: Policy, rules: MandateRule[]) {
+  for (const r of rules) {
+    switch (`${r.field} ${r.operator}`) {
+      case "authorization.billing_amount_chf <=":
+        if (r.scope === "period") p.periodLimit = null;
+        else p.perOrderLimitChf = null;
+        break;
+      case "items.item_category in":
+        p.allowedCategories = null;
+        break;
+      case "merchant.merchant_category in":
+        p.requiredMerchantCategories = null;
+        break;
+      case "order.return_window_days >=":
+        p.minReturnDays = null;
+        break;
+      case "items.requested_item =":
+        p.requestedItem = null;
+        break;
+      case "items.size =":
+        p.size = null;
+        break;
+    }
+  }
+}
 
 /** Applies one hard rule (field names as toHardRules() writes them). Returns false when the rule cannot be expressed. */
 function tighten(p: Policy, r: MandateRule): boolean {
