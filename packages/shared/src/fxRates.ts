@@ -1,14 +1,12 @@
 // Fixed synthetic FX rates from data/fx_rates.csv.
 // Use the ROW's currency, never the shop's country.
 // billing_amount_chf already includes delivery: never add delivery again.
-import { readCsv } from "./loaders";
+import { readCsv } from "./loaders.js";
 
 let rates: Map<string, number> | null = null;
 
 export function fxRate(currency: string): number {
-  if (!rates) {
-    rates = new Map(readCsv("fx_rates.csv").map((r) => [r.from_currency, Number(r.rate)]));
-  }
+  rates ??= new Map(readCsv("fx_rates.csv").map((r) => [r.from_currency ?? "", Number(r.rate)]));
   const rate = rates.get(currency);
   if (rate === undefined) throw new Error(`Unknown currency: ${currency}`);
   return rate;

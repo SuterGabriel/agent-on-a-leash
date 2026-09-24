@@ -110,6 +110,15 @@ export interface Policy {
   blockedCategories: string[] | null; // "no gift cards" -> gift_card
   blockedKeywords: string[] | null; // "no alcohol" -> wine, beer, … (item name, category, clean shop text)
   refundableRequired: boolean; // "refundable rate only", "only if it can be returned"
+  destinationCity: string | null; // "a hotel in Lyon" -> "Lyon" (compared with a lodging shop's city)
+  stayNights: number | null; // "for 2 nights", or the nights between the stated dates
+  stayDates: { from: string; to: string } | null; // "4 March to 7 March" -> { from: "03-04", to: "03-07" }
+  oneItem: boolean; // "buy one grocery item": shown to the customer, not a hard rule
+  forDelivery: boolean; // "for delivery": shown to the customer, not a hard rule
+  /** The customer's words each field was read from (offsets into the instruction), keyed by Policy field name. */
+  sources: Partial<Record<keyof Policy | "uncertainty", { text: string; start: number; end: number }>>;
+  /** Open questions with a stable id (the app answers them by id). openQuestions holds the same texts. */
+  questions: { id: string; text: string }[];
   uncertainty: UncertaintyPolicy;
   overshootTolerance: number; // 0.10 = a limit exceeded by <= 10 % asks instead of declining
   assumptions: string[];

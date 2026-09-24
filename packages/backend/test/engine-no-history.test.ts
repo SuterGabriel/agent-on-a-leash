@@ -29,6 +29,8 @@ function eventFor(au: string, scenarioId: string, over: { card_id: string; recen
 }
 
 describe("a card with no history (live scenarios)", () => {
+  // Team decision (24-09): no history is always an ask (no_shop_history), never left to the uncertainty policy,
+  // so "decline when unsure" can't turn missing history into a decline.
   it("'shops I use': unknown, asked, with an honest message", () => {
     const v = engine.decide(eventFor("AU0001", "SCEN0000", { card_id: "CA1331" }), { runId: `r-${Math.random()}`, currentMandate: null });
     expect(v.decision).toBe("step_up");

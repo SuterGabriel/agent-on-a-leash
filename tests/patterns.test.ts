@@ -146,7 +146,7 @@ describe("A10–A12 extras, session, doubt", () => {
 
 describe("B guards", () => {
   it("per-unit limit compares each line's unit price", () => {
-    const I = "Rooms at most CHF 100 per night.";
+    const I = "Spare parts at most CHF 100 per item.";
     const over = run(I, event(I, (e) => { e.authorization.items[0].unit_price = 150; e.authorization.items[0].currency = "CHF"; }));
     expect(over.decision).toBe("decline");
     expect(over.reason_codes).toContain("over_unit_limit");
@@ -380,6 +380,89 @@ describe("session: 'stop and ask me' asks, 'pause anything' stops", () => {
     const stopped = run(STOP, event(STOP, threeSignals));
     expect(stopped.reason_codes).toContain("session_not_you");
     expect(stopped.decision).toBe("decline");
+  });
+});
+
+describe("lookalike: an identical normalised name is still a question for a customer without history", () => {
+  const est = (id: string, name: string, category: string, i: number): Row => ({
+    card_id: "CA_OLD", customer_id: "CU_OLD", account_id: "AC_OLD", transaction_type: "purchase", status: "approved",
+    merchant_id: id, merchant_name: name, merchant_category: category, customer_device_id: "DV_O", recurring: "false",
+    timestamp: `2026-04-${String(1 + i).padStart(2, "0")}T19:00:00Z`, merchant_country: "CH",
+  });
+  const base = buildBaselines(
+    [...Array.from({ length: 4 }, (_, i) => est("ME_OWL", "NightOwl Kitchen", "food_delivery", i)), ...Array.from({ length: 4 }, (_, i) => est("ME_PIX", "PixelHarbor", "electronics", 10 + i))],
+    new Map(),
+  );
+  const I = "Up to CHF 500 per order.";
+  const at = (id: string, name: string, category: string) => (e: AuthorizationEvent) => {
+    Object.assign(e.authorization.merchant, { merchant_id: id, merchant_name: name, merchant_category: category });
+    e.authorization.card_id = "CA_FRESH";
+    e.mandate.customer_id = "CU_FRESH";
+  };
+
+  it('"Night Owl Kitchen" vs established "NightOwl Kitchen": asked about, never declined (the customer never bought at the original)', () => {
+    const r = run(I, event(I, at("ME_OWL2", "Night Owl Kitchen", "food_delivery")), new Ledger(), base);
+    expect(r.decision).toBe("step_up");
+    expect(r.reason_codes).toContain("lookalike_shop");
+  });
+  it('"PixelHarbour" vs established "PixelHarbor": a question, not a stop', () => {
+    const r = run(I, event(I, at("ME_PIX2", "PixelHarbour", "electronics")), new Ledger(), base);
+    expect(r.decision).toBe("step_up");
+    expect(r.reason_codes).toContain("lookalike_shop");
+  });
+});
+
+describe("travel: destination, nights and dates", () => {
+  it("reads the city and the nights, from a count or from dates", () => {
+    const a = compilePolicy("A guesthouse in Lyon for 2 nights, at most EUR 120 per night.");
+    expect(a.destinationCity).toBe("Lyon");
+    expect(a.stayNights).toBe(2);
+    expect(a.perUnitLimit).toEqual({ amountChf: 114, unit: "night" });
+    const b = compilePolicy("Book a room in Porto from 4 March to 7 March.");
+    expect(b.destinationCity).toBe("Porto");
+    expect(b.stayNights).toBe(3);
+    expect(b.stayDates).toEqual({ from: "03-04", to: "03-07" });
+    expect(compilePolicy("Hostel in Zurich, 5–8 June.").stayNights).toBe(3);
+    expect(compilePolicy("A stay in New York, December 30 to January 2.").stayNights).toBe(3);
+    expect(compilePolicy("A weekend trip to Graz for two nights.").destinationCity).toBe("Graz");
+    expect(compilePolicy("Two nights in a hotel in Bruges, 1 to 4 May.").openQuestions.some((q) => q.includes("nights"))).toBe(true);
+  });
+
+  const hotel = (city: string, total: number, name = "Double room") => (e: AuthorizationEvent) => {
+    Object.assign(e.authorization.merchant, { merchant_category: "hotel", merchant_city: city });
+    e.authorization.billing_amount_chf = total;
+    e.authorization.order_returnable = "true";
+    e.authorization.items[0].item_name = name;
+    e.authorization.items[0].item_category = "hotel";
+    e.authorization.items[0].item_details = "Breakfast included.";
+  };
+
+  it("a hotel in another city is the wrong destination; local and English names are the same city", () => {
+    const I = "A hotel in Lyon for 3 nights, at most CHF 150 per night.";
+    const wrong = run(I, event(I, hotel("Grenoble", 300)));
+    expect(wrong.decision).toBe("decline");
+    expect(wrong.reason_codes).toContain("wrong_destination");
+    const J = "A hotel in Munich for 3 nights, at most CHF 150 per night.";
+    expect(run(J, event(J, hotel("München", 300))).reason_codes).not.toContain("wrong_destination");
+  });
+
+  it("per night = total / nights, with the 10 % band", () => {
+    const I = "A hotel in Lyon for 3 nights, at most CHF 100 per night.";
+    expect(run(I, event(I, hotel("Lyon", 300))).decision).toBe("approve"); // 100.00 per night
+    const band = run(I, event(I, hotel("Lyon", 327)));                    // 109.00: within 10 %
+    expect(band.decision).toBe("step_up");
+    expect(band.reason_codes).toContain("over_unit_limit");
+    const over = run(I, event(I, hotel("Lyon", 360)));                    // 120.00: above
+    expect(over.decision).toBe("decline");
+  });
+
+  it("nights unknown: uncertain (asks); nights stated by the shop are used", () => {
+    const I = "A hotel in Lyon, at most CHF 100 per night.";
+    const unknown = run(I, event(I, hotel("Lyon", 250)));
+    expect(unknown.decision).toBe("step_up");
+    expect(unknown.reason_codes).toContain("missing_info");
+    const fromShop = run(I, event(I, hotel("Lyon", 250, "Double room, 3 nights")));
+    expect(fromShop.decision).toBe("approve"); // 83.33 per night
   });
 });
 

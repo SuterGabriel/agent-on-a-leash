@@ -21,6 +21,13 @@ export const RULE_KEYS = {
   split_orders: "split_orders",
   blocked_shop: "blocked_shop",
   blocked_category: "blocked_category",
+  // Read by the engine since the compiler learned them (shared/src/compiler.ts):
+  order_frequency: "order_frequency",
+  weekdays: "weekdays",
+  blocked_keywords: "blocked_keywords",
+  refundable: "refundable",
+  destination: "destination",
+  nights: "nights",
   /** "until Friday": kept in our store only, the engine cannot read a date rule (see valid_until on the leash). */
   valid_until: "valid_until",
 } as const;
@@ -41,6 +48,16 @@ export const RULE_KEYS = {
  * merchant.familiar_on_card         =       "true"                         known_shop
  * order.addons_allowed              =       "false"                        no_extras
  * session.integrity                 =       "required"                     session
+ * items.unit_price_chf              <=      N                              unit_limit: per item; per night = total / nights
+ * orders.count                      <=      N  scope "period", period_days D  order_frequency: approved orders
+ * authorization.weekday             in      ["mon", …]                     weekdays (Swiss time)
+ * items.item_category               not_in  [..]                           blocked_category (read by the engine since 24-09)
+ * items.keywords                    not_in  [..]                           blocked_keywords: name, category, clean shop text
+ * order.refundable                  =       "true"                         refundable: unknown = unsure
+ * order.destination_city            =       "Lyon"                         destination: a lodging shop's city
+ * order.nights                      =       3                              nights: for the per-night limit
+ * (ENGINE_READABLE_RULES below still lists only the original set: it decides which learned rules D1 may OFFER,
+ *  and widening it changes what the app suggests. Agree with the app before adding to it.)
  *
  * Written by tighten / learned rules, NOT read by the engine yet (would make every purchase an ask):
  * items.item_category               not_in  [..]                           blocked_category

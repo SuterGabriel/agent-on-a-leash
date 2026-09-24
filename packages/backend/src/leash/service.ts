@@ -160,6 +160,11 @@ export const CHECK_TO_RULE: Record<string, string> = {
   merchant_type: RULE_KEYS.merchant_type,
   familiarity: RULE_KEYS.known_shop,
   session: RULE_KEYS.session,
+  order_frequency: RULE_KEYS.order_frequency,
+  weekday: RULE_KEYS.weekdays,
+  blocked: RULE_KEYS.blocked_category,
+  refundable: RULE_KEYS.refundable,
+  destination: RULE_KEYS.destination,
 };
 
 const APPROVED = new Set(["approved", "approved_by_you"]);

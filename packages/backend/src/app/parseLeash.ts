@@ -1,6 +1,7 @@
-// POST /app/leash/parse. Only calls the one policy compiler (packages/shared/src/compiler.ts); no parsing here.
+// The compiler's result in the shape a mandate needs. Goes through compile(), the same single path as
+// POST /app/leash/parse (shared/src/compiler.ts reads the instruction; nothing here reads it again).
 import type { MandateRule, UncertaintyPolicy } from "@leash/shared";
-import { compilePolicy, toHardRules } from "../../../shared/src/compiler.js";
+import { compile, toMandateDraft } from "../compiler/compile.js";
 
 export interface ParseLeashResponse {
   instruction: string;
@@ -14,12 +15,13 @@ export interface ParseLeashResponse {
 
 export function parseLeash(body: { instruction?: unknown }): ParseLeashResponse {
   if (typeof body.instruction !== "string" || !body.instruction.trim()) throw new Error("instruction must be a non-empty string");
-  const policy = compilePolicy(body.instruction);
+  const parsed = compile(body.instruction);
+  const draft = toMandateDraft(parsed, parsed.rules);
   return {
-    instruction: policy.instruction,
-    hard_rules: toHardRules(policy),
-    uncertainty_policy: policy.uncertainty,
-    assumptions: policy.assumptions,
-    open_questions: policy.openQuestions,
+    instruction: parsed.instruction,
+    hard_rules: draft.hard_rules,
+    uncertainty_policy: draft.uncertainty_policy,
+    assumptions: parsed.assumptions,
+    open_questions: draft.open_questions,
   };
 }

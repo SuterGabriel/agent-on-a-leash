@@ -15,10 +15,11 @@
     "voice:agent": "tsx packages/backend/src/cli/voiceAgent.ts",
     "api-atlas": "tsx packages/backend/src/cli/apiAtlas.ts",
     "live-results": "tsx packages/backend/src/cli/liveResults.ts",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.engine.json --noEmit",
     "replay": "tsx packages/engine/src/replay.ts",
-    "inspect-live": "tsx packages/backend/src/cli/inspectLive.ts"
+    "inspect-live": "tsx packages/backend/src/cli/inspectLive.ts",
+    "live-review": "tsx packages/backend/src/cli/liveReview.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.engine.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

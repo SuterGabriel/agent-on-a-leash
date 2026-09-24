@@ -26,6 +26,7 @@ import { allowedWeekday } from "./guards/weekday";
 import { blockedItems } from "./guards/blocked";
 import { refundableOrder } from "./guards/refundable";
 import { issuerLimits } from "./guards/issuerLimits";
+import { destination } from "./guards/destination";
 
 export const ENGINE_VERSION = "leash-0.3.0";
 
@@ -47,6 +48,7 @@ export const GUARDS: Guard[] = [
   unrequestedAddon,
   returnTerms,
   refundableOrder,
+  destination,
   merchantType,
   merchantFamiliarity,
   lookalikeMerchant,

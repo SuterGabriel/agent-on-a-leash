@@ -19,7 +19,7 @@ const log = (line: string) => console.log(`[worker] ${line}`);
 
 // Live: the live pack has its own scenarios and card history, downloaded now and cached in data/live/.
 const liveRef = cfg.mode === "live" ? await loadLiveReference(client, resolve(cfg.dataDir, "live"), log) : null;
-const engine = new LeashEngine(undefined, liveRef ? buildBaselines(liveRef.history, liveRef.merchants) : undefined);
+const engine = new LeashEngine(undefined, liveRef ? buildBaselines(liveRef.history, liveRef.merchants, { cards: liveRef.cards, accounts: liveRef.accounts }) : undefined);
 
 const service = new LeashService({
   api: cfg.mode === "live" ? client : new OfflinePlatform(pack),

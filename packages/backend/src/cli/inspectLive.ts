@@ -38,6 +38,8 @@ for (const s of ref.scenarios) {
   console.log(`  blocked categories  ${show(p.blockedCategories)}`);
   console.log(`  blocked keywords    ${show(p.blockedKeywords)}`);
   console.log(`  refundable only     ${p.refundableRequired ? "yes" : "no"}`);
+  console.log(`  destination         ${show(p.destinationCity)}`);
+  console.log(`  nights / dates      ${p.stayNights ?? "—"}${p.stayDates ? ` (${p.stayDates.from} → ${p.stayDates.to})` : ""}`);
   console.log(`  when uncertain      ${p.uncertainty}`);
   for (const a of p.assumptions) console.log(`  assumption: ${a}`);
   for (const q of p.openQuestions) console.log(`  open question: ${q}`);
