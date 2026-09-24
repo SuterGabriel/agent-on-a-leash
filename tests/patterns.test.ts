@@ -236,3 +236,60 @@ describe("C card with little history", () => {
     expect(r.decision).toBe("step_up");
   });
 });
+
+describe("lookalike against every established shop at the issuer", () => {
+  const hist = (merchant: string, name: string, category: string, customer: string, i: number): Row => ({
+    card_id: `CA_${customer}`, customer_id: customer, account_id: `AC_${customer}`, transaction_type: "purchase", status: "approved",
+    merchant_id: merchant, merchant_name: name, merchant_category: category, customer_device_id: "DV_X", recurring: "false",
+    timestamp: `2026-05-${String(1 + i).padStart(2, "0")}T12:00:00Z`, merchant_country: "CH",
+  });
+  const history = [
+    ...Array.from({ length: 5 }, (_, i) => hist("ME_EST", "Harbourline Grocers", "groceries", "CU_OTHER", i)),
+    hist("ME_TWIN", "Harbourline Grocer", "groceries", "CU_OTHER", 9), // similar name, but an established shop itself
+  ];
+  const base = buildBaselines(history, new Map());
+  const I = "Up to CHF 500 per order.";
+  const at = (id: string, name: string, category = "groceries") => (e: AuthorizationEvent) => {
+    e.authorization.merchant.merchant_id = id;
+    e.authorization.merchant.merchant_name = name;
+    e.authorization.merchant.merchant_category = category;
+    e.authorization.card_id = "CA_NEWCOMER";
+    e.mandate.customer_id = "CU_NEWCOMER";
+  };
+
+  it("a never-used shop named almost like an established one is an imitation, even for a customer with no history", () => {
+    const r = run(I, event(I, at("ME_FAKE", "Harbourlime Grocers")), new Ledger(), base);
+    expect(r.decision).toBe("decline");
+    expect(r.reason_codes).toContain("lookalike_shop");
+  });
+  it("two established shops with similar names are just two shops", () => {
+    expect(run(I, event(I, at("ME_TWIN", "Harbourline Grocer")), new Ledger(), base).reason_codes).not.toContain("lookalike_shop");
+  });
+  it("another category or a clearly different name is not a lookalike", () => {
+    expect(run(I, event(I, at("ME_FAKE", "Harbourlime Grocers", "electronics")), new Ledger(), base).reason_codes).not.toContain("lookalike_shop");
+    expect(run(I, event(I, at("ME_FAKE", "Birchwood Pantry")), new Ledger(), base).reason_codes).not.toContain("lookalike_shop");
+  });
+});
+
+describe("issuer limits: the card's own per-purchase limit", () => {
+  const base = buildBaselines([], new Map(), {
+    cards: [{ card_id: "CA_LIM", account_id: "AC_LIM" }],
+    accounts: [{ account_id: "AC_LIM", per_transaction_limit_chf: "300", monthly_limit_chf: "1000" }],
+  });
+  const I = "Up to CHF 5000 per order.";
+  const onCard = (card: string, chf: number) => (e: AuthorizationEvent) => {
+    e.authorization.card_id = card;
+    e.authorization.billing_amount_chf = chf;
+  };
+
+  it("above the account's per-transaction limit declines, even when the customer allows more", () => {
+    const r = run(I, event(I, onCard("CA_LIM", 350)), new Ledger(), base);
+    expect(r.decision).toBe("decline");
+    expect(r.reason_codes).toContain("over_card_limit");
+  });
+  it("exactly at the limit passes, and a card with no known limit is not checked", () => {
+    expect(run(I, event(I, onCard("CA_LIM", 300)), new Ledger(), base).reason_codes).not.toContain("over_card_limit");
+    const unknown = run(I, event(I, onCard("CA_UNLISTED", 9000)), new Ledger(), base);
+    expect(unknown.guards.find((g) => g.guard === "issuer_limits")?.verdict).toBe("SKIP");
+  });
+});

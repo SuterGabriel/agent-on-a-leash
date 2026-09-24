@@ -21,6 +21,9 @@ export interface LiveReference {
   history: Row[];
   /** merchant_id → row, from reference-data tables.merchants. */
   merchants: Map<string, Row>;
+  /** reference-data tables.cards and tables.accounts, as strings. */
+  cards: Row[];
+  accounts: Row[];
   scenarios: LiveScenario[];
   /** "downloaded" or "cache" (a download failed and the cached copy was used). */
   source: "downloaded" | "cache";
@@ -70,5 +73,7 @@ export async function loadLiveReference(api: LiveReferenceSource, cacheDir: stri
     const r = asStrings(s);
     return { scenario_id: r.scenario_id ?? "", scenario_name: r.scenario_name ?? "", cardholder_instruction: r.cardholder_instruction ?? "", event_count: Number(r.event_count ?? 0) };
   });
-  return { bootstrap, referenceData, history, merchants, scenarios, source };
+  const cards = (t.cards ?? []).map(asStrings);
+  const accounts = (t.accounts ?? []).map(asStrings);
+  return { bootstrap, referenceData, history, merchants, cards, accounts, scenarios, source };
 }

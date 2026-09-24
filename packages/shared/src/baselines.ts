@@ -16,7 +16,14 @@ export interface Baselines {
   cardCustomer: Map<string, string>;
   customers: Map<string, CardBaseline>; // the same habits, over ALL cards of a customer (for cards with little history)
   issuerMerchants: Map<string, number>; // merchant -> approved purchases across ALL customers
+  cardLimits: Map<string, CardLimits>; // card -> limits of the account behind it
   merchantNames: Map<string, { name: string; category: string }>;
+}
+
+export interface CardLimits {
+  accountId: string;
+  perTransactionChf: number;
+  monthlyChf: number | null;
 }
 
 const hourFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour: "2-digit", hourCycle: "h23" });
@@ -44,7 +51,8 @@ const emptyBaseline = (): CardBaseline => ({ purchases: 0, merchants: new Map(),
 
 const inc = <K>(m: Map<K, number>, k: K) => m.set(k, (m.get(k) ?? 0) + 1);
 
-export function buildBaselines(history: Row[], merchants: Map<string, Row>): Baselines {
+/** `catalog`: the card and account tables (data pack or live reference data); they win over the history rows. */
+export function buildBaselines(history: Row[], merchants: Map<string, Row>, catalog?: { cards: Iterable<Row>; accounts: Iterable<Row> }): Baselines {
   const cards = new Map<string, CardBaseline>();
   const customerMerchants = new Map<string, Map<string, number>>();
   const cardCustomer = new Map<string, string>();
@@ -90,7 +98,22 @@ export function buildBaselines(history: Row[], merchants: Map<string, Row>): Bas
       merchantNames.set(r.merchant_id, { name: r.merchant_name, category: r.merchant_category ?? "" });
     }
   }
-  return { cards, customerMerchants, cardCustomer, customers, issuerMerchants, merchantNames };
+  const cardLimits = new Map<string, CardLimits>();
+  const limitsFrom = (accountId: string, per: string | undefined, monthly: string | undefined): CardLimits | null =>
+    per && Number.isFinite(Number(per)) ? { accountId, perTransactionChf: Number(per), monthlyChf: monthly ? Number(monthly) : null } : null;
+  for (const r of history) {
+    const l = limitsFrom(r.account_id, r.per_transaction_limit_chf, r.monthly_limit_chf);
+    if (r.card_id && l) cardLimits.set(r.card_id, l);
+  }
+  if (catalog) {
+    const accounts = new Map([...catalog.accounts].map((a) => [a.account_id, a]));
+    for (const c of catalog.cards) {
+      const a = accounts.get(c.account_id);
+      const l = a ? limitsFrom(a.account_id, a.per_transaction_limit_chf, a.monthly_limit_chf) : null;
+      if (l) cardLimits.set(c.card_id, l);
+    }
+  }
+  return { cards, customerMerchants, cardCustomer, customers, issuerMerchants, merchantNames, cardLimits };
 }
 
 export const EMPTY_CARD: CardBaseline = {

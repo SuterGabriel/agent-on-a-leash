@@ -25,6 +25,7 @@ import { orderFrequency } from "./guards/orderFrequency";
 import { allowedWeekday } from "./guards/weekday";
 import { blockedItems } from "./guards/blocked";
 import { refundableOrder } from "./guards/refundable";
+import { issuerLimits } from "./guards/issuerLimits";
 
 export const ENGINE_VERSION = "leash-0.3.0";
 
@@ -34,6 +35,7 @@ export const MIN_CARD_HISTORY = 10;
 // Order matters only for the order of reason codes among equally strict findings.
 export const GUARDS: Guard[] = [
   perOrderLimit,
+  issuerLimits,
   perUnitLimit,
   periodBudget,
   orderFrequency,

@@ -54,7 +54,7 @@ const draft = await api.createMandate({ instruction: scenario.cardholder_instruc
 const { mandate_id } = await api.confirmMandate(draft.draft_id);
 const store = new InMemoryDecisionStore();
 const bus = new LeashBus();
-const engine = new LeashEngine(bus, liveRef ? buildBaselines(liveRef.history, liveRef.merchants) : undefined);
+const engine = new LeashEngine(bus, liveRef ? buildBaselines(liveRef.history, liveRef.merchants, { cards: liveRef.cards, accounts: liveRef.accounts }) : undefined);
 const worker = new Worker(api, engine, store, bus, { log: (l) => console.log(l), pollWaitSeconds: live ? 25 : 0 });
 
 if (answer) {

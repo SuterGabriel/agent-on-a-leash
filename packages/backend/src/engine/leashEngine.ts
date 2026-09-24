@@ -168,6 +168,7 @@ const HEADLINES: Record<string, string> = {
   blocked_item: "Something you excluded",
   not_refundable: "Not refundable",
   no_shop_history: "No history to check the shop",
+  over_card_limit: "Above your card's limit",
   guard_error: "Please check this purchase",
 };
 const FALLBACK_HEADLINE: Record<EngineDecisionValue, string> = {
@@ -197,6 +198,7 @@ const CHECKS: Record<string, { label: string; source: CheckSource }> = {
   weekday: { label: "Days you allowed", source: "you" },
   blocked: { label: "Things you excluded", source: "you" },
   refundable: { label: "Refundable only", source: "you" },
+  issuer_limits: { label: "Card limit per purchase", source: "built_in" },
 };
 
 function checkResult(g: GuardResult): CheckResult {
@@ -278,7 +280,7 @@ export class LeashEngine implements Engine {
     if (baselines) this.baselines = baselines;
     else {
       const pack = loadDataPack();
-      this.baselines = buildBaselines(pack.history, pack.merchants);
+      this.baselines = buildBaselines(pack.history, pack.merchants, { cards: pack.cards.values(), accounts: pack.accounts.values() });
     }
     if (bus) this.follow(bus);
   }

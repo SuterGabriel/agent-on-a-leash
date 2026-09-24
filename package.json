@@ -11,6 +11,7 @@
     "replay": "tsx packages/engine/src/replay.ts",
     "inspect-live": "tsx packages/backend/src/cli/inspectLive.ts",
     "api-atlas": "tsx packages/backend/src/cli/apiAtlas.ts",
+    "live-results": "tsx packages/backend/src/cli/liveResults.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.engine.json --noEmit"
   },
