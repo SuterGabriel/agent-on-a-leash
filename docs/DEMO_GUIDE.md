@@ -22,24 +22,32 @@ LEASH_STATE_FILE=off npm run api
 
 Voice needs `VITE_ELEVENLABS_AGENT_ID` in `app-web/.env.local` and internet. Without either, the mic button does nothing and the tap path works as usual.
 
-## 2. The 60-second beats, with the two taps that matter
+## 2. The pitch: two slides, then the phone
 
-Scenario in the side panel: **SCEN0004 · Manipulated agent**. The customer is Oliver Graf, card CA0039.
+**Slide 1, the problem and what we solved.** An AI agent shopping with your card is a card you no longer control: it can be over-charged, sent to a fake shop, or talked into ignoring your limit by a line of text on a product page. Our answer: Viseca gives the agent its own card that carries your rules, not your money. Every payment is checked by a rules engine in milliseconds, explained in your words, and when the engine is not sure it asks you. Your answer can become a rule.
 
-| Time | Do | Say |
-|---|---|---|
-| 0:00 | Card tab, **Get started**. Screen 1.3 shows the rules proposed from his history | "Viseca already knows how he shops. Nothing to type." |
-| 0:10 | Tap the limit, step **300 → 400**. Tap the month budget, step **1,000 → 2,000** | "He corrects what he wants. Stricter is one tap later, looser needs Face ID." |
-| 0:15 | Smart settings as proposed. Face ID. Card ready | "The agent gets its own card number. His card stays private." |
-| 0:25 | Side panel **Start run**. Purchase 1, PixelHarbor CHF 289: quiet row, bar moves | "Normal shopping stays invisible." |
-| 0:30 | Purchase 5, PixelHarbour CHF 340 declined. Tap it: "Real shop, not a lookalike" failed | "One letter off. Stopped, and he sees which rule and why." |
-| 0:40 | Purchase 6, ask sheet: CHF 299, the shop text in the grey box | "The shop page tried to talk our engine out of his limit. We ignored it and asked him." |
-| 0:50 | **Decline**. Offer "Always decline when a shop's text gives orders", tap **Yes, always**. Rules → Learned | "His answer becomes a rule." |
-| 0:58 | Laptop: `GET /judge/decisions` or the comparison figure in `docs/pitch/comparison.svg` | "45 of 45 public purchases, a plain limit catches 6 of 28 risky ones, we catch 28." |
+**Slide 2, the demo.** The phone on the left, the demo panel on the right. The panel lists the steps below and highlights the one the phone is on. No jump menu: the only controls are the scenario picker, Start run, and Reset demo.
 
-Both steps at 0:10 matter. Without 400 the reference approvals at 391.50 and 399.90 decline. Without 2,000 the month budget from his history turns two later approvals into questions.
+**Before you start.** Backend up, side panel says "Data: offline · decisions arrive from the backend", scenario set to **SCEN0004 · Manipulated agent**, Reset demo pressed.
+
+| Step | On the phone | Tap | Say |
+|---|---|---|---|
+| 1 | Card tab with the banner | Get started | "Your Viseca card, and an offer: let an agent shop for you, safely." |
+| 2 | An Agent Card, three lines | Continue | "Its own number, your rules travel with it, you stay in control." |
+| 3 | Rules from your shopping, 23 purchases analysed | Tap CHF 300, step to 400. Tap the 30-day budget, step to 2'000. Use these rules | "Viseca already knows how he shops and proposes the rules. He corrects what he wants." |
+| 4 | Smart settings | Leave as proposed. Create card with Face ID | "When we're not sure: ask. At night: decline. New shops: ask first. Learn from my answers: on." |
+| 5 | Your Agent Card is ready | Done | "A separate number. The main card is never shared." |
+| 6 | Home, no payments yet | Side panel: **Start run** | "Now the agent goes shopping with this card." |
+| 7 | Home fills up | Watch the quiet approval and the bar. Tap the stopped payment at PixelHarbour | "Normal shopping stays invisible. This one was a fake shop, one letter off. Stopped, and he sees which rule and the fact." |
+| 8 | Push: your agent wants to pay CHF 299 | Open it. Read the grey box. Decline (or say "decline" with the mic) | "The shop page tried to talk our engine out of his limit. We ignored it and asked him." |
+| 9 | You declined: "Always decline when a shop's text gives orders?" | Yes, always | "His answer becomes a rule." |
+| 10 | Rules | Show Learned. Turn off Agent Card | "Tighter is one tap. Off is one tap. Looser needs Face ID." |
+
+Step 3 matters twice. Without 400 the reference approvals at 391.50 and 399.90 decline. Without 2'000 the month budget proposed from his history turns two later approvals into questions.
 
 The asks in this scenario, in order, and the answer the reference assumes: purchase 2 duplicate order **decline**, purchase 6 shop text **decline**, purchase 10 shop known from the other card **decline**. Every ask closes itself after 120 seconds with "Time's up. Nothing was bought."
+
+**If the scene is "Above the limit" (SCEN0003 in the picker).** Purchase 11, Loom and Pine CHF 268 against a CHF 250 task limit, asks "above your limit, approve anyway?". The learned-rule offer after a decline exists only for shop text, lookalikes, extras and new shops, not for an over-limit purchase, so step 9 has no equivalent in this scene. The burst of four declines from a new device at 02:14 is the scene's strong moment instead.
 
 ## 3. The other scenarios, if someone asks
 

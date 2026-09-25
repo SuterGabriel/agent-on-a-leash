@@ -7,7 +7,7 @@ import { scenarioDecisions } from "@/features/shopping-card/demo-data";
 import { formatClock } from "@/features/shopping-card/format";
 import { PrototypePhone } from "@/features/shopping-card/prototype-phone";
 import type { FrameId } from "@/features/shopping-card/prototype-state";
-import { PrototypeProvider, currentFrame, frames, usePrototype } from "@/features/shopping-card/prototype-state";
+import { PrototypeProvider, currentFrame, usePrototype } from "@/features/shopping-card/prototype-state";
 import { VoiceProvider } from "@/features/voice/voice-provider";
 import { VoiceToggle } from "@/features/voice/voice-status";
 import { cx } from "@/utils/cx";
@@ -48,6 +48,27 @@ const useFitScale = (sideBySide: boolean) => {
 };
 
 const REPLAY_GAP_MS = 2500;
+
+/** What the scenario picker calls a scene on stage. Viseca's own names stay in the data; this is display only. */
+const SCENE_LABEL: Record<string, string> = {
+    SCEN0003: "Above the limit",
+};
+
+/** The demo, tap by tap. The step whose frames contain the phone's current frame is highlighted. */
+const DEMO_STEPS: { frames: FrameId[]; where: string; tap: string }[] = [
+    { frames: ["1.1"], where: "Card tab", tap: "Tap Get started" },
+    { frames: ["1.2"], where: "How it works", tap: "Continue" },
+    { frames: ["1.3", "1.3a"], where: "Rules from your shopping", tap: "Tap CHF 300, step to 400. Tap the 30-day budget, step to 2'000. Then Use these rules" },
+    { frames: ["1.4"], where: "Smart settings", tap: "Leave as proposed. Create card with Face ID" },
+    { frames: ["1.5"], where: "Your Agent Card is ready", tap: "Done" },
+    { frames: ["3.1b"], where: "Home, no payments yet", tap: "Here: Start run. The agent goes shopping" },
+    { frames: ["3.1", "3.1c"], where: "Home", tap: "Quiet approvals move the bar. Tap a stopped payment" },
+    { frames: ["5.1", "5.2", "5.2b", "5.2c"], where: "Payment details", tap: "The rule that failed, the fact next to it. OK" },
+    { frames: ["4.0", "4.1", "4.2"], where: "Your agent wants to pay", tap: "Read why we ask, then Decline (or say it)" },
+    { frames: ["4.4", "4.3", "4.5"], where: "You declined", tap: "Yes, always: the answer becomes a rule" },
+    { frames: ["6.1"], where: "Rules", tap: "Learned rule, tighten in one tap, Turn off Agent Card" },
+];
+const stepIndex = (frame: FrameId) => DEMO_STEPS.findIndex((st) => st.frames.includes(frame));
 
 /** Outside the phone. In mock mode the buttons stand in for the engine; in live mode the stream drives the phone. */
 const DemoControls = () => {
@@ -125,7 +146,7 @@ const DemoControls = () => {
                         >
                             {(scenarios.length ? scenarios : [{ scenario_id: scenario, scenario_name: scenario }]).map((s) => (
                                 <option key={s.scenario_id} value={s.scenario_id}>
-                                    {s.scenario_id} · {s.scenario_name}
+                                    {s.scenario_id} · {SCENE_LABEL[s.scenario_id] ?? s.scenario_name}
                                 </option>
                             ))}
                         </select>
@@ -211,20 +232,26 @@ const DemoControls = () => {
 
             <VoiceToggle />
 
-            <label className="flex flex-col gap-2">
-                <span className="text-md font-semibold text-primary">Jump to screen</span>
-                <select
-                    value={currentFrame(state)}
-                    onChange={(e) => dispatch({ type: "JUMP", frame: e.target.value as FrameId })}
-                    className="h-11 w-full cursor-pointer rounded-full bg-primary px-4 text-md text-primary outline-focus-ring focus-visible:outline-2"
-                >
-                    {frames.map((f) => (
-                        <option key={f.id} value={f.id}>
-                            {f.name}
-                        </option>
-                    ))}
-                </select>
-            </label>
+            <div className="flex flex-col gap-2">
+                <span className="text-md font-semibold text-primary">Demo, tap by tap</span>
+                <ol className="flex flex-col gap-1.5" aria-label="Demo steps">
+                    {DEMO_STEPS.map((st, i) => {
+                        const active = stepIndex(currentFrame(state)) === i;
+                        return (
+                            <li
+                                key={st.where}
+                                aria-current={active ? "step" : undefined}
+                                className={cx("rounded-xl px-3 py-2 text-sm", active ? "bg-primary text-primary" : "text-tertiary")}
+                            >
+                                <span className={cx("font-semibold", active ? "text-primary" : "text-secondary")}>
+                                    {i + 1}. {st.where}
+                                </span>
+                                <span className="block">{st.tap}</span>
+                            </li>
+                        );
+                    })}
+                </ol>
+            </div>
 
             <Button size="md" color="tertiary" onClick={() => dispatch({ type: "RESET" })}>
                 Reset demo
