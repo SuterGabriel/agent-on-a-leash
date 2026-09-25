@@ -82,12 +82,6 @@ export interface MemoryView {
     blocked_shops: { merchant_id: string; name: string; at: string }[];
 }
 
-/** GET /api/status — backend mode and the run in progress. */
-export interface BackendStatus {
-    mode?: string;
-    [k: string]: unknown;
-}
-
 /** Viseca `hard_rules` entry (technical_details.md §Rule format). */
 export interface HardRule {
     field: string;

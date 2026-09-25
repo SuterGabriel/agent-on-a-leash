@@ -1,18 +1,47 @@
-// One adapter for mock and live. Set VITE_API_BASE=/v4 to go live (the dev server proxies it to the backend and adds
-// the app secret there, see vite.config.ts); unset = mock.
+// One adapter for mock and live. Set VITE_API_BASE (e.g. http://localhost:8080) to go live; unset = mock.
 // The mock returns the same shapes from src/mocks/decisions.json and demo-data.ts so the screens don't know the difference.
-import type { BackendStatus, ColdStart, CreateLeashRequest, FeedResponse, Leash, MemoryView, ResolveRequest, StreamEvent, SuggestResponse, TightenRequest, UnderstandResponse } from "@/features/shopping-card/api/types";
-import { analysis, customer, defaultSmart, instructionFromRules, proposedRules, scenarioDecisions, smartSettings, suggestedValues, task } from "@/features/shopping-card/demo-data";
+import type {
+    ColdStart,
+    CreateLeashRequest,
+    FeedResponse,
+    Leash,
+    MemoryView,
+    ResolveRequest,
+    StreamEvent,
+    SuggestResponse,
+    TightenRequest,
+    UnderstandResponse,
+} from "@/features/shopping-card/api/types";
+import {
+    analysis,
+    customer,
+    defaultSmart,
+    instructionFromRules,
+    proposedRules,
+    scenarioDecisions,
+    smartSettings,
+    suggestedValues,
+    task,
+} from "@/features/shopping-card/demo-data";
 import type { Decision } from "@/types/decision";
 
 export const apiBase: string | undefined = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "");
 export const dataMode: "mock" | "live" = apiBase ? "live" : "mock";
 
+// The backend refuses writes under /app/* without the bearer when APP_SECRET is set (always in live mode).
+// Local dev: leave VITE_APP_SECRET empty, the Vite proxy adds it server-side (vite.config.ts), so it never reaches the
+// browser. A static deploy without a proxy (Vercel) needs VITE_APP_SECRET: hackathon-grade, one shared secret in the bundle.
+const appSecret = (import.meta.env.VITE_APP_SECRET as string | undefined)?.trim();
+export const authHeaders = (): Record<string, string> => (appSecret ? { Authorization: `Bearer ${appSecret}` } : {});
+
 const json = async <T>(path: string, init?: RequestInit): Promise<T> => {
-    const res = await fetch(`${apiBase}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
+    const res = await fetch(`${apiBase}${path}`, { ...init, headers: { "Content-Type": "application/json", ...authHeaders(), ...(init?.headers ?? {}) } });
     if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
-        throw Object.assign(new Error(body?.error?.message ?? `${init?.method ?? "GET"} ${path} → ${res.status}`), { status: res.status, code: body?.error?.code });
+        throw Object.assign(new Error(body?.error?.message ?? `${init?.method ?? "GET"} ${path} → ${res.status}`), {
+            status: res.status,
+            code: body?.error?.code,
+        });
     }
     return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
 };
@@ -36,13 +65,27 @@ const mockSuggest = (): SuggestResponse => ({
     },
     rules: proposedRules.map((r) => ({
         key: r.key,
-        suggested_value: r.key === "orderLimit" ? suggestedValues.orderLimit : r.key === "monthBudget" ? suggestedValues.monthBudget : r.key === "categories" ? analysis.categories : null,
+        suggested_value:
+            r.key === "orderLimit"
+                ? suggestedValues.orderLimit
+                : r.key === "monthBudget"
+                  ? suggestedValues.monthBudget
+                  : r.key === "categories"
+                    ? analysis.categories
+                    : null,
         evidence: r.evidence,
         hard_rule:
             r.key === "orderLimit"
                 ? { field: "authorization.billing_amount_chf", operator: "<=", value: suggestedValues.orderLimit, currency: "CHF", scope: "purchase" }
                 : r.key === "monthBudget"
-                  ? { field: "authorization.billing_amount_chf", operator: "<=", value: suggestedValues.monthBudget, currency: "CHF", scope: "period", period_days: 30 }
+                  ? {
+                        field: "authorization.billing_amount_chf",
+                        operator: "<=",
+                        value: suggestedValues.monthBudget,
+                        currency: "CHF",
+                        scope: "period",
+                        period_days: 30,
+                    }
                   : null,
     })),
     smart: { ...defaultSmart, evidence: Object.fromEntries(smartSettings.map((s) => [s.key, s.evidence])) },
@@ -77,8 +120,11 @@ export const api = {
         apiBase ? json("/app/leash/understand", { method: "POST", body: JSON.stringify({ instruction }) }) : Promise.reject(new Error("mock mode")),
     getLeash: (): Promise<Leash> => (apiBase ? json("/app/leash") : wait(100).then(mockLeash)),
     createLeash: (body: CreateLeashRequest): Promise<Leash> =>
-        apiBase ? json("/app/leash", { method: "POST", body: JSON.stringify(body) }) : wait(400).then(() => ({ ...mockLeash(), instruction: body.instruction, rules: body.rules })),
-    tighten: (body: TightenRequest): Promise<Leash> => (apiBase ? json("/app/leash/rules", { method: "PATCH", body: JSON.stringify(body) }) : wait(150).then(mockLeash)),
+        apiBase
+            ? json("/app/leash", { method: "POST", body: JSON.stringify(body) })
+            : wait(400).then(() => ({ ...mockLeash(), instruction: body.instruction, rules: body.rules })),
+    tighten: (body: TightenRequest): Promise<Leash> =>
+        apiBase ? json("/app/leash/rules", { method: "PATCH", body: JSON.stringify(body) }) : wait(150).then(mockLeash),
     pause: (): Promise<void> => (apiBase ? json("/app/leash/pause", { method: "POST" }) : wait(100).then(() => undefined)),
     revoke: (): Promise<void> => (apiBase ? json("/app/leash", { method: "DELETE" }) : wait(200).then(() => undefined)),
     feed: (): Promise<FeedResponse> => (apiBase ? json("/app/feed") : wait(100).then(() => ({ decisions: [], asks: [] }))),
@@ -86,12 +132,14 @@ export const api = {
         apiBase ? json(`/app/decisions/${id}`) : wait(50).then(() => scenarioDecisions("SCEN0004").find((d) => d.id === id) as Decision),
     resolve: (id: string, body: ResolveRequest): Promise<void> =>
         apiBase ? json(`/app/asks/${id}/resolve`, { method: "POST", body: JSON.stringify(body) }) : wait(100).then(() => undefined),
-    acceptSuggestion: (id: string): Promise<void> =>
-        apiBase ? json(`/app/suggestions/${id}/accept`, { method: "POST" }) : wait(100).then(() => undefined),
+    acceptSuggestion: (id: string): Promise<void> => (apiBase ? json(`/app/suggestions/${id}/accept`, { method: "POST" }) : wait(100).then(() => undefined)),
     /** Unfreeze: a loosening, needs Face ID. */
-    resume: (): Promise<Leash> => (apiBase ? json("/app/leash/resume", { method: "POST", body: JSON.stringify({ face_id_confirmed: true }) }) : wait(100).then(mockLeash)),
+    resume: (): Promise<Leash> =>
+        apiBase ? json("/app/leash/resume", { method: "POST", body: JSON.stringify({ face_id_confirmed: true }) }) : wait(100).then(mockLeash),
     unblockShop: (merchantId: string): Promise<Leash> =>
-        apiBase ? json("/app/leash/unblock-shop", { method: "POST", body: JSON.stringify({ merchant_id: merchantId, face_id_confirmed: true }) }) : wait(100).then(mockLeash),
+        apiBase
+            ? json("/app/leash/unblock-shop", { method: "POST", body: JSON.stringify({ merchant_id: merchantId, face_id_confirmed: true }) })
+            : wait(100).then(mockLeash),
     /** "Was this you?" yes trusts the device (Face ID); no pauses the card and never trusts the device again. */
     wasMe: (id: string, answer: "yes" | "no"): Promise<{ learned: string[]; paused: boolean; leash: Leash } | undefined> =>
         apiBase
@@ -102,13 +150,15 @@ export const api = {
         apiBase ? json(`/app/memory/shops/${encodeURIComponent(merchantId)}`, { method: "DELETE" }) : Promise.resolve(null),
     forgetDevice: (deviceId: string): Promise<MemoryView | null> =>
         apiBase ? json(`/app/memory/devices/${encodeURIComponent(deviceId)}`, { method: "DELETE" }) : Promise.resolve(null),
-    status: (): Promise<BackendStatus | null> => (apiBase ? json("/api/status") : Promise.resolve(null)),
 
     /** Live demo control: the scenarios the backend can replay, and starting one (the task lands on top of the card rules). */
     scenarios: (): Promise<{ scenario_id: string; scenario_name: string; cardholder_instruction: string; event_count: number }[]> =>
         apiBase ? json("/api/scenarios") : Promise.resolve([]),
     startRun: (scenarioId: string): Promise<{ run_id: string; scenario_id: string; state: string }> =>
         apiBase ? json("/api/runs", { method: "POST", body: JSON.stringify({ scenario_id: scenarioId }) }) : Promise.reject(new Error("mock mode")),
+    /** Live: the latest run and whether it is still running, so the next scene starts only after the last one ended. */
+    status: (): Promise<{ latest_run: { run_id: string; scenario_id: string; state: "running" | "finished" | "failed" } | null }> =>
+        apiBase ? json("/api/status") : Promise.resolve({ latest_run: null }),
 
     /** Live: subscribe to /app/stream. Mock: no-op (the demo controls dispatch INGEST directly). Returns an unsubscribe. */
     stream: (onEvent: (e: StreamEvent) => void, onError?: (e: Event) => void): (() => void) => {

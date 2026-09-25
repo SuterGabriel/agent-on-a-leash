@@ -1,0 +1,29 @@
+<svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="450" viewBox="0 0 1200 450" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="450" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">The numbers, measured 24 and 25 September</text>
+<text x="40" y="86" font-size="19" fill="#52514e">Each one re-runs with a command: npm run replay, npm run compare, npm run jury-figures, npm test.</text>
+<rect x="40" y="138" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="60" y="196" font-size="44" font-weight="600" fill="#0b0b0b">45 of 45</text>
+<text x="60" y="228" font-size="16" fill="#52514e">decisions match Viseca's</text><text x="60" y="250" font-size="16" fill="#52514e">reference on the public set</text>
+<rect x="324" y="138" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="344" y="196" font-size="44" font-weight="600" fill="#0b0b0b">28 of 28</text>
+<text x="344" y="228" font-size="16" fill="#52514e">risky purchases stopped or</text><text x="344" y="250" font-size="16" fill="#52514e">asked; a plain limit catches 6</text>
+<rect x="608" y="138" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="628" y="196" font-size="44" font-weight="600" fill="#0b0b0b">0 of 185</text>
+<text x="628" y="228" font-size="16" fill="#52514e">live decisions after</text><text x="628" y="250" font-size="16" fill="#52514e">the 8 s deadline</text>
+<rect x="892" y="138" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="912" y="196" font-size="44" font-weight="600" fill="#0b0b0b">268 ms</text>
+<text x="912" y="228" font-size="16" fill="#52514e">median decision on Viseca's</text><text x="912" y="250" font-size="16" fill="#52514e">server, network included</text>
+<rect x="40" y="286" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="60" y="344" font-size="44" font-weight="600" fill="#0b0b0b">0.04 ms</text>
+<text x="60" y="376" font-size="16" fill="#52514e">median engine time</text><text x="60" y="398" font-size="16" fill="#52514e">per decision</text>
+<rect x="324" y="286" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="344" y="344" font-size="44" font-weight="600" fill="#0b0b0b">21</text>
+<text x="344" y="376" font-size="16" fill="#52514e">checks in five families,</text><text x="344" y="398" font-size="16" fill="#52514e">from your words and built in</text>
+<rect x="608" y="286" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="628" y="344" font-size="44" font-weight="600" fill="#0b0b0b">262</text>
+<text x="628" y="376" font-size="16" fill="#52514e">tests, all green,</text><text x="628" y="398" font-size="16" fill="#52514e">in 22 files</text>
+<rect x="892" y="286" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="912" y="344" font-size="44" font-weight="600" fill="#0b0b0b">2</text>
+<text x="912" y="376" font-size="16" fill="#52514e">learned rules enforced</text><text x="912" y="398" font-size="16" fill="#52514e">after one decline</text>
+</svg>

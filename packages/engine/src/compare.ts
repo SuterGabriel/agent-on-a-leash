@@ -114,23 +114,24 @@ export function markdown(purchases: Purchase[]): string {
 /** One slide figure: three bars, one series, labels beside the bars. Light surface, palette from the dataviz skill. */
 export function svg(purchases: Purchase[]): string {
   const { risky, rows } = report(purchases);
-  const W = 1200, left = 300, barH = 44, gap = 28, top = 130, maxW = 640;
+  const W = 1200, left = 300, barH = 24, gap = 30, top = 170, maxW = 640;
   const H = top + rows.length * (barH + gap) + 40;
   const bars = rows.map((r, i) => {
     const y = top + i * (barH + gap);
     const w = Math.max(4, Math.round((r.caught / risky.length) * maxW));
     const fill = r.name === "Our engine" ? "#2a78d6" : "#eb6834";
     return [
-      `<text x="${left - 24}" y="${y + barH / 2 + 8}" text-anchor="end" font-size="26" font-weight="600" fill="#0b0b0b">${r.name}</text>`,
+      `<text x="${left - 24}" y="${y + barH / 2 + 8}" text-anchor="end" font-size="24" font-weight="600" fill="#0b0b0b">${r.name}</text>`,
       r.caught > 0 ? `<rect x="${left}" y="${y}" width="${w}" height="${barH}" rx="4" fill="${fill}"><title>${r.name}: ${r.caught} of ${risky.length} risky purchases stopped or asked</title></rect>` : "",
-      `<text x="${left + w + 16}" y="${y + barH / 2 + 8}" font-size="26" fill="#0b0b0b">${r.caught} of ${risky.length}</text>`,
+      `<text x="${left + w + 16}" y="${y + barH / 2 + 8}" font-size="24" fill="#0b0b0b">${r.caught} of ${risky.length}</text>`,
     ].join("");
   });
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">`,
     `<rect width="${W}" height="${H}" fill="#fcfcfb"/>`,
-    `<text x="40" y="52" font-size="34" font-weight="700" fill="#0b0b0b">A spending limit catches ${rows[1].caught} of ${risky.length} risky purchases. The rules engine catches ${rows[2].caught}.</text>`,
-    `<text x="40" y="88" font-size="20" fill="#52514e">Risky purchases stopped or put to the customer, of ${risky.length} in Viseca's five public scenarios</text>`,
+    `<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">A spending limit catches ${rows[1].caught} of ${risky.length} risky purchases.</text>`,
+    `<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">The rules engine catches ${rows[2].caught}.</text>`,
+    `<text x="40" y="128" font-size="19" fill="#52514e">Risky purchases stopped or put to the customer, of ${risky.length} in Viseca's five public scenarios</text>`,
     `<line x1="${left}" y1="${top - 12}" x2="${left}" y2="${H - 30}" stroke="#d9d8d3" stroke-width="2"/>`,
     ...bars,
     `</svg>`,

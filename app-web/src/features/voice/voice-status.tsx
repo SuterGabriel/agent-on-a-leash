@@ -68,11 +68,10 @@ export const VoiceToggle = () => {
     return (
         <div className="flex flex-col gap-2">
             <span className="text-md font-semibold text-primary">Voice (ElevenLabs)</span>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 *:w-full">
                 <Button
                     size="md"
                     color={voice.enabled ? "primary" : "secondary"}
-                    className="flex-1"
                     iconLeading={voice.enabled ? Microphone01 : MicrophoneOff01}
                     aria-pressed={voice.enabled}
                     onClick={() => {
@@ -83,7 +82,7 @@ export const VoiceToggle = () => {
                     {voice.enabled ? "Asks are read aloud" : "Read asks aloud"}
                 </Button>
                 <Button size="md" color="secondary" onClick={live ? voice.stop : voice.start}>
-                    {live ? "Hang up" : "Call now"}
+                    {live ? "Hang up" : voice.cardCreated ? "Call now" : "Set up by voice"}
                 </Button>
             </div>
             <p role="status" aria-live="polite" className="flex items-center gap-2 px-1 text-sm text-secondary">

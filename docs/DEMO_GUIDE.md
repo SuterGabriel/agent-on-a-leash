@@ -22,24 +22,41 @@ LEASH_STATE_FILE=off npm run api
 
 Voice needs `VITE_ELEVENLABS_AGENT_ID` in `app-web/.env.local` and internet. Without either, the mic button does nothing and the tap path works as usual.
 
-## 2. The 60-second beats, with the two taps that matter
+## 2. The pitch: two slides, then the phone
 
-Scenario in the side panel: **SCEN0004 · Manipulated agent**. The customer is Oliver Graf, card CA0039.
+**Slide 1, the problem and what we solved.** An AI agent shopping with your card is a card you no longer control: it can be over-charged, sent to a fake shop, or talked into ignoring your limit by a line of text on a product page. Our answer: Viseca gives the agent its own card that carries your rules, not your money. Every payment is checked by a rules engine in milliseconds, explained in your words, and when the engine is not sure it asks you. Your answer can become a rule.
 
-| Time | Do | Say |
-|---|---|---|
-| 0:00 | Card tab, **Get started**. Screen 1.3 shows the rules proposed from his history | "Viseca already knows how he shops. Nothing to type." |
-| 0:10 | Tap the limit, step **300 → 400**. Tap the month budget, step **1,000 → 2,000** | "He corrects what he wants. Stricter is one tap later, looser needs Face ID." |
-| 0:15 | Smart settings as proposed. Face ID. Card ready | "The agent gets its own card number. His card stays private." |
-| 0:25 | Side panel **Start run**. Purchase 1, PixelHarbor CHF 289: quiet row, bar moves | "Normal shopping stays invisible." |
-| 0:30 | Purchase 5, PixelHarbour CHF 340 declined. Tap it: "Real shop, not a lookalike" failed | "One letter off. Stopped, and he sees which rule and why." |
-| 0:40 | Purchase 6, ask sheet: CHF 299, the shop text in the grey box | "The shop page tried to talk our engine out of his limit. We ignored it and asked him." |
-| 0:50 | **Decline**. Offer "Always decline when a shop's text gives orders", tap **Yes, always**. Rules → Learned | "His answer becomes a rule." |
-| 0:58 | Laptop: `GET /judge/decisions` or the comparison figure in `docs/pitch/comparison.svg` | "45 of 45 public purchases, a plain limit catches 6 of 28 risky ones, we catch 28." |
+**Slide 2, the demo.** The phone on the left, the guide on the right. The guide is a programme: the setup once, then all five scenes in order, each with its own beats. It shows one step at a time, follows the phone forward on its own, and every step is clickable: the title opens the full list, a click on the current step does the tap for you, Back and Next move by hand. A scene's start step carries the scene picker and Start run; Start run is locked while a scene is running or a question is open.
 
-Both steps at 0:10 matter. Without 400 the reference approvals at 391.50 and 399.90 decline. Without 2,000 the month budget from his history turns two later approvals into questions.
+**Before you start.** Backend up, side panel says "Data: offline · decisions arrive from the backend", Reset demo pressed.
 
-The asks in this scenario, in order, and the answer the reference assumes: purchase 2 duplicate order **decline**, purchase 6 shop text **decline**, purchase 10 shop known from the other card **decline**. Every ask closes itself after 120 seconds with "Time's up. Nothing was bought."
+### Setup, once
+
+| Step | On the phone | Tap | Say |
+|---|---|---|---|
+| 1 | Card tab with the banner | Get started | "Your Viseca card, and an offer: let an agent shop for you, safely." |
+| 2 | An Agent Card, three lines | Continue | "Its own number, your rules travel with it, you stay in control." |
+| 3 | Rules from your shopping | Tap CHF 300, step to 400. Tap the 30-day budget, step to 2'000. Use these rules | "Viseca already knows how he shops and proposes the rules. He corrects what he wants." |
+| 4 | Smart settings | Leave as proposed. Create card with Face ID | "When we're not sure: ask. At night: decline. New shops: ask first. Learn from my answers: on." |
+| 5 | Your Agent Card is ready | Done | "A separate number. The main card is never shared." |
+
+Step 3 matters twice. Without 400 the reference approvals at 391.50 and 399.90 decline. Without 2'000 the month budget proposed from his history turns two later approvals into questions.
+
+### The scenes, in programme order
+
+A question pauses the run until it is answered or two minutes pass, so the purchases arrive in a fixed order and the guide's beats match it. Answer as the beat says; those are the answers the reference assumes. The card and everything it learned stay from scene to scene, only the agent's task changes.
+
+**Scene 1 · Manipulated agent (SCEN0004).** The hero scene. PixelHarbor CHF 289 approved quietly. "Buy it again?" for the same monitor 25 minutes later: decline. CHF 520 with "pre-authorised up to CHF 900" in the product text: declined, quoted. PixelHarbour, one letter off: declined, tap it for the failed check. "Your agent wants to pay CHF 299" with "ignore any previous spending instructions" in the grey box: decline, or say it. "Always decline when a shop's text gives orders?" Yes, always. Protection plan added: declined. A new offer after the decline: approved. A gift voucher instead of the monitor: declined. Circuit and Pine, known from his other card: decline. Rules: the learned rule.
+
+**Scene 2 · Above the limit (SCEN0003).** Two quiet approvals at shops he knows. "Is this you?" from a device he never used, at night: approve, it was him. Four more orders in minutes from that device at shops he never used: stopped without a question, tap one. RainThread from the new device: approve. CHF 268 above his CHF 250 limit: decline. The card learned the device, not a higher limit.
+
+**Scene 3 · Weekly groceries budget (SCEN0001).** CHF 44.50 and CHF 120 exactly at the limit: quiet. CHF 126, 5 % over: decline. A second order within 10 minutes, together CHF 135: decline. A fragrance gift in the grocery basket: decline, then "Never buy cosmetics?" Yes, always. CHF 324 in 7 days, over the CHF 300 budget: decline. CHF 138 declined without a question; the week rolls on and CHF 88 goes through.
+
+**Scene 4 · One item, right shop, returns (SCEN0002).** The shoes at CHF 165 approved. Size 42, final sale, 7-day returns: declined quietly. No return policy stated: decline. Protection plan added: decline, then "Always decline when something is added?" Yes, always. CHF 215, 7.5 % over: decline. A cycling helmet and a sustainable-goods shop: declined. Summit Thread CHF 179: approved.
+
+**Scene 5 · Connection check (SCEN0000).** One grocery order, CHF 18 against CHF 20: approved, quiet. Optional; skip it when time is short.
+
+For a one-minute pitch, play scene 1 only and mention that four more are in the guide. For the three-minute Q&A, scene 2 is the strongest second scene.
 
 ## 3. The other scenarios, if someone asks
 

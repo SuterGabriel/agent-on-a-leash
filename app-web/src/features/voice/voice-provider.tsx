@@ -20,6 +20,8 @@ interface VoiceValue {
     /** Start a call now (setup by voice, or re-read the question). */
     start: () => void;
     stop: () => void;
+    /** Whether the Agent Card exists yet; picks the label of the manual call button. */
+    cardCreated: boolean;
 }
 
 const VoiceCtx = createContext<VoiceValue | null>(null);
@@ -92,7 +94,11 @@ const VoiceBridge = ({ children }: { children: ReactNode }) => {
                   : "listening"
               : "off";
 
-    const value = useMemo<VoiceValue>(() => ({ enabled, setEnabled, state: voiceState, message, start, stop }), [enabled, voiceState, message, start, stop]);
+    const cardCreated = state.cardCreated;
+    const value = useMemo<VoiceValue>(
+        () => ({ enabled, setEnabled, state: voiceState, message, start, stop, cardCreated }),
+        [enabled, voiceState, message, start, stop, cardCreated],
+    );
 
     return (
         <VoiceCtx.Provider value={value}>
