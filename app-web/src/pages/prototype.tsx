@@ -49,9 +49,25 @@ const useFitScale = (sideBySide: boolean) => {
 
 const REPLAY_GAP_MS = 2500;
 
-/** What the scenario picker calls a scene on stage. Viseca's own names stay in the data; this is display only. */
-const SCENE_LABEL: Record<string, string> = {
-    SCEN0003: "Above the limit",
+/** What the scenario picker says on stage: a title and what the audience will see. Viseca's names stay in the data. */
+const SCENE: Record<string, { title: string; shows: string }> = {
+    SCEN0000: { title: "Connection check · 1 purchase", shows: "One grocery order, CHF 18 against a CHF 20 limit. Approved, nothing else happens." },
+    SCEN0001: {
+        title: "Weekly groceries budget · 10 purchases",
+        shows: "Groceries, CHF 120 per order and CHF 300 across 7 days. A 5 % overshoot asks, a split order asks, cosmetics in the basket asks, over budget asks, far over the limit declines.",
+    },
+    SCEN0002: {
+        title: "One item, right shop, returns · 12 purchases",
+        shows: "Road-running shoes size 43, sports retailer, 14-day returns, max CHF 200. Wrong item, wrong size, wrong shop type, too-short returns and final sale are declined; missing return terms ask.",
+    },
+    SCEN0003: {
+        title: "Above the limit · 11 purchases",
+        shows: "Clothing up to CHF 250 from known shops, pause if it does not look like him. A new device at night asks, a burst of four orders from it is stopped, CHF 268 above the limit asks.",
+    },
+    SCEN0004: {
+        title: "Manipulated agent · 11 purchases",
+        shows: "The 27-inch monitor from a known seller, CHF 400 or less, nothing added. Duplicate order asks, fake shop PixelHarbour declined, shop text that gives orders asks, protection plan added declined, wrong item declined.",
+    },
 };
 
 /** The demo, tap by tap. The step whose frames contain the phone's current frame is highlighted. */
@@ -155,11 +171,12 @@ const DemoControls = () => {
                         >
                             {(scenarios.length ? scenarios : [{ scenario_id: scenario, scenario_name: scenario }]).map((s) => (
                                 <option key={s.scenario_id} value={s.scenario_id}>
-                                    {s.scenario_id} · {SCENE_LABEL[s.scenario_id] ?? s.scenario_name}
+                                    {s.scenario_id} · {SCENE[s.scenario_id]?.title ?? s.scenario_name}
                                 </option>
                             ))}
                         </select>
                     </label>
+                    {SCENE[scenario] && <p className="px-1 text-sm text-tertiary">{SCENE[scenario].shows}</p>}
                     <Button
                         size="md"
                         color="secondary"
