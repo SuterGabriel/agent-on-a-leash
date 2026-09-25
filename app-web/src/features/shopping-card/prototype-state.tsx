@@ -1,8 +1,9 @@
 import type { Dispatch, ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { api, dataMode } from "@/features/shopping-card/api/client";
+import type { Leash, MemoryView, SuggestResponse, UnderstandResponse } from "@/features/shopping-card/api/types";
 import type { ActivityItem, RuleKey, SmartSettings } from "@/features/shopping-card/demo-data";
-import { burstIds, defaultSmart, getDecision, pushReasons, rowFor, suggestedValues, suggestionFor } from "@/features/shopping-card/demo-data";
+import { burstIds, defaultSmart, getDecision, pushReasons, rowFor, smartSettings, suggestedValues, suggestionFor } from "@/features/shopping-card/demo-data";
 import type { Decision } from "@/types/decision";
 
 // ---------- screens, sheets, frames (concept v4: 06_product/09-concept-v4-agent-card.md) ----------
@@ -88,6 +89,27 @@ export interface State {
     editing: { key: Extract<RuleKey, "orderLimit" | "monthBudget">; draft: number } | null;
     /** Reason for the last answered ask (drives the learned-rule offer on 4.4). */
     lastAnswered: string | null;
+
+    // ---- live only (null in mock: the screens then show the prototype data) ----
+    /** 1.3 / 1.4: what the backend proposed from the card history, or from customers like this one (cold start). */
+    suggest: SuggestResponse | null;
+    /** Demo control: look at a customer without purchases (cold start). */
+    coldCustomerId: string | null;
+    /** The task the agent was given, as the backend stored it (3.1 / 6.1). */
+    liveTask: Leash["task"];
+    cardLast4: string | null;
+    knownShops: NonNullable<Leash["known_shops"]> | null;
+    freesUpAt: string | null;
+    /** 1.4: a task written in the customer's own words (any language), as our compiler read it. */
+    taskDraft: UnderstandResponse | null;
+    /** 6.3: what the card learned from the customer's answers. */
+    memory: MemoryView | null;
+    /** The last payment that sent a "we stopped" push (5.1). */
+    lastStopped: string | null;
+    /** The group of the last burst (7.1 / 7.2). */
+    burstGroup: string | null;
+    /** Shops the customer blocked on 6.3 (mock keeps them here; live also tells the backend). */
+    blocked: string[];
 }
 
 const base: State = {
@@ -110,9 +132,42 @@ const base: State = {
     learned: [],
     editing: null,
     lastAnswered: null,
+    suggest: null,
+    coldCustomerId: null,
+    liveTask: null,
+    cardLast4: null,
+    knownShops: null,
+    freesUpAt: null,
+    taskDraft: null,
+    memory: null,
+    lastStopped: null,
+    burstGroup: null,
+    blocked: [],
 };
 
 export const initialState = (): State => ({ ...base });
+
+/** What the phone shows of a backend leash: numbers, switches, learned rules, budget, task, card, known shops. */
+export const leashPatch = (leash: Leash): Partial<State> => ({
+    cardCreated: leash.status !== "off",
+    rules: leash.rules,
+    smart: leash.smart,
+    monthSpent: leash.month_spent_chf,
+    frozen: leash.status === "paused",
+    learned: leash.learned.map((l) => ({ text: l.text, added: addedLabel(l.added_at) })),
+    taskActive: leash.task !== null,
+    liveTask: leash.task,
+    cardLast4: leash.card_last4 || null,
+    knownShops: leash.known_shops ?? null,
+    freesUpAt: leash.frees_up_at,
+});
+
+const addedLabel = (iso: string) => {
+    const t = Date.parse(iso);
+    if (Number.isNaN(t)) return "Added";
+    const days = Math.floor((Date.now() - t) / 86_400_000);
+    return days <= 0 ? "Added today" : days === 1 ? "Added yesterday" : `Added ${days} days ago`;
+};
 
 export const ASK_SECONDS = 120;
 
@@ -235,10 +290,17 @@ export type Action =
     | { type: "SET_SMART"; key: keyof SmartSettings; value: string }
     | { type: "CREATE_CARD" }
     | { type: "RESOLVE_ASK"; outcome: "approved" | "declined" }
-    | { type: "ACCEPT_SUGGESTION"; text: string }
+    | { type: "ACCEPT_SUGGESTION"; text: string; decisionId?: string }
     | { type: "REMOVE_LEARNED"; text: string }
     | { type: "TIME_UP" }
     | { type: "TURN_OFF" }
+    /** 7.2: the customer's answer about a burst. "yes" is only dispatched after Face ID. */
+    | { type: "WAS_ME"; answer: "yes" | "no" }
+    /** Unfreeze (after Face ID). */
+    | { type: "RESUME" }
+    | { type: "BLOCK_SHOP"; merchantId: string }
+    /** Unblock (after Face ID: a loosening). */
+    | { type: "UNBLOCK_SHOP"; merchantId: string }
     /** One decision arrives (from the mock demo controls or from the live backend). */
     | { type: "INGEST"; decision: Decision; quiet?: boolean }
     | { type: "DEMO"; demo: "approve" | "duplicate" | "lookalike" | "ask" | "burst" };
@@ -264,7 +326,10 @@ const ingest = (s: State, d: Decision, quiet = false): State => {
     }
 
     if (d.decision === "step_up") {
-        const waiting = { decisionId: d.id, deadline: Date.now() + ASK_SECONDS * 1000 };
+        // Live: the backend's own deadline (the agent really waits that long); mock: 2:00 from now.
+        const until = d.deadline_at ? Date.parse(d.deadline_at) : NaN;
+        const waiting = { decisionId: d.id, deadline: Number.isNaN(until) ? Date.now() + ASK_SECONDS * 1000 : until };
+        const left = Math.max(0, Math.round((waiting.deadline - Date.now()) / 1000));
         return {
             ...next,
             waiting,
@@ -275,7 +340,7 @@ const ingest = (s: State, d: Decision, quiet = false): State => {
                       kind: "ask",
                       key: bannerSeq,
                       title: `Your agent wants to pay CHF ${Math.round(d.amount.chf)} at ${d.merchant.name}`,
-                      body: "Tap to answer. 2:00 left.",
+                      body: `Tap to answer. ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} left.`,
                       target: { type: "GO", screen: "3.1", sheet: "question" },
                   },
         };
@@ -286,14 +351,10 @@ const ingest = (s: State, d: Decision, quiet = false): State => {
     const isBurst = !!d.group_id;
     const alreadyBurst = isBurst && s.activity.some((a) => a.groupId === d.group_id);
     let banner = s.banner;
-    if (isBurst && !alreadyBurst && !quiet) {
-        banner = {
-            kind: "burst",
-            key: bannerSeq,
-            title: "We stopped 4 payments, 02:14 to 02:24",
-            body: "A new phone tried to pay at shops you never used.",
-            target: { type: "GO", screen: "3.1", sheet: "was-this-you" },
-        };
+    if (isBurst && !quiet && (!alreadyBurst || s.banner?.kind === "burst")) {
+        // One push for the whole burst, updated as more payments of the same group are stopped.
+        const group = [d, ...s.activity.filter((a) => a.groupId === d.group_id).map((a) => getDecision(a.decisionId))];
+        banner = { kind: "burst", key: alreadyBurst && s.banner ? s.banner.key : bannerSeq, ...burstPush(group), target: { type: "GO", screen: "3.1", sheet: "was-this-you" } };
     } else if (isPush && !isBurst) {
         banner = {
             kind: "stopped",
@@ -303,7 +364,36 @@ const ingest = (s: State, d: Decision, quiet = false): State => {
             target: { type: "GO", screen: "5.2", patch: { paymentId: d.id } },
         };
     }
-    return { ...next, activity: [row, ...s.activity], banner };
+    return {
+        ...next,
+        activity: [row, ...s.activity],
+        banner,
+        lastStopped: isPush && !isBurst ? d.id : s.lastStopped,
+        burstGroup: isBurst ? d.group_id : s.burstGroup,
+    };
+};
+
+const clock = (d: Decision) => d.created_at.slice(11, 16);
+
+/** "We stopped 4 payments, 02:14 to 02:24" and what looked odd, from the decisions of one burst. */
+export const burstPush = (group: Decision[]): { title: string; body: string } => {
+    const times = group.map(clock).sort();
+    const n = group.length;
+    const span = times.length > 1 && times[0] !== times[times.length - 1] ? `, ${times[0]} to ${times[times.length - 1]}` : times[0] ? ` at ${times[0]}` : "";
+    const signals = new Set(group.flatMap((d) => d.signals ?? []));
+    const who = signals.has("new_device") ? "A new phone" : "Someone";
+    const where = signals.has("unfamiliar_merchant") || group.some((d) => d.reason_codes.includes("no_shop_history")) ? " at shops you never used" : "";
+    const when = signals.has("unusual_hour") ? " at an unusual hour" : "";
+    return { title: `We stopped ${n} payment${n === 1 ? "" : "s"}${span}`, body: signals.size || where ? `${who} tried to pay${where}${when}.` : "Several payments in a few minutes." };
+};
+
+/** The decisions of the last burst (live), or the prototype's four. */
+export const burstDecisions = (s: State): Decision[] => {
+    if (dataMode === "live" && s.burstGroup) {
+        const ids = [...new Set(s.activity.filter((a) => a.groupId === s.burstGroup).map((a) => a.decisionId))];
+        return ids.map(getDecision).sort((a, b) => a.created_at.localeCompare(b.created_at));
+    }
+    return burstIds.map(getDecision);
 };
 
 export const reducer = (s: State, a: Action): State => {
@@ -351,6 +441,14 @@ export const reducer = (s: State, a: Action): State => {
                 lastAnswered: d.id,
             };
         }
+        case "WAS_ME":
+            return a.answer === "no" ? go({ ...s, frozen: true, waiting: null }, "7.3") : go(s, "7.3b");
+        case "RESUME":
+            return { ...s, frozen: false };
+        case "BLOCK_SHOP":
+            return s.blocked.includes(a.merchantId) ? s : { ...s, blocked: [...s.blocked, a.merchantId] };
+        case "UNBLOCK_SHOP":
+            return { ...s, blocked: s.blocked.filter((m) => m !== a.merchantId) };
         case "ACCEPT_SUGGESTION":
             if (s.learned.some((l) => l.text === a.text)) return { ...s, sheet: null };
             return { ...s, sheet: null, learned: [...s.learned, { text: a.text, added: "Added today" }] };
@@ -372,7 +470,7 @@ export const reducer = (s: State, a: Action): State => {
             };
         }
         case "TURN_OFF":
-            return go({ ...s, cardCreated: false, taskActive: false, waiting: null, frozen: false, activity: [], monthSpent: 0, learned: [] }, "1.1");
+            return go({ ...s, cardCreated: false, taskActive: false, waiting: null, frozen: false, activity: [], monthSpent: 0, learned: [], liveTask: null, taskDraft: null }, "1.1");
         case "INGEST":
             return ingest(s, a.decision, a.quiet);
         case "DEMO": {
@@ -396,37 +494,92 @@ export const reducer = (s: State, a: Action): State => {
 /** The learned rule we offer after the customer answered an ask (null when "Learn from my answers" is off). */
 export const pendingSuggestion = (s: State): string | null => {
     if (s.smart.learn === "off" || !s.lastAnswered) return null;
-    return suggestionFor(getDecision(s.lastAnswered));
+    const d = getDecision(s.lastAnswered);
+    // Live: only what the backend offered (it offers nothing when learning is off). Mock: the prototype's table.
+    return dataMode === "live" ? (d.suggestion?.text ?? null) : suggestionFor(d);
 };
 
 // ---------- live side effects (mock: nothing happens; live: the backend is told what the customer did) ----------
 
-const sideEffects = (a: Action, s: State) => {
+const sideEffects = (a: Action, s: State, dispatch: Dispatch<Action>) => {
     if (dataMode !== "live") return;
     const fail = (what: string) => (err: unknown) => console.error(`${what} failed`, err);
+    /** The backend's answer is the truth: put it on the phone. */
+    const apply = (leash: Leash | undefined) => {
+        if (leash) dispatch({ type: "PATCH", patch: leashPatch(leash) });
+    };
+    const refreshMemory = () =>
+        api.memory()
+            .then((memory) => dispatch({ type: "PATCH", patch: { memory } }))
+            .catch(fail("memory"));
     switch (a.type) {
         case "RESOLVE_ASK":
             // RESOLVE_ASK approved is only ever dispatched after FACE_ID_DONE (ask sheet and voice both go through FACE_ID).
             if (s.waiting)
-                api.resolve(s.waiting.decisionId, a.outcome === "approved" ? { decision: "approve", face_id_confirmed: true } : { decision: "decline" }).catch(fail("resolve"));
+                api.resolve(s.waiting.decisionId, a.outcome === "approved" ? { decision: "approve", face_id_confirmed: true } : { decision: "decline" })
+                    .then(refreshMemory)
+                    .catch(fail("resolve"));
             break;
-        case "CREATE_CARD":
-            api.createLeash({ instruction: "", rules: s.rules, smart: s.smart }).catch(fail("create leash"));
+        case "CREATE_CARD": {
+            const task = s.taskDraft;
+            api.createLeash({
+                instruction: "",
+                rules: s.rules,
+                smart: s.smart,
+                ...(task && task.rules.length ? { task_instruction: task.english } : {}),
+                ...(task?.translated ? { original_instruction: { language: task.language, text: task.original } } : {}),
+            })
+                .then(apply)
+                .catch(fail("create leash"));
             break;
+        }
         case "SAVE_RULE":
-            if (s.editing) api.tighten({ rules: { [s.editing.key]: s.editing.draft }, face_id_confirmed: s.editing.draft > s.rules[s.editing.key] }).catch(fail("tighten"));
+            if (s.editing)
+                api.tighten({ rules: { [s.editing.key]: s.editing.draft }, face_id_confirmed: s.editing.draft > s.rules[s.editing.key] })
+                    .then(apply)
+                    .catch(fail("tighten"));
             break;
         case "SET_SMART":
-            api.tighten({ smart: { [a.key]: a.value } }).catch(fail("tighten"));
+            // A loosening only ever reaches here after Face ID (6.1 dispatches it through FACE_ID). Before the card exists
+            // the switches are sent with CREATE_CARD.
+            if (s.cardCreated) {
+                const stricter = smartSettings.find((x) => x.key === a.key)?.stricter;
+                const loosening = s.smart[a.key] === stricter && a.value !== stricter;
+                api.tighten({ smart: { [a.key]: a.value }, ...(loosening ? { face_id_confirmed: true } : {}) })
+                    .then(apply)
+                    .catch(fail("tighten"));
+            }
             break;
-        case "ACCEPT_SUGGESTION":
-            if (s.lastAnswered) api.acceptSuggestion(s.lastAnswered).catch(fail("accept suggestion"));
+        case "ACCEPT_SUGGESTION": {
+            const id = a.decisionId ?? s.lastAnswered;
+            if (id) api.acceptSuggestion(id).then(() => api.getLeash().then(apply)).catch(fail("accept suggestion"));
             break;
+        }
         case "TURN_OFF":
             api.revoke().catch(fail("revoke"));
             break;
         case "SHEET":
             if (a.patch?.frozen) api.pause().catch(fail("pause"));
+            break;
+        case "RESUME":
+            api.resume().then(apply).catch(fail("resume"));
+            break;
+        case "WAS_ME": {
+            const first = burstDecisions(s)[0];
+            if (first)
+                api.wasMe(first.id, a.answer)
+                    .then((r) => {
+                        apply(r?.leash);
+                        return refreshMemory();
+                    })
+                    .catch(fail("was me"));
+            break;
+        }
+        case "BLOCK_SHOP":
+            api.tighten({ block_shop: a.merchantId }).then(apply).then(refreshMemory).catch(fail("block shop"));
+            break;
+        case "UNBLOCK_SHOP":
+            api.unblockShop(a.merchantId).then(apply).then(refreshMemory).catch(fail("unblock shop"));
             break;
     }
 };
@@ -450,7 +603,7 @@ export const PrototypeProvider = ({ children }: { children: ReactNode }) => {
 
     // Same dispatch for mock and live; live additionally tells the backend (resolve, tighten, revoke ...).
     const dispatch = useCallback((a: Action) => {
-        sideEffects(a, stateRef.current);
+        sideEffects(a, stateRef.current, rawDispatch);
         rawDispatch(a);
     }, []);
 

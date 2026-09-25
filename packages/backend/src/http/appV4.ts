@@ -113,6 +113,11 @@ export class AppV4 {
     };
   }
 
+  /** Customers without history the demo can look at (cold start), with their name. */
+  coldCustomers() {
+    return this.opts.peers?.coldProfiles().map((c) => ({ customer_id: c.customer_id, name: this.opts.peers?.nameOf(c.customer_id) ?? c.customer_id })) ?? [];
+  }
+
   /** Cold start for one customer: profile signals, predicted categories, the neighbours and what they do. */
   profileInsight(customerId?: string) {
     const who = customerId ?? this.service.currentCustomer().customer_id ?? this.opts.profileCustomerId;
@@ -187,6 +192,7 @@ export class AppV4 {
       month_spent_chf: view.budget?.spent_chf ?? 0,
       frees_up_at: view.budget?.next_release?.at ?? null,
       valid_until: view.valid_until,
+      known_shops: view.known_shops,
     };
   }
 
@@ -354,6 +360,8 @@ export class AppV4 {
       merchant: d.merchant,
       items: d.items,
       ...(d.device_id ? { device_id: d.device_id } : {}),
+      ...sessionSignals(d),
+      evidence_mix: evidenceMix(d),
       group_id: d.group_id ?? (burst ? `${d.run_id}:burst` : null),
       ...(d.deadline_at ? { deadline_at: d.deadline_at } : {}),
       ...(d.suggestion ? { suggestion: d.suggestion } : {}),
@@ -506,4 +514,26 @@ function coldStartSuggestion(i: ColdStartInsight): AppSuggestResponse & { cold_s
     instruction_generated: instructionFromCard({ orderLimit, monthBudget }, { ...DEFAULT_SMART, night, newShops: i.signals.prefers_known_shops ? "known" : "ask" }),
     cold_start: insightJson(i),
   };
+}
+
+/** The session guard's signals, from its check ("session_signals new_device,new_country …"). */
+function sessionSignals(d: StoredDecision): { signals?: string[] } {
+  const fact = d.checks.find((c) => c.key === "session")?.fact ?? "";
+  const m = fact.match(/session_signals ([a-z_,]+)/);
+  const list = m?.[1] && m[1] !== "none" ? m[1].split(",") : [];
+  return list.length ? { signals: list } : {};
+}
+
+/** Counts the decision's checks by what they rest on. Derived from the checks the engine returned, nothing new. */
+function evidenceMix(d: StoredDecision) {
+  const mix = { your_rules: 0, your_history: 0, taught_by_you: 0, customers_like_you: 0, unknown: 0 };
+  for (const c of d.checks) {
+    const fact = c.fact ?? "";
+    if (/confirmed_by_you|memory|approved_in_this_run/.test(fact)) mix.taught_by_you += 1;
+    else if (/customers like you|peers_/.test(fact)) mix.customers_like_you += 1;
+    else if (c.result === "unsure" || /baseline none|card_history_purchases 0/.test(fact)) mix.unknown += 1;
+    else if (/authorization_history|approved_purchases|baseline (card|customer)/.test(fact)) mix.your_history += 1;
+    else mix.your_rules += 1;
+  }
+  return mix;
 }

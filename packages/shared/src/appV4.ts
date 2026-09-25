@@ -65,6 +65,8 @@ export interface AppLeash {
   frees_up_at: string | null;
   /** The card stops working here (purchases after it are declined `leash_ended`); null = no end. */
   valid_until: string | null;
+  /** Shops the customer knows: card history plus what they confirmed (memory). `new` = learned from an answer. */
+  known_shops?: { merchant_id: string; name: string; times_used: number; new: boolean }[];
 }
 
 /** PATCH /v4/app/leash/rules */
@@ -95,6 +97,13 @@ export interface AppDecision {
   merchant: { id: string; name: string; category: string; country: string };
   items: { name: string; category: string; qty: number; unit_price: number; currency: string }[];
   device_id?: string;
+  /** Session signals the engine noticed (new_device, unusual_hour, quick_series, new_country, unfamiliar_merchant …). */
+  signals?: string[];
+  /**
+   * What this decision rests on, counted over its checks: your rules and your history, what you taught the card,
+   * customers like you, and what we could not know. Shown as one bar, so "how sure" is never a black box.
+   */
+  evidence_mix?: { your_rules: number; your_history: number; taught_by_you: number; customers_like_you: number; unknown: number };
   group_id: string | null;
   deadline_at?: string;
   suggestion?: { id: string; text: string };

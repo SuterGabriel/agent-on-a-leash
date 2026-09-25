@@ -2,8 +2,8 @@ import type { Dispatch } from "react";
 import { useEffect, useState } from "react";
 import { api, dataMode } from "@/features/shopping-card/api/client";
 import { registerLiveDecision } from "@/features/shopping-card/api/live-decisions";
-import type { Leash } from "@/features/shopping-card/api/types";
-import type { Action, State } from "@/features/shopping-card/prototype-state";
+import type { Action } from "@/features/shopping-card/prototype-state";
+import { leashPatch } from "@/features/shopping-card/prototype-state";
 import type { Decision } from "@/types/decision";
 
 /**
@@ -23,23 +23,13 @@ export const useLiveFeed = (dispatch: Dispatch<Action>) => {
             dispatch({ type: "INGEST", decision, quiet });
         };
 
-        /** What the phone shows of the leash: the numbers on 6.1, the switches on 1.4, the learned rules, the budget bar. */
-        const leashPatch = (leash: Leash): Partial<State> => ({
-            cardCreated: leash.status !== "off",
-            rules: leash.rules,
-            smart: leash.smart,
-            monthSpent: leash.month_spent_chf,
-            frozen: leash.status === "paused",
-            learned: leash.learned.map((l) => ({ text: l.text, added: "Added today" })),
-            taskActive: leash.task !== null,
-        });
-
         // The leash first (an existing Agent Card skips onboarding), then the feed. A missing leash is not an outage.
         api.getLeash()
             .then((leash) => {
                 if (!cancelled && leash.status !== "off") dispatch({ type: "GO", screen: "3.1", patch: leashPatch(leash) });
             })
             .catch(() => undefined)
+            .then(() => api.memory().then((memory) => !cancelled && dispatch({ type: "PATCH", patch: { memory } })).catch(() => undefined))
             .then(() => api.feed())
             .then((feed) => {
                 if (cancelled) return;

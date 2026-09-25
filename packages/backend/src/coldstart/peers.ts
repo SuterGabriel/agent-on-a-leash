@@ -83,6 +83,7 @@ export class PeerIndex {
   private cardCustomer = new Map<string, string>();
   private cache = new Map<string, ColdStartInsight | null>();
   private texts = new Map<string, import("./profileSignals.js").ProfileText>();
+  private names = new Map<string, string>();
 
   constructor(src: PeerSources) {
     const accountsById = new Map(src.accounts.map((a) => [str(a.account_id), a]));
@@ -100,6 +101,7 @@ export class PeerIndex {
       const card = cardsByCustomer.get(id)?.[0];
       const text = { background: str(c.background), shopping_preferences: str(c.shopping_preferences), typical_spending: str(c.typical_spending), travel_pattern: str(c.travel_pattern), budget_style: str(c.budget_style) };
       this.texts.set(id, text);
+      if (c.persona_name) this.names.set(id, str(c.persona_name));
       this.profiles.set(id, {
         customer_id: id,
         budget_style: str(c.budget_style),
@@ -145,6 +147,10 @@ export class PeerIndex {
 
   customerOfCard(cardId: string): string | undefined {
     return this.cardCustomer.get(cardId);
+  }
+
+  nameOf(customerId: string): string | undefined {
+    return this.names.get(customerId);
   }
 
   /** Customers without enough history, with their profile text (for the Apertus reader). */
