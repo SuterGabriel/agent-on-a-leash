@@ -19,7 +19,7 @@ and the pitch. If the bot does not answer, ask in `#hackathon-support`.
 
 ## 2. API key (2 min)
 
-1. In elevenlabs.io, profile picture (bottom left) → **API Keys** → **Create API Key**.
+1. In elevenlabs.io, left sidebar → **Developers** (bottom, above Upgrade) → **API Keys** → **Create API Key**. Not the profile menu.
 2. Name it `agent-on-a-leash`. Leave the permissions at the default, or make sure **Agents Platform** (Conversational AI) has read and write. Save the key; it is shown once.
 3. In the repo root, copy `.env.example` to `.env` if you have not, and add:
 
