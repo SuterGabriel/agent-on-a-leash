@@ -1,5 +1,52 @@
 # READMEALLES: traspaso del engine + backend (Agent on a Leash)
 
+## 0. ACTUALIZACIÓN 25-09-2026: lee esto primero
+
+**Rama con todo:** `feat/ui-real`, que ya tiene mezclado `main` al 25-09. El PR va de `feat/ui-real` a `main` (no mergearlo sin revisarlo).
+Encadenada: `feat/learning-store` → `feat/apertus` → `feat/ui-real`. Las secciones 1 a 9 de abajo son del 24-09 y siguen valiendo como historia.
+
+**Verificado en `feat/ui-real`:** 291/291 tests · typecheck (2 pasadas) · replay 45/45 · `app-web` build OK · endpoints nuevos respondiendo
+offline · escrituras sin secreto → 401 · el proxy de Vite inyecta `APP_SECRET` (la escritura llega y responde 403 "face_id_required") · el
+secreto **no** está en el bundle.
+
+### Qué se añadió
+| Parte | Qué hace | Dónde |
+|---|---|---|
+| Memoria que aprende | un "sí" guarda tienda, dispositivo, país y hora; "no fui yo" bloquea el dispositivo; sobrevive reinicios (`data/live/memory-<mode>.json`, `LEASH_MEMORY_FILE=off` la apaga). "Learn from my answers" = off corta aprendizaje y sugerencias | `packages/backend/src/memory/`, `packages/shared/src/memory.ts` |
+| Guardias nuevas | noche (23–05: decline o ask, según 1.4) y tienda bloqueada | `packages/engine/src/guards/night.ts`, `shopBlock.ts` |
+| Cold start | cliente sin historial → 5 vecinos más parecidos (perfil + presupuesto + región) → categorías y límites predichos. **Los vecinos nunca aprueban**, solo explican | `packages/backend/src/coldstart/` |
+| Apertus (Swisscom) | (1) lee el texto del perfil de clientes nuevos; (2) traduce una correa en DE/FR/IT/suizo alemán, **verificando que ningún número cambie** (`please_check`). Nunca decide: un test prueba que el engine no lo importa. Caché, cola con espera mínima, reintentos 429 y corte automático | `packages/backend/src/llm/` |
+| API v4 nueva | `POST /v4/app/leash/understand`, `/leash/resume`, `/leash/unblock-shop`, `/decisions/:id/was-me`, `GET /v4/app/memory`, `DELETE /memory/shops/:id` y `/memory/devices/:id`, `GET /leash/suggest?customer_id=`, `/profile/insight`, `/profile/customers`. `AppLeash.known_shops`, `AppDecision.signals` y `evidence_mix` | `packages/backend/src/http/` |
+| UI con datos reales | en modo vivo cada pantalla lee el backend (1.3 cold start, 1.4 correa en cualquier idioma, 1.5, 3.1/6.1 tarea, 5.2 barra de evidencia, 6.3 tiendas, bloquear y teléfonos, 7.x ráfaga y was-me, Unfreeze). El mock sigue igual y dice "Mock replay (not the engine)" | `app-web/src/features/shopping-card/live-view.ts` + `screens/` |
+| Medido | 111 compras en vivo, repasadas con memoria: preguntas 65→45, aprobaciones 9→29, 0 rechazos convertidos en aprobación | `npm run live-review` |
+
+### Cómo arrancar (local)
+```bash
+git checkout feat/ui-real && npm install && (cd app-web && npm install)
+# .env en la raíz (NUNCA se sube): TEAM_API_KEY, APP_SECRET, APERTUS_API_KEY
+#   + APERTUS_BASE_URL=https://api.swisscom.com/products/swiss-ai-weeks/apertus-1.5-70b/v1  APERTUS_MODEL=swiss-ai/Apertus-v1.5-70B
+printf 'VITE_API_BASE=/v4\n' > app-web/.env.local   # el proxy de Vite añade APP_SECRET desde ../.env
+npm run api      # backend :8787 (offline por defecto)
+npm run web      # UI :5173 → modo vivo
+npm test && npm run typecheck && npm run replay -- --all
+```
+
+### Lo que falta (en orden)
+1. **Mirar la UI en el navegador en modo vivo.** Solo se verificó con typecheck, build y curl; nadie la ha probado clic a clic:
+   1.3 con un cliente nuevo (selector del panel) → 1.4 escribir una correa en alemán → crear tarjeta → Start run → responder una pregunta → 6.3.
+2. **Corrida en vivo** de SCEN0100–0109 (crea mandatos permanentes en Viseca: **pedir permiso al equipo antes**) y comparar con la del 24-09.
+3. `docs/DEMO_SCRIPT.md`: guion del pitch (cold start + correa en suizo alemán + ráfaga "was this you" + barra de evidencia).
+4. Revisar y mergear el PR `feat/ui-real` → `main`.
+
+### Problemas conocidos (honestos)
+- El test de rendimiento "200 KB instruction" tarda unos 720 ms solo (límite 1 s) y, con toda la suite en paralelo, a veces pasa de 1 s. Si falla, repítelo; no subimos el límite.
+- En el selector de cold start, la tarjeta se crea para la tarjeta configurada del backend: el cliente nuevo solo cambia la **propuesta** de 1.3.
+- Quitar una regla aprendida no es posible en vivo (Viseca no borra reglas de un mandato); la UI no muestra "Remove" en vivo.
+- 7.2: los textos de las señales están en `live-view.ts` (`SIGNAL_COPY`). Revisar que coincidan con los nombres reales que emite `packages/engine/src/guards/session.ts`.
+- En Vercel no hay proxy: allí se usa `VITE_APP_SECRET` (el secreto queda en el bundle; aceptable solo para el hackathon).
+
+---
+
 > **Para quien retoma (y para su Claude):** este archivo resume todo lo hecho el 24-09-2026 en la rama
 > `feat/engine-integration`, el estado actual, los problemas abiertos y lo que proponemos hacer.
 > Léelo entero antes de tocar código. Todo lo que dice aquí se verificó corriendo el código.
