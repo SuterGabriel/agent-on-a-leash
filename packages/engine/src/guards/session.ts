@@ -1,7 +1,8 @@
 // Guard 15: session integrity. Does this look like the customer? Judged against THIS card's history,
 // or all the customer's cards when the card has little ("baseline: customer").
 // 1–2 signals: ask. 3 or more: stop. Signals are per purchase, so a clean purchase after a burst passes.
-// With no history at all every signal would fire; that is missing data, not proof, so it only asks.
+// No history to compare with (device, hour, country, shop unknown): that is missing data, not proof, so it asks
+// (STEP_UP), even when the customer said "decline when unsure". A burst of orders is real data and keeps its weight.
 // With no history, a purchase the customer approved earlier in this run becomes the baseline: the same device in the
 // same country is then the customer for the rest of the run. With history, the history stays the baseline, a yes to one
 // purchase does not vouch for the device: the public burst scenario still stops the purchases after an approved one.
@@ -17,8 +18,8 @@ export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScop
   const signals: string[] = [];
   const text: string[] = [];
 
-  // No history for this card (live scenario cards): device, country and shop can't be "new" against nothing.
-  // Only the burst signal stands on its own; the rest is unknown and goes to the uncertainty policy.
+  // No history for this card or its customer (live scenario cards): device, country and shop can't be "new" against
+  // nothing. Only the burst signal stands on its own; the rest is unknown, and unknown is an ask, never a decline.
   const deviceApproved = ledger.approvedOnDevice(auth.customer_device_id);
   const countryApproved = ledger.approvedInCountry(auth.merchant.merchant_country);
   if (card.purchases === 0) {
@@ -41,8 +42,8 @@ export const sessionIntegrity: Guard = ({ auth, policy, habits: card, habitsScop
     if (deviceApproved > 0 && countryApproved > 0) return { guard: "session", verdict: "PASS", evidence, signals: [] };
     return {
       guard: "session",
-      verdict: "UNCERTAIN",
-      reason_code: "missing_info",
+      verdict: "STEP_UP",
+      reason_code: "no_session_history",
       evidence,
       message: "We don't have any purchase history for this card yet, so we can't compare this with how you usually shop.",
     };

@@ -770,7 +770,7 @@ export class LeashService {
         tokens: (() => {
           const ts = rows.flatMap((d) => (d.token ? [d.token] : []));
           const verified = ts.map((t) => this.tokens.verify(t.id));
-          return { issued: ts.length, charged: ts.filter((t) => t.status === "charged").length, chains_ok: verified.filter((v) => v.ok).length, chains_broken: verified.filter((v) => !v.ok).length };
+          return { issued: ts.length, charged: ts.filter((t) => t.status === "used").length, chains_ok: verified.filter((v) => v?.ok).length, chains_broken: verified.filter((v) => !v?.ok).length };
         })(),
       },
       rows: rows.map((d, i) => ({
