@@ -16,7 +16,7 @@ Viseca gives your AI shopping agent its own card. The card carries your rules, n
 | Live, asks answered no | 10 scenarios, 111 purchases, 59 % asked, 0 missed deadlines, 327 ms median | `docs/pitch/live-figures-asks-declined.md` |
 | Engine speed | 0.04 ms median per decision on the public set; p99 0.7 ms and worst case 7 ms over 2,000 synthetic purchases; deadline is 8,000 ms | `npm run replay`, `performance.test.ts` |
 | Guards | 21, in five families: money, item, shop, session, manipulation | `packages/engine/src/guards/` |
-| Tests | 262, all green, in 22 files | `npm test` |
+| Tests | 263, all green, in 22 files | `npm test` |
 | Learned rules | Two enforced today: "always decline when a shop's text gives orders", "block shops that look like my known shops" | `learned-shop-text.test.ts` |
 
 The 38 percent versus 59 percent is the shop learning: the live cards have no purchase history, so the first purchase at a shop asks once. With a yes, the shop is known for the rest of the run. Relay quotes 29 percent on the public set, where every card has history, so the figures are not comparable.
@@ -43,7 +43,7 @@ What is tested, by suite. Every test is a sentence a jury member can read.
 
 **Answering an ask, `security.test.ts`.** A double tap sends one answer to Viseca, not two. Two approvals racing each other cannot spend more than the budget. An approve needs Face ID, a decline never does. Only the app's secret can write; reads are open; only the app's origin is allowed.
 
-**Hardening, `security-hardening.test.ts`, 25 tests.** Invalid JSON, arrays, bare strings and nested objects are 400, never 500. A body above 1 MB is 413. Unknown routes 404, wrong methods 405, no stack trace. The secret in the query string does not count. No error body ever contains the app secret or the team key. Shop text comes back as JSON, never HTML. The leash cannot be loosened through the API: a higher limit is refused, zero, negative, NaN, string and object limits are refused. The token vault refuses negative, zero, NaN and infinite amounts, a charge one rappen above the maximum, a second charge, another shop, an expired token, a revoked token, a refund above the charge. One decision gets exactly one token. The token history is a hash chain: change one detail, remove a line or swap two lines and verification names the broken point.
+**Hardening, `security-hardening.test.ts`, 34 tests.** Invalid JSON, arrays, bare strings and nested objects are 400, never 500. A body above 1 MB is 413. Unknown routes 404, wrong methods 405, no stack trace. The secret in the query string does not count. No error body ever contains the app secret or the team key. Shop text comes back as JSON, never HTML. The leash cannot be loosened through the API: a higher limit is refused, zero, negative, NaN, string and object limits are refused. The token vault refuses negative, zero, NaN and infinite amounts, a charge one rappen above the maximum, a second charge, another shop, an expired token, a revoked token, a refund above the charge. One decision gets exactly one token. The token history is a hash chain: change one detail, remove a line or swap two lines and verification names the broken point.
 
 **Two real defects these suites found and fixed** on 24 September: the token vault accepted negative and NaN amounts; the tighten endpoint coerced arrays and booleans to a limit of 1.
 
@@ -123,6 +123,7 @@ Relay (St. Gallen, same data): a desktop dashboard, a 0 to 100 trust score, dete
 | Model decision | `docs/research/MODEL_DECISION.md` |
 | Product spec | `docs/PRODUCT_SPEC.md` |
 | Voice | `app-web/docs/voice.md` |
+| Tests and security, the long form | `docs/TESTS_AND_SECURITY.md`: every suite, every measure, every test sentence |
 | Security and performance learnings | `docs/learnings/2026-09-24-tests-merge-and-hardening.md`, `2026-09-24-security-review.md` |
 
 ## 10. Viseca's list, row by row: built or not, and where the pitch shows it
