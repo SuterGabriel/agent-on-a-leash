@@ -125,6 +125,15 @@ const DemoControls = () => {
 
     const isLive = dataMode === "live";
 
+    // One demo step at a time. The phone's frame sets the step when it maps to one; Back and Next move it by hand.
+    const [step, setStep] = useState(0);
+    const frameStep = stepIndex(currentFrame(state));
+    useEffect(() => {
+        if (frameStep >= 0) setStep(frameStep);
+    }, [frameStep]);
+    const current = DEMO_STEPS[Math.min(step, DEMO_STEPS.length - 1)]!;
+    const next = DEMO_STEPS[step + 1];
+
     return (
         <aside aria-label="Demo controls" style={{ width: CONTROLS_W }} className="flex max-w-full shrink-0 flex-col gap-6 rounded-2xl bg-secondary p-5">
             <div className="flex flex-col gap-1">
@@ -232,25 +241,30 @@ const DemoControls = () => {
 
             <VoiceToggle />
 
-            <div className="flex flex-col gap-2">
-                <span className="text-md font-semibold text-primary">Demo, tap by tap</span>
-                <ol className="flex flex-col gap-1.5" aria-label="Demo steps">
-                    {DEMO_STEPS.map((st, i) => {
-                        const active = stepIndex(currentFrame(state)) === i;
-                        return (
-                            <li
-                                key={st.where}
-                                aria-current={active ? "step" : undefined}
-                                className={cx("rounded-xl px-3 py-2 text-sm", active ? "bg-primary text-primary" : "text-tertiary")}
-                            >
-                                <span className={cx("font-semibold", active ? "text-primary" : "text-secondary")}>
-                                    {i + 1}. {st.where}
-                                </span>
-                                <span className="block">{st.tap}</span>
-                            </li>
-                        );
-                    })}
-                </ol>
+            <div className="flex flex-col gap-2" aria-live="polite">
+                <div className="flex items-baseline justify-between">
+                    <span className="text-md font-semibold text-primary">Demo, tap by tap</span>
+                    <span className="text-sm text-tertiary tabular-nums">
+                        {step + 1} of {DEMO_STEPS.length}
+                    </span>
+                </div>
+                <div className="rounded-xl bg-primary px-4 py-3">
+                    <p className="text-md font-semibold text-primary">{current.where}</p>
+                    <p className="text-sm text-secondary">{current.tap}</p>
+                </div>
+                {next && (
+                    <p className="px-1 text-sm text-tertiary">
+                        Next: {next.where}
+                    </p>
+                )}
+                <div className="flex gap-2 *:flex-1">
+                    <Button size="sm" color="secondary" isDisabled={step === 0} onClick={() => setStep((i) => Math.max(0, i - 1))}>
+                        Back
+                    </Button>
+                    <Button size="sm" color="secondary" isDisabled={!next} onClick={() => setStep((i) => Math.min(DEMO_STEPS.length - 1, i + 1))}>
+                        Next
+                    </Button>
+                </div>
             </div>
 
             <Button size="md" color="tertiary" onClick={() => dispatch({ type: "RESET" })}>
