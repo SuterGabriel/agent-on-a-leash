@@ -42,7 +42,6 @@ npm test && npm run typecheck && npm run replay -- --all
 - El test de rendimiento "200 KB instruction" tarda unos 720 ms solo (límite 1 s) y, con toda la suite en paralelo, a veces pasa de 1 s. Si falla, repítelo; no subimos el límite.
 - En el selector de cold start, la tarjeta se crea para la tarjeta configurada del backend: el cliente nuevo solo cambia la **propuesta** de 1.3.
 - Quitar una regla aprendida no es posible en vivo (Viseca no borra reglas de un mandato); la UI no muestra "Remove" en vivo.
-- 7.2: los textos de las señales están en `live-view.ts` (`SIGNAL_COPY`). Revisar que coincidan con los nombres reales que emite `packages/engine/src/guards/session.ts`.
 - En Vercel no hay proxy: allí se usa `VITE_APP_SECRET` (el secreto queda en el bundle; aceptable solo para el hackathon).
 
 ---
