@@ -10,6 +10,8 @@ import { createLeashServer } from "../http/server.js";
 import { loadLiveReference } from "../live/referenceData.js";
 import { attachSnapshotFile } from "../persist.js";
 import { MemoryStore } from "../memory/memoryStore.js";
+import { PeerIndex } from "../coldstart/peers.js";
+import { loadPeerSources } from "../coldstart/peerSources.js";
 import { buildBaselines } from "../../../shared/src/baselines.js";
 
 const cfg = loadConfig(process.argv.includes("--live") ? { mode: "live" } : {});
@@ -26,6 +28,12 @@ const engine = new LeashEngine(undefined, liveRef ? buildBaselines(liveRef.histo
 const memoryFile = process.env.LEASH_MEMORY_FILE?.trim() || resolve(cfg.dataDir, "live", `memory-${cfg.mode}.json`);
 const memory = new MemoryStore({ file: memoryFile === "off" ? null : memoryFile, log });
 engine.useMemory(memory.lookup);
+
+// Cold start: customers like this one (nearest neighbours by profile) for cards without history. Evidence only.
+const peerSrc = loadPeerSources(cfg.dataDir, liveRef);
+const peers = new PeerIndex(peerSrc.sources);
+engine.usePeers(peers.lookup);
+log(`cold start: ${peerSrc.sources.customers.length} customers from ${peerSrc.from}${peerSrc.profileCustomerId ? `, profile ${peerSrc.profileCustomerId}` : ""}`);
 
 const service = new LeashService({
   memory,
@@ -55,7 +63,7 @@ if (cfg.mode === "live" && (!appSecret || !corsOrigin || corsOrigin === "*")) {
 }
 if (!appSecret) console.warn("APP_SECRET is not set: anyone who reaches this server can answer purchases.");
 
-createLeashServer(service, { corsOrigin: corsOrigin as string, appSecret, app: { history: liveRef?.history } }).listen(port, () => {
+createLeashServer(service, { corsOrigin: corsOrigin as string, appSecret, app: { history: liveRef?.history, peers, profileCustomerId: peerSrc.profileCustomerId } }).listen(port, () => {
   console.log(`Leash API on http://localhost:${port} · mode ${cfg.mode} · engine ${engine.version}`);
   console.log(`  scenarios: ${service.scenarios().map((s) => s.scenario_id).join(" ")}`);
   console.log(`  GET  /app/leash · /app/feed · /app/asks · /app/stream (SSE) · /app/tokens · /judge/decisions · /api/status`);

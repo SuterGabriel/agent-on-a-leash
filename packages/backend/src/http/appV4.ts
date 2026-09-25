@@ -18,6 +18,7 @@ import {
 } from "@leash/shared";
 import { ServiceError, type LeashService } from "../leash/service.js";
 import { analyzeCard, cardPurchases, DEFAULT_SMART, DEFAULT_VALUES, instructionFromCard, MONTH_DAYS, valuesFromLeash } from "../leash/cardLeash.js";
+import type { ColdStartInsight, PeerIndex } from "../coldstart/peers.js";
 import type { LeashEvents, StoredDecision } from "../store.js";
 
 // The v4 app contract (app-web, Kim's handover of 24 Sep) on top of LeashService. Served under /v4/app/*.
@@ -31,6 +32,10 @@ export interface AppV4Options {
   suggestCardId?: string;
   /** Scenario whose first purchase ends the analysis window (simulated time). Offline default: SCEN0004. */
   suggestScenarioId?: string;
+  /** Customers like this one, for a card without history (cold start on 1.3 and GET /profile/insight). */
+  peers?: PeerIndex;
+  /** The customer the live pack presents (bootstrap profile), when no leash names one. */
+  profileCustomerId?: string;
 }
 
 const ASK_WINDOW_MS = 120_000;
@@ -63,14 +68,29 @@ export class AppV4 {
     return this.historyCache;
   }
 
-  suggest(cardId?: string, scenarioId?: string): AppSuggestResponse {
+  suggest(cardId?: string, scenarioId?: string, customerId?: string): AppSuggestResponse {
     const rows = this.history();
     const leashCard = this.service.getLeash().card?.id;
     const card = cardId ?? this.opts.suggestCardId ?? leashCard ?? (cardPurchases(rows, DEMO_CARD).length ? DEMO_CARD : busiestCard(rows));
+    // A card with no purchases: propose from customers like this one, and say so.
+    if (cardPurchases(rows, card).length === 0 || customerId) {
+      const who = customerId ?? this.opts.peers?.customerOfCard(card) ?? this.opts.profileCustomerId;
+      const insight = who ? this.opts.peers?.insight(who) : null;
+      if (insight) return coldStartSuggestion(insight);
+    }
     const scenario = scenarioId ?? this.opts.suggestScenarioId ?? (this.service.pack.scenarios.has(DEMO_SCENARIO) ? DEMO_SCENARIO : undefined);
     const firstAttempt = scenario ? scenarioAttempts(this.service.pack, scenario)[0]?.timestamp : undefined;
     const until = firstAttempt ? Date.parse(firstAttempt) : undefined;
     return analyzeCard(rows, card, { until: Number.isNaN(until) ? undefined : until });
+  }
+
+  /** Cold start for one customer: profile signals, predicted categories, the neighbours and what they do. */
+  profileInsight(customerId?: string) {
+    const who = customerId ?? this.service.currentCustomer().customer_id ?? this.opts.profileCustomerId;
+    if (!who) throw new ServiceError(404, "no_customer", "No customer to look at yet.");
+    const insight = this.opts.peers?.insight(who);
+    if (!insight) return { customer_id: who, cold_start: false, reason: this.opts.peers ? "This customer has enough history of their own." : "No reference data loaded." };
+    return { cold_start: true, ...insightJson(insight) };
   }
 
   // ── 1.4 Create, 3.1 / 6.1 read ─────────────────────────────────────────────────────────────────
@@ -386,4 +406,72 @@ function pickSmart(given: Partial<AppSmart> | undefined): Partial<AppSmart> {
     if (v !== undefined && (SMART_OPTIONS[key] as readonly string[]).includes(v as string)) (out as Record<string, string>)[key] = v as string;
   }
   return out;
+}
+
+const roundUp = (n: number, step: number) => Math.ceil(n / step) * step;
+const titleCase = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** Sets and maps as plain JSON for the app. */
+export function insightJson(i: ColdStartInsight) {
+  return {
+    customer_id: i.customer_id,
+    signals: i.signals,
+    predicted_categories: i.predicted_categories,
+    neighbours: i.neighbours,
+    prior: i.prior
+      ? {
+          ticket_p50: i.prior.ticket_p50,
+          ticket_p90: i.prior.ticket_p90,
+          month_p50: i.prior.month_p50,
+          categories: i.prior.categories.slice(0, 6),
+          hours: [...i.prior.hours].sort((a, b) => a - b),
+          countries: [...i.prior.countries],
+          shops: [...i.prior.shops.entries()].map(([merchant_id, s]) => ({ merchant_id, name: s.name, neighbours: s.neighbours })).sort((a, b) => b.neighbours - a.neighbours).slice(0, 8),
+        }
+      : null,
+  };
+}
+
+/** 1.3 for a card without history: what customers like this one do, never presented as the customer's own history. */
+function coldStartSuggestion(i: ColdStartInsight): AppSuggestResponse & { cold_start: ReturnType<typeof insightJson> } {
+  const p = i.prior;
+  const n = i.neighbours.length;
+  const orderLimit = p ? Math.max(50, roundUp(p.ticket_p90 * 1.1, 50)) : DEFAULT_VALUES.orderLimit;
+  const monthBudget = p ? Math.max(200, roundUp(p.month_p50 * 1.2, 100)) : DEFAULT_VALUES.monthBudget;
+  const cats = i.predicted_categories.slice(0, 5).map((c) => titleCase(c.category));
+  const like = `${n} customer${n === 1 ? "" : "s"} like you`;
+  const night = i.signals.night_owl ? "ask" : "decline";
+  return {
+    window_days: 90,
+    analysis: {
+      purchases: 0,
+      typical_chf: p?.ticket_p50 ?? 0,
+      biggest_chf: p?.ticket_p90 ?? 0,
+      per_month_chf: p?.month_p50 ?? 0,
+      biggest_month_chf: p?.month_p50 ?? 0,
+      night_purchases: 0,
+      shops_used: 0,
+      categories: cats,
+      category_share: Math.round(Math.min(1, i.predicted_categories.slice(0, 5).reduce((s, c) => s + c.confidence, 0) / 2) * 100),
+    },
+    rules: [
+      { key: "orderLimit", suggested_value: orderLimit, evidence: p ? `No purchases on this card yet. ${like} usually pay up to CHF ${p.ticket_p90}` : "No purchases on this card yet", hard_rule: { field: "authorization.billing_amount_chf", operator: "<=", value: orderLimit, currency: "CHF", scope: "purchase" } },
+      { key: "monthBudget", suggested_value: monthBudget, evidence: p ? `${like} spend about CHF ${p.month_p50} a month` : "No purchases on this card yet", hard_rule: { field: "authorization.billing_amount_chf", operator: "<=", value: monthBudget, currency: "CHF", scope: "period", period_days: MONTH_DAYS } },
+      { key: "knownShops", suggested_value: null, evidence: "No shops yet. A new shop asks you first, and every yes is remembered", hard_rule: null },
+      { key: "categories", suggested_value: cats, evidence: cats.length ? `Probably ${cats.slice(0, 3).join(", ")}: from your profile and ${like}` : "Not enough to tell yet", hard_rule: null },
+    ],
+    smart: {
+      ...DEFAULT_SMART,
+      night,
+      newShops: i.signals.prefers_known_shops ? "known" : "ask",
+      evidence: {
+        unsure: "You get one question and 2 minutes to answer",
+        night: i.signals.night_owl ? "Your profile says you shop late, so we ask instead of declining" : "Your profile doesn't mention late shopping",
+        newShops: i.signals.prefers_known_shops ? "Your profile says you stick to shops you know" : "A new one asks you first, and your yes is remembered",
+        learn: "Every answer teaches your card. You can see and forget what it learned",
+      },
+    },
+    instruction_generated: instructionFromCard({ orderLimit, monthBudget }, { ...DEFAULT_SMART, night, newShops: i.signals.prefers_known_shops ? "known" : "ask" }),
+    cold_start: insightJson(i),
+  };
 }

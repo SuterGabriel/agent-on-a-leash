@@ -146,7 +146,8 @@ export function createLeashServer(service: LeashService, opts: ServerOptions = {
     route("GET", "/api/status", () => service.status()),
 
     // ── v4 app contract (app-web/handover/docs/03-backend-hookup.md). Base URL for the app: http://host:port/v4 ──
-    route("GET", "/v4/app/leash/suggest", ({ query }) => app.suggest(query.get("card_id") ?? undefined, query.get("scenario_id") ?? undefined)),
+    route("GET", "/v4/app/leash/suggest", ({ query }) => app.suggest(query.get("card_id") ?? undefined, query.get("scenario_id") ?? undefined, query.get("customer_id") ?? undefined)),
+    route("GET", "/v4/app/profile/insight", ({ query }) => app.profileInsight(query.get("customer_id") ?? undefined)),
     route("POST", "/v4/app/leash", async ({ body }) => app.createLeash((await body()) as unknown as AppCreateLeashRequest)),
     route("GET", "/v4/app/leash", () => app.leash()),
     route("PATCH", "/v4/app/leash/rules", async ({ body }) => app.tighten((await body()) as unknown as AppTightenRequest)),

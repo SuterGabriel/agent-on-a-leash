@@ -35,7 +35,12 @@ export const merchantFamiliarity: Guard = ({ auth, policy, card, base, customerI
     const peerShop = peers?.shops.get(mId);
     const evidence: Evidence[] = [{ fact: "card_history_purchases", value: card.purchases, comparator: ">=", threshold: 1, source: "authorization_history" }, baseline];
     if (peers) evidence.push({ fact: "peers_who_buy_here", value: peerShop?.neighbours ?? 0, comparator: null, threshold: null, source: `${peers.neighbours.length} customers like you` });
-    const hint = peerShop ? ` ${peerShop.neighbours} of ${peers!.neighbours.length} customers like you buy there.` : "";
+    const top = peers?.categories[0]?.category.replace(/_/g, " ");
+    const hint = peerShop
+      ? ` ${peerShop.neighbours} of ${peers!.neighbours.length} customers like you buy there.`
+      : peers && top
+        ? ` Customers like you mostly buy ${top}.`
+        : "";
     return {
       guard: "familiarity",
       verdict: "STEP_UP",
