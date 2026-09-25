@@ -178,6 +178,11 @@ const DemoControls = () => {
         if (frame) dispatch({ type: "JUMP", frame });
         setListOpen(false);
     };
+    /** Clicking the current step does the tap for you: the phone moves on to the next step's screen. */
+    const doStep = () => {
+        if (current.startRun) return;
+        if (next && next.frames.length) goTo(step + 1);
+    };
 
     return (
         <aside aria-label="Demo controls" style={{ width: CONTROLS_W }} className="flex max-w-full shrink-0 flex-col gap-6 rounded-2xl bg-secondary p-5">
@@ -280,12 +285,16 @@ const DemoControls = () => {
                 <div className="flex flex-col gap-3 rounded-xl bg-primary px-4 py-3">
                     <button
                         type="button"
-                        onClick={() => goTo(step)}
-                        title="Put the phone on this screen"
-                        className="cursor-pointer rounded-lg text-left outline-focus-ring focus-visible:outline-2"
+                        onClick={doStep}
+                        disabled={!!current.startRun || !next?.frames.length}
+                        title="Click to do this tap on the phone"
+                        className="group flex cursor-pointer items-center justify-between gap-3 rounded-lg text-left outline-focus-ring hover:opacity-80 focus-visible:outline-2 disabled:cursor-default disabled:opacity-100"
                     >
-                        <p className="text-md font-semibold text-primary">{current.where}</p>
-                        <p className="text-sm text-secondary">{current.tap}</p>
+                        <span>
+                            <span className="block text-md font-semibold text-primary">{current.where}</span>
+                            <span className="block text-sm text-secondary">{current.tap}</span>
+                        </span>
+                        {!current.startRun && next?.frames.length ? <span className="text-lg text-tertiary group-hover:text-primary">›</span> : null}
                     </button>
                     {current.startRun && isLive && (
                         <div className="flex flex-col gap-2">
