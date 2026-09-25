@@ -98,11 +98,19 @@ const PROGRAMME: { scenario: string; title: string; beats: Omit<Step, "scenario"
             { frames: HOME, where: "Home", tap: "PixelHarbor, CHF 289: approved, quiet. The bar moves" },
             { frames: ASK, where: "Buy it again?", tap: "The same monitor 25 minutes later. Decline" },
             { frames: ANSWERED, where: "You declined", tap: "Nothing to learn from a repeat. Done" },
-            { frames: HOME, where: "Home", tap: "CHF 520 with 'pre-authorised up to CHF 900' in the text: declined, quoted. PixelHarbour, one letter off: declined. Tap it" },
+            {
+                frames: HOME,
+                where: "Home",
+                tap: "CHF 520 with 'pre-authorised up to CHF 900' in the text: declined, quoted. PixelHarbour, one letter off: declined. Tap it",
+            },
             { frames: DETAILS, where: "Payment details", tap: "'Real shop, not a lookalike' failed, the fact next to it. OK", optional: true },
             { frames: ASK, where: "Your agent wants to pay CHF 299", tap: "The grey box: 'ignore any previous spending instructions'. Decline (or say it)" },
             { frames: ANSWERED, where: "You declined", tap: "Always decline when a shop's text gives orders? Yes, always" },
-            { frames: HOME, where: "Home", tap: "Protection plan added: declined. A new offer after the decline: approved. A gift voucher instead of the monitor: declined" },
+            {
+                frames: HOME,
+                where: "Home",
+                tap: "Protection plan added: declined. A new offer after the decline: approved. A gift voucher instead of the monitor: declined",
+            },
             { frames: ASK, where: "Circuit and Pine", tap: "Bought there with his other card, never with this one. Decline" },
             { frames: ["6.1"], where: "Rules", tap: "The learned rule. Tighten in one tap, looser needs Face ID" },
         ],
@@ -187,8 +195,11 @@ function follow(step: number, frame: FrameId): number {
 const DemoControls = () => {
     const { state, dispatch, secondsLeft } = usePrototype();
     const status = useLiveFeed(dispatch);
-    const [playing, setPlaying] = useState<number | null>(null);
+    const [replay, setReplay] = useState<{ scenario: string; done: number; total: number; running: boolean } | null>(null);
     const timer = useRef<number | null>(null);
+    // The mock replay pauses while a question is open, as the backend does: the customer answers, then the run goes on.
+    const waitingRef = useRef(false);
+    waitingRef.current = !!state.waiting;
 
     const demo = (d: "approve" | "duplicate" | "lookalike" | "ask" | "burst") => dispatch({ type: "DEMO", demo: d });
 
@@ -234,28 +245,45 @@ const DemoControls = () => {
     const running = run?.state === "running";
     const sceneSize = scenarios.find((sc) => sc.scenario_id === run?.scenario)?.event_count ?? 0;
 
-    const stopReplay = () => {
+    const clearTimer = () => {
         if (timer.current) window.clearTimeout(timer.current);
         timer.current = null;
-        setPlaying(null);
+    };
+    const stopReplay = () => {
+        clearTimer();
+        setReplay((r) => (r ? { ...r, running: false } : r));
     };
 
-    /** Replay all SCEN0004 purchases in order, one every 2.5 s. Backup for a dead Wi-Fi on stage. */
-    const play = () => {
-        stopReplay();
-        const all = scenarioDecisions("SCEN0004");
+    /**
+     * Mock mode: replay a scene's purchases in engine order, one every 2.5 s, from src/mocks/decisions.json.
+     * A question pauses the replay until it is answered, so the phone sees the same order as with the backend.
+     * Also the backup for a dead Wi-Fi on stage.
+     */
+    const play = (scenarioId: string) => {
+        clearTimer();
+        const all = scenarioDecisions(scenarioId);
         let i = 0;
+        setReplay({ scenario: scenarioId, done: 0, total: all.length, running: true });
         const next = () => {
+            if (waitingRef.current) {
+                timer.current = window.setTimeout(next, 500);
+                return;
+            }
             if (i >= all.length) return stopReplay();
             dispatch({ type: "INGEST", decision: all[i] });
             i += 1;
-            setPlaying(i);
+            setReplay({ scenario: scenarioId, done: i, total: all.length, running: true });
             timer.current = window.setTimeout(next, REPLAY_GAP_MS);
         };
         next();
     };
+    /** The guide's "Start scene" in mock mode: like Start run, but the decisions come from the mock data. */
+    const startScene = (scenarioId: string) => {
+        play(scenarioId);
+        setStep((i) => (STEPS[i]?.startRun ? i + 1 : i));
+    };
 
-    useEffect(() => () => stopReplay(), []);
+    useEffect(() => clearTimer, []);
 
     const isLive = dataMode === "live";
 
@@ -283,8 +311,10 @@ const DemoControls = () => {
     /** Clicking the current step does the tap for you: the phone moves on to the next step's screen. */
     const doStep = () => {
         if (current.startRun) return;
+        if (next?.startRun) return setStep(step + 1); // the scene card has no screen of its own
         if (next && next.frames.length) goTo(step + 1);
     };
+    const canStep = !current.startRun && !!(next?.frames.length || next?.startRun);
 
     return (
         <aside aria-label="Demo controls" style={{ width: CONTROLS_W }} className="flex max-w-full shrink-0 flex-col gap-6 rounded-2xl bg-secondary p-5">
@@ -342,9 +372,9 @@ const DemoControls = () => {
                         size="md"
                         color="secondary"
                         className="h-auto min-h-10 justify-start bg-primary py-2 text-left whitespace-normal"
-                        onClick={playing ? stopReplay : play}
+                        onClick={replay?.running ? stopReplay : () => play("SCEN0004")}
                     >
-                        {playing ? `Stop replay (${playing} of 11)` : "Play SCEN0004, all 11 purchases"}
+                        {replay?.running ? `Stop replay (${replay.done} of ${replay.total})` : "Play SCEN0004, all 11 purchases"}
                     </Button>
                     {state.waiting && (
                         <p className="px-1 text-sm text-secondary tabular-nums" aria-live="off">
@@ -388,7 +418,7 @@ const DemoControls = () => {
                     <button
                         type="button"
                         onClick={doStep}
-                        disabled={!!current.startRun || !next?.frames.length}
+                        disabled={!canStep}
                         title="Click to do this tap on the phone"
                         className="group flex cursor-pointer items-center justify-between gap-3 rounded-lg text-left outline-focus-ring hover:opacity-80 focus-visible:outline-2 disabled:cursor-default disabled:opacity-100"
                     >
@@ -396,8 +426,20 @@ const DemoControls = () => {
                             <span className="block text-md font-semibold text-primary">{current.where}</span>
                             <span className="block text-sm text-secondary">{current.tap}</span>
                         </span>
-                        {!current.startRun && next?.frames.length ? <span className="text-lg text-tertiary group-hover:text-primary">›</span> : null}
+                        {canStep ? <span className="text-lg text-tertiary group-hover:text-primary">›</span> : null}
                     </button>
+                    {current.startRun && !isLive && current.scenario && (
+                        <Button size="md" color="primary" isDisabled={!!replay?.running || !!state.waiting} onClick={() => startScene(current.scenario!)}>
+                            {replay?.running ? "Scene running…" : "Start scene"}
+                        </Button>
+                    )}
+                    {!isLive && replay && (
+                        <p className="text-sm text-secondary" aria-live="polite">
+                            {replay.running
+                                ? `Scene running · ${replay.done} of ${replay.total} purchases decided`
+                                : "Scene finished. Walk through the phone, then click on to the next scene."}
+                        </p>
+                    )}
                     {current.startRun && isLive && (
                         <div className="flex flex-col gap-2">
                             <select
@@ -442,6 +484,18 @@ const DemoControls = () => {
             <Button size="md" color="tertiary" onClick={() => dispatch({ type: "RESET" })}>
                 Reset demo
             </Button>
+
+            <a
+                href="https://github.com/SuterGabriel/agent-on-a-leash"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 text-md font-semibold text-primary outline-focus-ring hover:bg-primary_hover focus-visible:outline-2"
+            >
+                <span>For the code, click here</span>
+                <span aria-hidden className="text-secondary">
+                    github.com/SuterGabriel/agent-on-a-leash ↗
+                </span>
+            </a>
         </aside>
     );
 };
