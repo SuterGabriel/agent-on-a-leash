@@ -122,7 +122,7 @@ export interface AgentDefinitionOptions {
 
 /** Request body for POST /v1/convai/agents/create and PATCH /v1/convai/agents/{id}. */
 export function agentDefinition(opts: AgentDefinitionOptions = {}) {
-  const tts: Record<string, string> = { model_id: opts.ttsModel ?? "eleven_flash_v2_5" };
+  const tts: Record<string, string> = { model_id: opts.ttsModel ?? "eleven_flash_v2" };
   if (opts.voiceId) tts.voice_id = opts.voiceId;
   return {
     name: VOICE_AGENT_NAME,
