@@ -53,6 +53,21 @@ To show it live: 53 tests, two seconds.
 npx vitest run tests/redteam.test.ts packages/backend/test/security-hardening.test.ts packages/backend/test/security.test.ts
 ```
 
+## 4a. What the tests test with: Viseca's data or ours
+
+Both, and it is deliberate which one where.
+
+| Data | Where it comes from | Used for |
+|---|---|---|
+| Viseca's public set | 45 purchases in 5 scenarios, their merchants, items, cards, and 4,701 rows of purchase history, copied unchanged from the challenge repo into `data/` | The replay, the comparison figure, the red team (every attack starts from a real approved purchase and changes one thing), most guard tests |
+| Viseca's reference decisions | `data/reference_decisions.csv`, the expected answer per public purchase | Scoring only. The engine never reads it; a test fails if the engine or compiler mentions any scenario or purchase id |
+| Viseca's live scenarios | 10 scenarios, 111 purchases, other cards and shops, served by their Azure platform | The live figures in `docs/pitch/` |
+| Synthetic purchases | A seeded generator (`packages/backend/test/helpers/synthetic.ts`) that builds purchases and history rows from Viseca's real catalogues; same seed, same data | Performance and hardening: 2,000 purchases, 100,000 history rows, 50 KB of shop text, a 200 KB instruction. The public set is far too small to measure load |
+| Hand-written edge cases | In the test files themselves | Guards and compiler: a lookalike name with swapped letters, a card with no history, thin history falling back to the customer's other cards, unusual instruction wording, session signals |
+| Our own API traffic | Our app secret, our requests, against an in-process copy of Viseca's platform | The security suites, which test our HTTP surface and the token vault, not the engine |
+
+If asked: the public set proves correctness against the reference; the synthetic and hand-written data prove the engine holds up beyond what the reference covers; the live runs prove it on the platform the jury sees.
+
 ## 5. Which model, honestly
 
 **No model decides. No model runs in the decision path today.**
