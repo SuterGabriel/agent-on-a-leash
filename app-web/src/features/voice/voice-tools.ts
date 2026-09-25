@@ -1,9 +1,11 @@
 // What the voice agent can do, as client tools that run here in the app.
 // The agent (packages/backend/src/voice/agentDefinition.ts) never decides: every tool reads prototype state or
-// dispatches the same action a tap would. Tool names must match VOICE_TOOLS in that file.
+// dispatches the same action a tap would, so the phone screen always shows what the voice says.
+// Tool names must match VOICE_TOOLS in that file.
 import type { Dispatch } from "react";
-import { apiBase, authHeaders } from "@/features/shopping-card/api/client";
-import { getDecision, shopQuote } from "@/features/shopping-card/demo-data";
+import { api } from "@/features/shopping-card/api/client";
+import type { SuggestResponse } from "@/features/shopping-card/api/types";
+import { getDecision, proposedRules, shopQuote } from "@/features/shopping-card/demo-data";
 import type { Action, State } from "@/features/shopping-card/prototype-state";
 import type { Decision } from "@/types/decision";
 
@@ -11,7 +13,8 @@ export const VOICE_TOOLS = {
     getPendingAsk: "get_pending_ask",
     resolveAsk: "resolve_ask",
     readShopText: "read_shop_text",
-    parseInstruction: "parse_instruction",
+    analyseHistory: "analyse_history",
+    setRules: "set_rules",
     createCard: "create_card",
     endCall: "end_call",
 } as const;
@@ -62,75 +65,40 @@ export const openingFor = (state: State, secondsLeft: number): string => {
     const d = waitingDecision(state);
     if (d) return `${askSummary(d, secondsLeft)} Approve or decline?`;
     if (state.cardCreated) {
-        return `Hi. No question is waiting. Your Agent Card is active with ${spokenChf(state.rules.orderLimit)} per order and ${spokenChf(state.rules.monthBudget)} per 30 days. What would you like to do?`;
+        return `Hi. Your Agent Card is active: ${spokenChf(state.rules.orderLimit)} per payment and ${spokenChf(state.rules.monthBudget)} in any 30 days. Do you want to change a limit?`;
     }
-    return "Hi. Your Agent Card is not set up yet. Tell me your rules in your own words, for example how much per order and per month, and I will read back what I understood.";
+    return "Hi. I can help you set up your Agent Card, the card your AI agent shops with. Shall I look at your recent shopping on this card and propose rules from it?";
 };
 
-// ---------- parse spoken rules ----------
+// ---------- rules ----------
 
-export interface ParsedRules {
-    orderLimit: number | null;
-    monthBudget: number | null;
-    understood: string[];
-    notUnderstood: string[];
-    openQuestions: string[];
-}
-
-interface ParseResponse {
-    rules: { key: string; label: string; hard_rule: { field: string; operator: string; value: number | string | string[]; scope?: string } | null }[];
-    open_questions: { id: string; text: string; options: string[] }[];
-    not_understood: string[];
-}
-
-const amount = (s: string | undefined) => (s ? Number(s.replace(/['’]/g, "")) : null);
-
-/** Offline reading of the two limits the card has. Enough for the demo when the backend is not connected. */
-export const parseLocally = (instruction: string): ParsedRules => {
-    const order = /(\d[\d'’]*)\s*(?:chf|francs?|franken)?\s*(?:per|each|a|for every|pro)\s*(?:order|purchase|bestellung|einkauf)/i.exec(instruction);
-    const month = /(\d[\d'’]*)\s*(?:chf|francs?|franken)?\s*(?:per|a|pro|in|every)\s*(?:month|monat|30 days|30 tage)/i.exec(instruction);
-    const orderLimit = amount(order?.[1]);
-    const monthBudget = amount(month?.[1]);
-    const understood = [
-        orderLimit ? `Each order ${spokenChf(orderLimit)} or less` : "",
-        monthBudget ? `In any 30 days ${spokenChf(monthBudget)} or less` : "",
-    ].filter(Boolean);
-    return { orderLimit, monthBudget, understood, notUnderstood: understood.length ? [] : [instruction], openQuestions: [] };
+const bounds = (key: "orderLimit" | "monthBudget") => {
+    const r = proposedRules.find((p) => p.key === key);
+    return { min: r?.min ?? 0, max: r?.max ?? 10_000 };
 };
 
-/** The backend compiler (POST /app/leash/parse) when connected, the local reading otherwise. */
-export const parseInstruction = async (instruction: string): Promise<ParsedRules> => {
-    if (!apiBase) return parseLocally(instruction);
-    const root = apiBase.replace(/\/v4$/, "");
-    const res = await fetch(`${root}/app/leash/parse`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ instruction }),
-    });
-    if (!res.ok) return parseLocally(instruction);
-    const parsed = (await res.json()) as ParseResponse;
-    const limit = (scope: string) => {
-        const r = parsed.rules.find((x) => x.hard_rule?.field === "authorization.billing_amount_chf" && x.hard_rule.scope === scope);
-        return typeof r?.hard_rule?.value === "number" ? r.hard_rule.value : null;
-    };
-    return {
-        orderLimit: limit("purchase"),
-        monthBudget: limit("period"),
-        understood: parsed.rules.map((r) => r.label),
-        notUnderstood: parsed.not_understood,
-        openQuestions: parsed.open_questions.map((q) => `${q.text} (${q.options.join(" or ")})`),
-    };
+/** A spoken number becomes a limit: whole francs inside the stepper's range. */
+const asLimit = (value: unknown, key: "orderLimit" | "monthBudget"): number | null => {
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
+    const { min, max } = bounds(key);
+    return Math.max(min, Math.min(max, Math.round(value)));
 };
 
-const spokenParse = (p: ParsedRules) =>
-    [
-        p.understood.length ? `Understood: ${p.understood.join("; ")}.` : "I could not read any rule from that.",
-        p.notUnderstood.length ? `Not understood: ${p.notUnderstood.join("; ")}.` : "",
-        p.openQuestions.length ? `Open questions: ${p.openQuestions.join(" ")}` : "",
-        p.orderLimit || p.monthBudget ? `Numbers for create_card: order_limit_chf=${p.orderLimit ?? "none"}, month_budget_chf=${p.monthBudget ?? "none"}.` : "",
-    ]
-        .filter(Boolean)
-        .join(" ");
+const suggestedLimit = (s: SuggestResponse, key: "orderLimit" | "monthBudget", fallback: number) => {
+    const v = s.rules.find((r) => r.key === key)?.suggested_value;
+    return typeof v === "number" ? v : fallback;
+};
+
+/** What the agent says after the analysis. Same numbers as screen 1.3. */
+const spokenAnalysis = (s: SuggestResponse, orderLimit: number, monthBudget: number) => {
+    const a = s.analysis;
+    return [
+        `In the last ${s.window_days} days you made ${a.purchases} purchases on this card, typically ${spokenChf(a.typical_chf)}, the biggest ${spokenChf(a.biggest_chf)}, about ${spokenChf(a.per_month_chf)} a month.`,
+        `I propose ${spokenChf(orderLimit)} per payment and ${spokenChf(monthBudget)} in any 30 days.`,
+        `Only the ${a.shops_used} shops you already use; a new shop asks you first.`,
+        "The proposal is on your screen. Say yes to use it, or tell me a different number.",
+    ].join(" ");
+};
 
 // ---------- handlers ----------
 
@@ -162,19 +130,57 @@ export const buildVoiceTools = (get: () => VoiceContext): VoiceToolHandlers => (
         return quote ? `The shop page said: "${quote}"` : "none";
     },
 
-    [VOICE_TOOLS.parseInstruction]: async ({ instruction }) => {
-        if (typeof instruction !== "string" || !instruction.trim()) return "I need the rules in your words first.";
-        return spokenParse(await parseInstruction(instruction));
+    // Setup step 1: the same analysis screen 1.3 shows, from the backend (live) or the demo data (mock).
+    [VOICE_TOOLS.analyseHistory]: async () => {
+        const { state, dispatch } = get();
+        if (state.cardCreated) {
+            return `The Agent Card already exists with ${spokenChf(state.rules.orderLimit)} per payment and ${spokenChf(state.rules.monthBudget)} in any 30 days. Use set_rules to change a limit.`;
+        }
+        let s: SuggestResponse;
+        try {
+            s = await api.suggest();
+        } catch {
+            return "I could not read the shopping history right now. You can still tell me a limit per payment and per month.";
+        }
+        const orderLimit = suggestedLimit(s, "orderLimit", state.rules.orderLimit);
+        const monthBudget = suggestedLimit(s, "monthBudget", state.rules.monthBudget);
+        const { unsure, night, newShops, learn } = s.smart;
+        dispatch({ type: "GO", screen: "1.3", patch: { rules: { orderLimit, monthBudget }, smart: { unsure, night, newShops, learn } } });
+        return spokenAnalysis(s, orderLimit, monthBudget);
     },
 
-    [VOICE_TOOLS.createCard]: ({ order_limit_chf, month_budget_chf }) => {
+    // Setup step 2, or later: a limit the cardholder said. Before the card exists it just updates the proposal on screen.
+    // After, it is the same as the stepper: stricter applies at once, looser needs Face ID, one limit per call.
+    [VOICE_TOOLS.setRules]: ({ order_limit_chf, month_budget_chf }) => {
         const { state, dispatch } = get();
-        if (state.cardCreated) return "The Agent Card already exists. Rules can be tightened in the app.";
-        const orderLimit = typeof order_limit_chf === "number" && order_limit_chf > 0 ? Math.round(order_limit_chf) : state.rules.orderLimit;
-        const monthBudget = typeof month_budget_chf === "number" && month_budget_chf > 0 ? Math.round(month_budget_chf) : state.rules.monthBudget;
-        dispatch({ type: "PATCH", patch: { rules: { orderLimit, monthBudget } } });
+        const orderLimit = asLimit(order_limit_chf, "orderLimit");
+        const monthBudget = asLimit(month_budget_chf, "monthBudget");
+        if (orderLimit === null && monthBudget === null) return "I need a number: francs per payment, or francs per 30 days.";
+
+        if (!state.cardCreated) {
+            const rules = { orderLimit: orderLimit ?? state.rules.orderLimit, monthBudget: monthBudget ?? state.rules.monthBudget };
+            dispatch({ type: "GO", screen: "1.3", patch: { rules } });
+            return `Set: ${spokenChf(rules.orderLimit)} per payment, ${spokenChf(rules.monthBudget)} in any 30 days. The screen shows it. Say yes to create the card with these.`;
+        }
+
+        const key = orderLimit !== null ? "orderLimit" : "monthBudget";
+        const draft = (orderLimit ?? monthBudget) as number;
+        const looser = draft > state.rules[key];
+        dispatch({ type: "PATCH", patch: { editing: { key, draft } } });
+        dispatch(looser ? { type: "FACE_ID", then: { type: "SAVE_RULE" } } : { type: "SAVE_RULE" });
+        const what = key === "orderLimit" ? "per payment" : "in any 30 days";
+        const rest = orderLimit !== null && monthBudget !== null ? " Tell me the other limit again after this one." : "";
+        return looser
+            ? `${spokenChf(draft)} ${what} is looser than before, so Face ID confirms it on your phone.${rest}`
+            : `Done: ${spokenChf(draft)} ${what}, from the next payment.${rest}`;
+    },
+
+    // Setup step 3: only after a spoken yes. Face ID on the phone does the actual creation, as the button does.
+    [VOICE_TOOLS.createCard]: () => {
+        const { state, dispatch } = get();
+        if (state.cardCreated) return "The Agent Card already exists.";
         dispatch({ type: "FACE_ID", then: { type: "CREATE_CARD" } });
-        return `Your Agent Card is being created with ${spokenChf(orderLimit)} per order and ${spokenChf(monthBudget)} per 30 days. Face ID confirms it on screen.`;
+        return `Creating your Agent Card with ${spokenChf(state.rules.orderLimit)} per payment and ${spokenChf(state.rules.monthBudget)} in any 30 days. Confirm with Face ID on your phone.`;
     },
 
     [VOICE_TOOLS.endCall]: () => {

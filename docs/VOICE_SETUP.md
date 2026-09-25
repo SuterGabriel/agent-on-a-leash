@@ -85,8 +85,10 @@ npm run web     # app on http://localhost:5173
 5. Say "why?" to hear the reason again, "what did the shop say?" for the quote, then "decline". The sheet flips to "You declined", the call hangs up by itself.
 6. Trigger the ask again and say "yes" to see the approve path.
 
-Setup by voice: with no card created (Reset demo), click **Call now** and say "groceries, 120 francs per order and
-400 a month". The agent reads back what it understood; say "yes" and Face ID runs on screen.
+Setup by voice: with no card created (Reset demo), click **Set up by voice**. The agent asks whether it should look at
+your recent shopping; say "yes". It reads the numbers of the last 90 days and the proposed limits while the phone
+opens screen 1.3 with the same proposal. Say "make it 400 per payment" to change one, then "yes", and Face ID runs
+on screen.
 
 ## 6. If something is wrong
 

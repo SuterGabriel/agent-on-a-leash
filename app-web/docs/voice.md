@@ -13,7 +13,10 @@ when the 2-minute window opens) can still answer in time.
 | "Why?" | the engine's reason sentence | `get_pending_ask` |
 | "What did the shop say?" | the quarantined sentences, quoted, "and the card ignored that" | `read_shop_text` |
 | "Yes" / "No" | "Approved. 189 francs at Trail Outfitters. Your agent was told to go ahead." | `resolve_ask` (once, then `end_call`) |
-| No card yet: "Groceries, 120 per order, 400 a month" | the rules read back, then Face ID on screen | `parse_instruction`, `create_card` |
+| No card yet: "Set up by voice" | "Shall I look at your recent shopping and propose rules?" Then the numbers of the last 90 days and the proposed limits, the same as screen 1.3, which opens on the phone | `analyse_history` |
+| "Make it 400 per payment" | "Set: 400 francs per payment, 1500 in any 30 days. Say yes to create the card." Screen 1.3 updates | `set_rules` |
+| "Yes" to the proposal | "Creating your Agent Card ... Confirm with Face ID on your phone." | `create_card` |
+| Card exists: "Lower it to 300" | stricter applies at once, looser runs Face ID, same as the stepper | `set_rules` |
 
 The first sentence is a dynamic variable filled by the app from the engine's decision (`openingFor` in
 `src/features/voice/voice-tools.ts`), so what is read aloud comes from the engine, not from the language model.
@@ -31,14 +34,14 @@ The first sentence is a dynamic variable filled by the app from the engine's dec
 2. `npm run voice:agent` at the repo root creates or updates the agent "Agent Card voice" from
    `packages/backend/src/voice/agentDefinition.ts` and prints its id. `npm run voice:agent -- --show` prints the request without calling the API.
 3. `app-web/.env.local`: `VITE_ELEVENLABS_AGENT_ID=<id>`, then `npm run web`.
-4. In the demo controls, "Read asks aloud" switches voice on for every ask; "Call now" starts a call without one (setup by voice). On the ask-me sheet, "Read it to me" starts a call for that question.
+4. In the demo controls, "Read asks aloud" switches voice on for every ask; "Set up by voice" (no card yet) or "Call now" starts a call without one. On the ask-me sheet, "Read it to me" starts a call for that question.
 
-Works in mock mode (demo buttons) and live mode (backend stream). Rules parsing uses the backend compiler when
-`VITE_API_BASE` is set and a small local reading of the two limits otherwise.
+Works in mock mode (demo buttons) and live mode (backend stream). The history analysis is `GET /v4/app/leash/suggest`
+when `VITE_API_BASE` is set and the demo data otherwise, the same source screen 1.3 uses.
 
 ## Files
 
-- `src/features/voice/voice-tools.ts` tool handlers, spoken text, rules parsing
+- `src/features/voice/voice-tools.ts` tool handlers and spoken text
 - `src/features/voice/voice-provider.tsx` `VoiceProvider`, `useVoice()`: session start on each ask, hang-up after the answer
 - `src/features/voice/voice-status.tsx` `VoiceStatus` (sheet) and `VoiceToggle` (demo controls), both `aria-live`
 - `packages/backend/src/voice/agentDefinition.ts` prompt and tool schemas; `packages/backend/test/voice-agent.test.ts`

@@ -83,7 +83,7 @@ export const VoiceToggle = () => {
                     {voice.enabled ? "Asks are read aloud" : "Read asks aloud"}
                 </Button>
                 <Button size="md" color="secondary" onClick={live ? voice.stop : voice.start}>
-                    {live ? "Hang up" : "Call now"}
+                    {live ? "Hang up" : voice.cardCreated ? "Call now" : "Set up by voice"}
                 </Button>
             </div>
             <p role="status" aria-live="polite" className="flex items-center gap-2 px-1 text-sm text-secondary">
