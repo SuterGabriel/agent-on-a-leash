@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="624" viewBox="0 0 1200 624" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="624" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">21 checks in five families.</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">Every decision lists each one as pass, fail or unsure, with the fact.</text>
+<text x="40" y="126" font-size="19" fill="#52514e">Guards in the engine on 25 September: rules from the customer's words and built-in protections, grouped as the app shows them.</text>
+<text x="40" y="188" font-size="19" font-weight="700" fill="#0b0b0b">Money</text>
+<text x="40" y="212" font-size="15" fill="#52514e">6 checks</text>
+<rect x="40" y="228" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="236" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="260" font-size="15" fill="#0b0b0b">Per-order limit</text>
+<rect x="40" y="290" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="298" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="313" font-size="15" fill="#0b0b0b">Spending budget</text><text x="58" y="331" font-size="15" fill="#0b0b0b">over time</text>
+<rect x="40" y="352" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="360" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="375" font-size="15" fill="#0b0b0b">No orders split to</text><text x="58" y="393" font-size="15" fill="#0b0b0b">stay under the limit</text>
+<rect x="40" y="414" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="422" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="437" font-size="15" fill="#0b0b0b">Price per item,</text><text x="58" y="455" font-size="15" fill="#0b0b0b">night or unit</text>
+<rect x="40" y="476" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="484" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="499" font-size="15" fill="#0b0b0b">How many orders</text><text x="58" y="517" font-size="15" fill="#0b0b0b">per period</text>
+<rect x="40" y="538" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="546" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="561" font-size="15" fill="#0b0b0b">Card limit per</text><text x="58" y="579" font-size="15" fill="#0b0b0b">purchase</text>
+<text x="268" y="188" font-size="19" font-weight="700" fill="#0b0b0b">Item and terms</text>
+<text x="268" y="212" font-size="15" fill="#52514e">6 checks</text>
+<rect x="268" y="228" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="236" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="251" font-size="15" fill="#0b0b0b">Only the categories</text><text x="286" y="269" font-size="15" fill="#0b0b0b">you allowed</text>
+<rect x="268" y="290" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="298" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="313" font-size="15" fill="#0b0b0b">Only the item</text><text x="286" y="331" font-size="15" fill="#0b0b0b">you asked for</text>
+<rect x="268" y="352" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="360" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="375" font-size="15" fill="#0b0b0b">No extras you</text><text x="286" y="393" font-size="15" fill="#0b0b0b">did not ask for</text>
+<rect x="268" y="414" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="422" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="446" font-size="15" fill="#0b0b0b">Return policy</text>
+<rect x="268" y="476" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="484" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="508" font-size="15" fill="#0b0b0b">Things you excluded</text>
+<rect x="268" y="538" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="546" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="570" font-size="15" fill="#0b0b0b">Refundable only</text>
+<text x="496" y="188" font-size="19" font-weight="700" fill="#0b0b0b">Shop</text>
+<text x="496" y="212" font-size="15" fill="#52514e">4 checks</text>
+<rect x="496" y="228" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="496" y="236" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="514" y="260" font-size="15" fill="#0b0b0b">Type of shop</text>
+<rect x="496" y="290" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="496" y="298" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="514" y="313" font-size="15" fill="#0b0b0b">Only shops you</text><text x="514" y="331" font-size="15" fill="#0b0b0b">have used</text>
+<rect x="496" y="352" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="496" y="360" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="514" y="375" font-size="15" fill="#0b0b0b">Real shop, not</text><text x="514" y="393" font-size="15" fill="#0b0b0b">a lookalike</text>
+<rect x="496" y="414" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="496" y="422" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="514" y="437" font-size="15" fill="#0b0b0b">Hotel in the city</text><text x="514" y="455" font-size="15" fill="#0b0b0b">you named</text>
+<text x="724" y="188" font-size="19" font-weight="700" fill="#0b0b0b">Looks like you</text>
+<text x="724" y="212" font-size="15" fill="#52514e">2 checks</text>
+<rect x="724" y="228" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="724" y="236" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="742" y="260" font-size="15" fill="#0b0b0b">Looks like you</text>
+<rect x="724" y="290" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="724" y="298" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="742" y="322" font-size="15" fill="#0b0b0b">Days you allowed</text>
+<text x="952" y="166" font-size="19" font-weight="700" fill="#0b0b0b">Repeats and</text><text x="952" y="188" font-size="19" font-weight="700" fill="#0b0b0b">manipulation</text>
+<text x="952" y="212" font-size="15" fill="#52514e">3 checks</text>
+<rect x="952" y="228" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="952" y="236" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="970" y="251" font-size="15" fill="#0b0b0b">Shop text is</text><text x="970" y="269" font-size="15" fill="#0b0b0b">never obeyed</text>
+<rect x="952" y="290" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="952" y="298" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="970" y="322" font-size="15" fill="#0b0b0b">No duplicate orders</text>
+<rect x="952" y="352" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="952" y="360" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="970" y="375" font-size="15" fill="#0b0b0b">No new price</text><text x="970" y="393" font-size="15" fill="#0b0b0b">after a decline</text>
+</svg>

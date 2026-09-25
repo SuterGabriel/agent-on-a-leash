@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="514" viewBox="0 0 1200 514" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="514" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">16 of the 28 questions were a first purchase at a shop.</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">One yes, and that shop never asks again in the run.</text>
+<text x="40" y="126" font-size="19" fill="#52514e">Why the engine asked: seven live scenarios on Viseca's server, every question answered yes.</text>
+<text x="376" y="201" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">First purchase at this shop</text>
+<path d="M400,182h572a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-572z" fill="#eb6834"><title>First purchase at this shop: 16 of 28 questions</title></path>
+<text x="990" y="201" font-size="21" fill="#0b0b0b">16</text>
+<text x="376" y="247" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Shop page missing a fact</text>
+<path d="M400,228h176a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-176z" fill="#eb6834"><title>Shop page missing a fact: 5 of 28 questions</title></path>
+<text x="594" y="247" font-size="21" fill="#0b0b0b">5</text>
+<text x="376" y="293" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Over the per-order limit</text>
+<path d="M400,274h68a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-68z" fill="#eb6834"><title>Over the per-order limit: 2 of 28 questions</title></path>
+<text x="486" y="293" font-size="21" fill="#0b0b0b">2</text>
+<text x="376" y="339" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Item outside the task</text>
+<path d="M400,320h68a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-68z" fill="#eb6834"><title>Item outside the task: 2 of 28 questions</title></path>
+<text x="486" y="339" font-size="21" fill="#0b0b0b">2</text>
+<text x="376" y="385" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Shop text aimed at the agent</text>
+<path d="M400,366h32a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-32z" fill="#eb6834"><title>Shop text aimed at the agent: 1 of 28 questions</title></path>
+<text x="450" y="385" font-size="21" fill="#0b0b0b">1</text>
+<text x="376" y="431" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Looks like a split order</text>
+<path d="M400,412h32a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-32z" fill="#eb6834"><title>Looks like a split order: 1 of 28 questions</title></path>
+<text x="450" y="431" font-size="21" fill="#0b0b0b">1</text>
+<text x="376" y="477" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Over the budget for the period</text>
+<path d="M400,458h32a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-32z" fill="#eb6834"><title>Over the budget for the period: 1 of 28 questions</title></path>
+<text x="450" y="477" font-size="21" fill="#0b0b0b">1</text>
+<line x1="399" y1="170" x2="399" y2="490" stroke="#d9d8d3" stroke-width="2"/>
+</svg>

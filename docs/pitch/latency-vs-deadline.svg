@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="568" viewBox="0 0 1200 568" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="568" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">The slowest live decision is 12 times faster than the deadline.</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">The engine itself takes 0.04 ms.</text>
+<text x="40" y="126" font-size="19" fill="#52514e">Milliseconds on a log scale. Engine rows: the replay and the load test.</text>
+<text x="40" y="152" font-size="19" fill="#52514e">Live rows: measured on Viseca's server, request event to decision event, network both ways included.</text>
+<line x1="380" y1="202" x2="380" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="380" y="544" font-size="16" fill="#898781" text-anchor="middle">0.01 ms</text>
+<line x1="506" y1="202" x2="506" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="506" y="544" font-size="16" fill="#898781" text-anchor="middle">0.1</text>
+<line x1="632" y1="202" x2="632" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="632" y="544" font-size="16" fill="#898781" text-anchor="middle">1</text>
+<line x1="758" y1="202" x2="758" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="758" y="544" font-size="16" fill="#898781" text-anchor="middle">10</text>
+<line x1="884" y1="202" x2="884" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="884" y="544" font-size="16" fill="#898781" text-anchor="middle">100</text>
+<line x1="1010" y1="202" x2="1010" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="1010" y="544" font-size="16" fill="#898781" text-anchor="middle">1,000</text>
+<line x1="1136" y1="202" x2="1136" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="1136" y="544" font-size="16" fill="#898781" text-anchor="middle">10,000 ms</text>
+<line x1="1123.7893383609849" y1="202" x2="1123.7893383609849" y2="518" stroke="#52514e" stroke-width="2"/>
+<text x="1113.7893383609849" y="216" font-size="16" font-weight="600" fill="#52514e" text-anchor="end">Viseca's deadline, 8,000 ms</text>
+<text x="352" y="257" font-size="20" fill="#0b0b0b" text-anchor="end">Engine alone, median of 45</text>
+<line x1="380" y1="251" x2="455.8595589073233" y2="251" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="455.8595589073233" cy="251" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>Engine alone, median of 45: 0.04 ms</title></circle>
+<text x="473.8595589073233" y="257" font-size="18" font-weight="600" fill="#0b0b0b">0.04 ms</text>
+<text x="352" y="307" font-size="20" fill="#0b0b0b" text-anchor="end">Engine alone, slowest of 45</text>
+<line x1="380" y1="301" x2="669.9297794536617" y2="301" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="669.9297794536617" cy="301" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>Engine alone, slowest of 45: 2 ms</title></circle>
+<text x="687.9297794536617" y="307" font-size="18" font-weight="600" fill="#0b0b0b">2 ms</text>
+<text x="352" y="357" font-size="20" fill="#0b0b0b" text-anchor="end">Engine under load, p99 of 2,000</text>
+<line x1="380" y1="351" x2="612.4823530417964" y2="351" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="612.4823530417964" cy="351" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>Engine under load, p99 of 2,000: 0.7 ms</title></circle>
+<text x="630.4823530417964" y="357" font-size="18" font-weight="600" fill="#0b0b0b">0.7 ms</text>
+<text x="352" y="407" font-size="20" fill="#0b0b0b" text-anchor="end">Engine under load, worst case</text>
+<line x1="380" y1="401" x2="738.4823530417964" y2="401" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="738.4823530417964" cy="401" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>Engine under load, worst case: 7 ms</title></circle>
+<text x="756.4823530417964" y="407" font-size="18" font-weight="600" fill="#0b0b0b">7 ms</text>
+<text x="352" y="457" font-size="20" fill="#0b0b0b" text-anchor="end">On Viseca's server, median of 74</text>
+<line x1="380" y1="451" x2="937.9449840476275" y2="451" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="937.9449840476275" cy="451" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>On Viseca's server, median of 74: 268 ms</title></circle>
+<text x="955.9449840476275" y="457" font-size="18" font-weight="600" fill="#0b0b0b">268 ms</text>
+<text x="352" y="507" font-size="20" fill="#0b0b0b" text-anchor="end">On Viseca's server, slowest of 185</text>
+<line x1="380" y1="501" x2="987.5931780003702" y2="501" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="987.5931780003702" cy="501" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>On Viseca's server, slowest of 185: 664 ms</title></circle>
+<text x="1005.5931780003702" y="507" font-size="18" font-weight="600" fill="#0b0b0b">664 ms</text>
+</svg>

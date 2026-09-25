@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent on a Leash figures</title>
+<style>
+:root{--bg:#f3f2ee;--card:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--line:rgba(11,11,11,.12);--accent:#2a78d6}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#151514;--card:#fcfcfb;--ink:#f2f1ec;--ink2:#b9b8b0;--line:rgba(255,255,255,.12);--accent:#5598e7}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#151514;--card:#fcfcfb;--ink:#f2f1ec;--ink2:#b9b8b0;--line:rgba(255,255,255,.12);--accent:#5598e7}
+body{background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;padding-inline:16px;padding-block:24px 48px;margin:0}
+main{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
+header h1{font-size:28px;margin:0 0 6px;text-wrap:balance}
+header p{margin:0;color:var(--ink2);font-size:15px;max-width:70ch}
+nav{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:14px}
+nav a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent}
+nav a:hover,nav a:focus-visible{border-bottom-color:var(--accent);outline:none}
+.fig h2{font-size:15px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--ink2);margin:0 0 10px}
+.frame{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.frame svg{display:block;width:100%;height:auto}
+.src{margin:8px 0 0;font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<!-- Nine pitch figures, each an inline <svg> with a viewBox, so it scales to its container.
+     To reuse one on another page: copy its <svg>...</svg> block, or use <img src="docs/pitch/<name>.svg">.
+     Regenerate the SVGs with: npm run figures (eight) and npm run compare (comparison.svg). -->
+
+<main>
+<header><h1>Agent on a Leash, the figures for the pitch</h1><p>Nine graphs from the numbers in docs/HACKATHON.md, measured 24 and 25 September. Each one is also an SVG and a PNG in docs/pitch in the repo, ready for a slide.</p><nav><a href="#numbers">The numbers</a><a href="#comparison">Plain limit against the engine</a><a href="#limit-vs-engine-by-kind">What a plain limit misses, by kind of risk</a><a href="#money-unchecked">Money paid unchecked</a><a href="#live-before-after">Live on Viseca server: asks answered no, then yes</a><a href="#why-we-asked">Why the engine asked</a><a href="#latency-vs-deadline">Speed against the deadline</a><a href="#viseca-list-status">Viseca list, built or not</a><a href="#guards-by-family">The 21 checks in five families</a></nav></header>
+<section class="fig" id="numbers"><h2>The numbers</h2><div class="frame"><svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="450" viewBox="0 0 1200 450" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="450" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">The numbers, measured 24 and 25 September</text>
+<text x="40" y="86" font-size="19" fill="#52514e">Each one re-runs with a command: npm run replay, npm run compare, npm run jury-figures, npm test.</text>
+<rect x="40" y="138" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="60" y="196" font-size="44" font-weight="600" fill="#0b0b0b">45 of 45</text>
+<text x="60" y="228" font-size="16" fill="#52514e">decisions match Viseca's</text><text x="60" y="250" font-size="16" fill="#52514e">reference on the public set</text>
+<rect x="324" y="138" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="344" y="196" font-size="44" font-weight="600" fill="#0b0b0b">28 of 28</text>
+<text x="344" y="228" font-size="16" fill="#52514e">risky purchases stopped or</text><text x="344" y="250" font-size="16" fill="#52514e">asked; a plain limit catches 6</text>
+<rect x="608" y="138" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="628" y="196" font-size="44" font-weight="600" fill="#0b0b0b">0 of 185</text>
+<text x="628" y="228" font-size="16" fill="#52514e">live decisions after</text><text x="628" y="250" font-size="16" fill="#52514e">the 8 s deadline</text>
+<rect x="892" y="138" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="912" y="196" font-size="44" font-weight="600" fill="#0b0b0b">268 ms</text>
+<text x="912" y="228" font-size="16" fill="#52514e">median decision on Viseca's</text><text x="912" y="250" font-size="16" fill="#52514e">server, network included</text>
+<rect x="40" y="286" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="60" y="344" font-size="44" font-weight="600" fill="#0b0b0b">0.04 ms</text>
+<text x="60" y="376" font-size="16" fill="#52514e">median engine time</text><text x="60" y="398" font-size="16" fill="#52514e">per decision</text>
+<rect x="324" y="286" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="344" y="344" font-size="44" font-weight="600" fill="#0b0b0b">21</text>
+<text x="344" y="376" font-size="16" fill="#52514e">checks in five families,</text><text x="344" y="398" font-size="16" fill="#52514e">from your words and built in</text>
+<rect x="608" y="286" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="628" y="344" font-size="44" font-weight="600" fill="#0b0b0b">262</text>
+<text x="628" y="376" font-size="16" fill="#52514e">tests, all green,</text><text x="628" y="398" font-size="16" fill="#52514e">in 22 files</text>
+<rect x="892" y="286" width="268" height="132" rx="8" fill="#f9f9f7" stroke="rgba(11,11,11,0.10)" stroke-width="1"></rect>
+<text x="912" y="344" font-size="44" font-weight="600" fill="#0b0b0b">2</text>
+<text x="912" y="376" font-size="16" fill="#52514e">learned rules enforced</text><text x="912" y="398" font-size="16" fill="#52514e">after one decline</text>
+</svg></div><p class="src">docs/pitch/numbers.svg · docs/pitch/png/numbers.png</p></section>
+<section class="fig" id="comparison"><h2>Plain limit against the engine</h2><div class="frame"><svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="372" viewBox="0 0 1200 372" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="1200" height="372" fill="#fcfcfb"/>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">A spending limit catches 6 of 28 risky purchases.</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">The rules engine catches 28.</text>
+<text x="40" y="128" font-size="19" fill="#52514e">Risky purchases stopped or put to the customer, of 28 in Viseca's five public scenarios</text>
+<line x1="300" y1="158" x2="300" y2="342" stroke="#d9d8d3" stroke-width="2"/>
+<text x="276" y="190" text-anchor="end" font-size="24" font-weight="600" fill="#0b0b0b">No control</text><text x="320" y="190" font-size="24" fill="#0b0b0b">0 of 28</text>
+<text x="276" y="244" text-anchor="end" font-size="24" font-weight="600" fill="#0b0b0b">Plain spending limit</text><rect x="300" y="224" width="137" height="24" rx="4" fill="#eb6834"><title>Plain spending limit: 6 of 28 risky purchases stopped or asked</title></rect><text x="453" y="244" font-size="24" fill="#0b0b0b">6 of 28</text>
+<text x="276" y="298" text-anchor="end" font-size="24" font-weight="600" fill="#0b0b0b">Our engine</text><rect x="300" y="278" width="640" height="24" rx="4" fill="#2a78d6"><title>Our engine: 28 of 28 risky purchases stopped or asked</title></rect><text x="956" y="298" font-size="24" fill="#0b0b0b">28 of 28</text>
+</svg></div><p class="src">docs/pitch/comparison.svg · docs/pitch/png/comparison.png</p></section>
+<section class="fig" id="limit-vs-engine-by-kind"><h2>What a plain limit misses, by kind of risk</h2><div class="frame"><svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="628" viewBox="0 0 1200 628" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="628" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">A spending limit sees only the amount.</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">The engine catches all six kinds of risk; the limit, one.</text>
+<text x="40" y="126" font-size="19" fill="#52514e">The 28 risky purchases in Viseca's five public scenarios, grouped by why the reference refuses or asks.</text>
+<rect x="530" y="161" width="16" height="16" rx="3" fill="#eb6834"></rect>
+<text x="554" y="174" font-size="18" fill="#52514e">Plain spending limit</text>
+<rect x="777.2" y="161" width="16" height="16" rx="3" fill="#2a78d6"></rect>
+<text x="801.2" y="174" font-size="18" fill="#52514e">Our engine</text>
+<rect x="930.8000000000001" y="161" width="16" height="16" rx="3" fill="#e1e0d9"></rect>
+<text x="954.8000000000001" y="174" font-size="18" fill="#52514e">Risky purchases of that kind</text>
+<text x="500" y="234" font-size="20" font-weight="600" fill="#0b0b0b" text-anchor="end">Over the limit or the budget</text>
+<rect x="530" y="204" width="448" height="20" rx="4" fill="#e1e0d9"></rect>
+<path d="M530,204h332a4,4 0 0 1 4,4v12a4,4 0 0 1 -4,4h-332z" fill="#eb6834"><title>A plain limit catches 6 of 8: Over the limit or the budget</title></path>
+<text x="992" y="220" font-size="18" fill="#52514e">6 of 8</text>
+<rect x="530" y="230" width="448" height="20" rx="4" fill="#e1e0d9"></rect>
+<path d="M530,230h444a4,4 0 0 1 4,4v12a4,4 0 0 1 -4,4h-444z" fill="#2a78d6"><title>Our engine catches 8 of 8: Over the limit or the budget</title></path>
+<text x="992" y="246" font-size="18" fill="#52514e">8 of 8</text>
+<text x="500" y="302" font-size="20" font-weight="600" fill="#0b0b0b" text-anchor="end">Wrong item or unrequested extras</text>
+<rect x="530" y="272" width="336" height="20" rx="4" fill="#e1e0d9"></rect>
+
+<text x="880" y="288" font-size="18" fill="#52514e">0 of 6</text>
+<rect x="530" y="298" width="336" height="20" rx="4" fill="#e1e0d9"></rect>
+<path d="M530,298h332a4,4 0 0 1 4,4v12a4,4 0 0 1 -4,4h-332z" fill="#2a78d6"><title>Our engine catches 6 of 6: Wrong item or unrequested extras</title></path>
+<text x="880" y="314" font-size="18" fill="#52514e">6 of 6</text>
+<text x="500" y="370" font-size="20" font-weight="600" fill="#0b0b0b" text-anchor="end">Someone else driving the session</text>
+<rect x="530" y="340" width="280" height="20" rx="4" fill="#e1e0d9"></rect>
+
+<text x="824" y="356" font-size="18" fill="#52514e">0 of 5</text>
+<rect x="530" y="366" width="280" height="20" rx="4" fill="#e1e0d9"></rect>
+<path d="M530,366h276a4,4 0 0 1 4,4v12a4,4 0 0 1 -4,4h-276z" fill="#2a78d6"><title>Our engine catches 5 of 5: Someone else driving the session</title></path>
+<text x="824" y="382" font-size="18" fill="#52514e">5 of 5</text>
+<text x="500" y="438" font-size="20" font-weight="600" fill="#0b0b0b" text-anchor="end">Wrong, unknown or imitated seller</text>
+<rect x="530" y="408" width="224" height="20" rx="4" fill="#e1e0d9"></rect>
+
+<text x="768" y="424" font-size="18" fill="#52514e">0 of 4</text>
+<rect x="530" y="434" width="224" height="20" rx="4" fill="#e1e0d9"></rect>
+<path d="M530,434h220a4,4 0 0 1 4,4v12a4,4 0 0 1 -4,4h-220z" fill="#2a78d6"><title>Our engine catches 4 of 4: Wrong, unknown or imitated seller</title></path>
+<text x="768" y="450" font-size="18" fill="#52514e">4 of 4</text>
+<text x="500" y="506" font-size="20" font-weight="600" fill="#0b0b0b" text-anchor="end">Return terms not met or not stated</text>
+<rect x="530" y="476" width="168" height="20" rx="4" fill="#e1e0d9"></rect>
+
+<text x="712" y="492" font-size="18" fill="#52514e">0 of 3</text>
+<rect x="530" y="502" width="168" height="20" rx="4" fill="#e1e0d9"></rect>
+<path d="M530,502h164a4,4 0 0 1 4,4v12a4,4 0 0 1 -4,4h-164z" fill="#2a78d6"><title>Our engine catches 3 of 3: Return terms not met or not stated</title></path>
+<text x="712" y="518" font-size="18" fill="#52514e">3 of 3</text>
+<text x="500" y="574" font-size="20" font-weight="600" fill="#0b0b0b" text-anchor="end">Repeated order or text aimed at the agent</text>
+<rect x="530" y="544" width="112" height="20" rx="4" fill="#e1e0d9"></rect>
+
+<text x="656" y="560" font-size="18" fill="#52514e">0 of 2</text>
+<rect x="530" y="570" width="112" height="20" rx="4" fill="#e1e0d9"></rect>
+<path d="M530,570h108a4,4 0 0 1 4,4v12a4,4 0 0 1 -4,4h-108z" fill="#2a78d6"><title>Our engine catches 2 of 2: Repeated order or text aimed at the agent</title></path>
+<text x="656" y="586" font-size="18" fill="#52514e">2 of 2</text>
+<line x1="529" y1="194" x2="529" y2="596" stroke="#d9d8d3" stroke-width="2"/>
+</svg></div><p class="src">docs/pitch/limit-vs-engine-by-kind.svg · docs/pitch/png/limit-vs-engine-by-kind.png</p></section>
+<section class="fig" id="money-unchecked"><h2>Money paid unchecked</h2><div class="frame"><svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="354" viewBox="0 0 1200 354" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="354" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">CHF 4,173 of risky purchases still go through with a plain limit.</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">CHF 0 with the engine.</text>
+<text x="40" y="126" font-size="19" fill="#52514e">Risky amount paid unchecked, across the 28 risky purchases in Viseca's five public scenarios.</text>
+<text x="276" y="202" font-size="24" font-weight="600" fill="#0b0b0b" text-anchor="end">No control</text>
+<path d="M300,182h636a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-636z" fill="#898781"><title>No control: CHF 5,899 paid unchecked</title></path>
+<text x="954" y="202" font-size="24" fill="#0b0b0b">CHF 5,899</text>
+<text x="276" y="256" font-size="24" font-weight="600" fill="#0b0b0b" text-anchor="end">Plain spending limit</text>
+<path d="M300,236h449a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-449z" fill="#eb6834"><title>Plain spending limit: CHF 4,173 paid unchecked</title></path>
+<text x="767" y="256" font-size="24" fill="#0b0b0b">CHF 4,173</text>
+<text x="276" y="310" font-size="24" font-weight="600" fill="#0b0b0b" text-anchor="end">Our engine</text>
+
+<text x="314" y="310" font-size="24" fill="#0b0b0b">CHF 0</text>
+<line x1="299" y1="170" x2="299" y2="322" stroke="#d9d8d3" stroke-width="2"/>
+</svg></div><p class="src">docs/pitch/money-unchecked.svg · docs/pitch/png/money-unchecked.png</p></section>
+<section class="fig" id="live-before-after"><h2>Live on Viseca server: asks answered no, then yes</h2><div class="frame"><svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="850" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">Say yes once and the shop is known:</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">52 questions become 28 on the same 74 purchases</text>
+<text x="40" y="126" font-size="19" fill="#52514e">Seven live scenarios on Viseca's server, run twice. Top bar: every question answered no, nothing learned.</text>
+<text x="40" y="152" font-size="19" fill="#52514e">Bottom bar: every question answered yes, so a shop approved once is known for the rest of the run.</text>
+<rect x="400" y="187" width="16" height="16" rx="3" fill="#1baf7a"></rect>
+<text x="424" y="200" font-size="18" fill="#52514e">Approved</text>
+<rect x="534.88" y="187" width="16" height="16" rx="3" fill="#eb6834"></rect>
+<text x="558.88" y="200" font-size="18" fill="#52514e">Asked</text>
+<rect x="641.6800000000001" y="187" width="16" height="16" rx="3" fill="#2a78d6"></rect>
+<text x="665.6800000000001" y="200" font-size="18" fill="#52514e">Declined</text>
+<text x="250" y="265" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Connection check</text>
+<text x="270" y="248" font-size="16" fill="#52514e">Answered no</text><rect x="400" y="230" width="44" height="24" rx="0" fill="#eb6834"><title>1 of 2 asked</title></rect><text x="422" y="247" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">1</text><path d="M446,230h40a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-40z" fill="#2a78d6"><title>1 of 2 declined</title></path><text x="468" y="247" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">1</text><text x="504" y="248" font-size="18" fill="#52514e">1 of 2 asked</text>
+<text x="270" y="280" font-size="16" fill="#52514e">Answered yes</text><rect x="400" y="262" width="44" height="24" rx="0" fill="#eb6834"><title>1 of 2 asked</title></rect><text x="422" y="279" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">1</text><path d="M446,262h40a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-40z" fill="#2a78d6"><title>1 of 2 declined</title></path><text x="468" y="279" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">1</text><text x="504" y="280" font-size="18" fill="#52514e">1 of 2 asked</text>
+<text x="250" y="347" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Cross-border purchase</text>
+<text x="270" y="330" font-size="16" fill="#52514e">Answered no</text><rect x="400" y="312" width="274" height="24" rx="0" fill="#eb6834"><title>6 of 10 asked</title></rect><text x="537" y="329" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">6</text><path d="M676,312h178a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-178z" fill="#2a78d6"><title>4 of 10 declined</title></path><text x="767" y="329" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">4</text><text x="872" y="330" font-size="18" fill="#52514e">6 of 10 asked</text>
+<text x="270" y="362" font-size="16" fill="#52514e">Answered yes</text><rect x="400" y="344" width="90" height="24" rx="0" fill="#1baf7a"><title>2 of 10 approved</title></rect><text x="445" y="361" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">2</text><rect x="492" y="344" width="182" height="24" rx="0" fill="#eb6834"><title>4 of 10 asked</title></rect><text x="583" y="361" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">4</text><path d="M676,344h178a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-178z" fill="#2a78d6"><title>4 of 10 declined</title></path><text x="767" y="361" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">4</text><text x="872" y="362" font-size="18" fill="#52514e">4 of 10 asked</text>
+<text x="250" y="429" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Session integrity</text>
+<text x="270" y="412" font-size="16" fill="#52514e">Answered no</text><rect x="400" y="394" width="504" height="24" rx="0" fill="#eb6834"><title>11 of 12 asked</title></rect><text x="652" y="411" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">11</text><path d="M906,394h40a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-40z" fill="#2a78d6"><title>1 of 12 declined</title></path><text x="928" y="411" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">1</text><text x="964" y="412" font-size="18" fill="#52514e">11 of 12 asked</text>
+<text x="270" y="444" font-size="16" fill="#52514e">Answered yes</text><rect x="400" y="426" width="504" height="24" rx="0" fill="#eb6834"><title>11 of 12 asked</title></rect><text x="652" y="443" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">11</text><path d="M906,426h40a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-40z" fill="#2a78d6"><title>1 of 12 declined</title></path><text x="928" y="443" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">1</text><text x="964" y="444" font-size="18" fill="#52514e">11 of 12 asked</text>
+<text x="250" y="511" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Weeknight meal delivery</text>
+<text x="270" y="494" font-size="16" fill="#52514e">Answered no</text><rect x="400" y="476" width="412" height="24" rx="0" fill="#eb6834"><title>9 of 12 asked</title></rect><text x="606" y="493" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">9</text><path d="M814,476h132a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-132z" fill="#2a78d6"><title>3 of 12 declined</title></path><text x="882" y="493" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">3</text><text x="964" y="494" font-size="18" fill="#52514e">9 of 12 asked</text>
+<text x="270" y="526" font-size="16" fill="#52514e">Answered yes</text><rect x="400" y="508" width="228" height="24" rx="0" fill="#1baf7a"><title>5 of 12 approved</title></rect><text x="514" y="525" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">5</text><rect x="630" y="508" width="136" height="24" rx="0" fill="#eb6834"><title>3 of 12 asked</title></rect><text x="698" y="525" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">3</text><path d="M768,508h178a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-178z" fill="#2a78d6"><title>4 of 12 declined</title></path><text x="859" y="525" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">4</text><text x="964" y="526" font-size="18" fill="#52514e">3 of 12 asked</text>
+<text x="250" y="593" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Category exclusions</text>
+<text x="270" y="576" font-size="16" fill="#52514e">Answered no</text><rect x="400" y="558" width="274" height="24" rx="0" fill="#eb6834"><title>6 of 13 asked</title></rect><text x="537" y="575" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">6</text><path d="M676,558h316a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-316z" fill="#2a78d6"><title>7 of 13 declined</title></path><text x="836" y="575" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">7</text><text x="1010" y="576" font-size="18" fill="#52514e">6 of 13 asked</text>
+<text x="270" y="608" font-size="16" fill="#52514e">Answered yes</text><rect x="400" y="590" width="90" height="24" rx="0" fill="#1baf7a"><title>2 of 13 approved</title></rect><text x="445" y="607" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">2</text><rect x="492" y="590" width="182" height="24" rx="0" fill="#eb6834"><title>4 of 13 asked</title></rect><text x="583" y="607" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">4</text><path d="M676,590h316a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-316z" fill="#2a78d6"><title>7 of 13 declined</title></path><text x="836" y="607" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">7</text><text x="1010" y="608" font-size="18" fill="#52514e">4 of 13 asked</text>
+<text x="250" y="675" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Manipulated agent</text>
+<text x="270" y="658" font-size="16" fill="#52514e">Answered no</text><rect x="400" y="640" width="458" height="24" rx="0" fill="#eb6834"><title>10 of 13 asked</title></rect><text x="629" y="657" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">10</text><path d="M860,640h132a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-132z" fill="#2a78d6"><title>3 of 13 declined</title></path><text x="928" y="657" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">3</text><text x="1010" y="658" font-size="18" fill="#52514e">10 of 13 asked</text>
+<text x="270" y="690" font-size="16" fill="#52514e">Answered yes</text><rect x="400" y="672" width="320" height="24" rx="0" fill="#1baf7a"><title>7 of 13 approved</title></rect><text x="560" y="689" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">7</text><rect x="722" y="672" width="136" height="24" rx="0" fill="#eb6834"><title>3 of 13 asked</title></rect><text x="790" y="689" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">3</text><path d="M860,672h132a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-132z" fill="#2a78d6"><title>3 of 13 declined</title></path><text x="928" y="689" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">3</text><text x="1010" y="690" font-size="18" fill="#52514e">3 of 13 asked</text>
+<text x="250" y="757" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Household budget</text>
+<text x="270" y="740" font-size="16" fill="#52514e">Answered no</text><rect x="400" y="722" width="412" height="24" rx="0" fill="#eb6834"><title>9 of 12 asked</title></rect><text x="606" y="739" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">9</text><path d="M814,722h132a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-132z" fill="#2a78d6"><title>3 of 12 declined</title></path><text x="882" y="739" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">3</text><text x="964" y="740" font-size="18" fill="#52514e">9 of 12 asked</text>
+<text x="270" y="772" font-size="16" fill="#52514e">Answered yes</text><rect x="400" y="754" width="182" height="24" rx="0" fill="#1baf7a"><title>4 of 12 approved</title></rect><text x="491" y="771" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">4</text><rect x="584" y="754" width="90" height="24" rx="0" fill="#eb6834"><title>2 of 12 asked</title></rect><text x="629" y="771" font-size="15" font-weight="600" fill="#0b0b0b" text-anchor="middle">2</text><path d="M676,754h270a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-270z" fill="#2a78d6"><title>6 of 12 declined</title></path><text x="813" y="771" font-size="15" font-weight="600" fill="#ffffff" text-anchor="middle">6</text><text x="964" y="772" font-size="18" fill="#52514e">2 of 12 asked</text>
+<line x1="399" y1="220" x2="399" y2="784" stroke="#d9d8d3" stroke-width="2"/>
+<text x="40" y="814" font-size="19" fill="#52514e">All seven: 52 of 74 asked (70 %) when every question was answered no, 28 of 74 (38 %) when answered yes. Approved rose from 0 to 20.</text>
+</svg></div><p class="src">docs/pitch/live-before-after.svg · docs/pitch/png/live-before-after.png</p></section>
+<section class="fig" id="why-we-asked"><h2>Why the engine asked</h2><div class="frame"><svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="514" viewBox="0 0 1200 514" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="514" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">16 of the 28 questions were a first purchase at a shop.</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">One yes, and that shop never asks again in the run.</text>
+<text x="40" y="126" font-size="19" fill="#52514e">Why the engine asked: seven live scenarios on Viseca's server, every question answered yes.</text>
+<text x="376" y="201" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">First purchase at this shop</text>
+<path d="M400,182h572a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-572z" fill="#eb6834"><title>First purchase at this shop: 16 of 28 questions</title></path>
+<text x="990" y="201" font-size="21" fill="#0b0b0b">16</text>
+<text x="376" y="247" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Shop page missing a fact</text>
+<path d="M400,228h176a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-176z" fill="#eb6834"><title>Shop page missing a fact: 5 of 28 questions</title></path>
+<text x="594" y="247" font-size="21" fill="#0b0b0b">5</text>
+<text x="376" y="293" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Over the per-order limit</text>
+<path d="M400,274h68a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-68z" fill="#eb6834"><title>Over the per-order limit: 2 of 28 questions</title></path>
+<text x="486" y="293" font-size="21" fill="#0b0b0b">2</text>
+<text x="376" y="339" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Item outside the task</text>
+<path d="M400,320h68a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-68z" fill="#eb6834"><title>Item outside the task: 2 of 28 questions</title></path>
+<text x="486" y="339" font-size="21" fill="#0b0b0b">2</text>
+<text x="376" y="385" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Shop text aimed at the agent</text>
+<path d="M400,366h32a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-32z" fill="#eb6834"><title>Shop text aimed at the agent: 1 of 28 questions</title></path>
+<text x="450" y="385" font-size="21" fill="#0b0b0b">1</text>
+<text x="376" y="431" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Looks like a split order</text>
+<path d="M400,412h32a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-32z" fill="#eb6834"><title>Looks like a split order: 1 of 28 questions</title></path>
+<text x="450" y="431" font-size="21" fill="#0b0b0b">1</text>
+<text x="376" y="477" font-size="21" font-weight="600" fill="#0b0b0b" text-anchor="end">Over the budget for the period</text>
+<path d="M400,458h32a4,4 0 0 1 4,4v16a4,4 0 0 1 -4,4h-32z" fill="#eb6834"><title>Over the budget for the period: 1 of 28 questions</title></path>
+<text x="450" y="477" font-size="21" fill="#0b0b0b">1</text>
+<line x1="399" y1="170" x2="399" y2="490" stroke="#d9d8d3" stroke-width="2"/>
+</svg></div><p class="src">docs/pitch/why-we-asked.svg · docs/pitch/png/why-we-asked.png</p></section>
+<section class="fig" id="latency-vs-deadline"><h2>Speed against the deadline</h2><div class="frame"><svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="568" viewBox="0 0 1200 568" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="568" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">The slowest live decision is 12 times faster than the deadline.</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">The engine itself takes 0.04 ms.</text>
+<text x="40" y="126" font-size="19" fill="#52514e">Milliseconds on a log scale. Engine rows: the replay and the load test.</text>
+<text x="40" y="152" font-size="19" fill="#52514e">Live rows: measured on Viseca's server, request event to decision event, network both ways included.</text>
+<line x1="380" y1="202" x2="380" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="380" y="544" font-size="16" fill="#898781" text-anchor="middle">0.01 ms</text>
+<line x1="506" y1="202" x2="506" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="506" y="544" font-size="16" fill="#898781" text-anchor="middle">0.1</text>
+<line x1="632" y1="202" x2="632" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="632" y="544" font-size="16" fill="#898781" text-anchor="middle">1</text>
+<line x1="758" y1="202" x2="758" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="758" y="544" font-size="16" fill="#898781" text-anchor="middle">10</text>
+<line x1="884" y1="202" x2="884" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="884" y="544" font-size="16" fill="#898781" text-anchor="middle">100</text>
+<line x1="1010" y1="202" x2="1010" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="1010" y="544" font-size="16" fill="#898781" text-anchor="middle">1,000</text>
+<line x1="1136" y1="202" x2="1136" y2="518" stroke="#e1e0d9" stroke-width="1"/>
+<text x="1136" y="544" font-size="16" fill="#898781" text-anchor="middle">10,000 ms</text>
+<line x1="1123.7893383609849" y1="202" x2="1123.7893383609849" y2="518" stroke="#52514e" stroke-width="2"/>
+<text x="1113.7893383609849" y="216" font-size="16" font-weight="600" fill="#52514e" text-anchor="end">Viseca's deadline, 8,000 ms</text>
+<text x="352" y="257" font-size="20" fill="#0b0b0b" text-anchor="end">Engine alone, median of 45</text>
+<line x1="380" y1="251" x2="455.8595589073233" y2="251" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="455.8595589073233" cy="251" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>Engine alone, median of 45: 0.04 ms</title></circle>
+<text x="473.8595589073233" y="257" font-size="18" font-weight="600" fill="#0b0b0b">0.04 ms</text>
+<text x="352" y="307" font-size="20" fill="#0b0b0b" text-anchor="end">Engine alone, slowest of 45</text>
+<line x1="380" y1="301" x2="669.9297794536617" y2="301" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="669.9297794536617" cy="301" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>Engine alone, slowest of 45: 2 ms</title></circle>
+<text x="687.9297794536617" y="307" font-size="18" font-weight="600" fill="#0b0b0b">2 ms</text>
+<text x="352" y="357" font-size="20" fill="#0b0b0b" text-anchor="end">Engine under load, p99 of 2,000</text>
+<line x1="380" y1="351" x2="612.4823530417964" y2="351" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="612.4823530417964" cy="351" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>Engine under load, p99 of 2,000: 0.7 ms</title></circle>
+<text x="630.4823530417964" y="357" font-size="18" font-weight="600" fill="#0b0b0b">0.7 ms</text>
+<text x="352" y="407" font-size="20" fill="#0b0b0b" text-anchor="end">Engine under load, worst case</text>
+<line x1="380" y1="401" x2="738.4823530417964" y2="401" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="738.4823530417964" cy="401" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>Engine under load, worst case: 7 ms</title></circle>
+<text x="756.4823530417964" y="407" font-size="18" font-weight="600" fill="#0b0b0b">7 ms</text>
+<text x="352" y="457" font-size="20" fill="#0b0b0b" text-anchor="end">On Viseca's server, median of 74</text>
+<line x1="380" y1="451" x2="937.9449840476275" y2="451" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="937.9449840476275" cy="451" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>On Viseca's server, median of 74: 268 ms</title></circle>
+<text x="955.9449840476275" y="457" font-size="18" font-weight="600" fill="#0b0b0b">268 ms</text>
+<text x="352" y="507" font-size="20" fill="#0b0b0b" text-anchor="end">On Viseca's server, slowest of 185</text>
+<line x1="380" y1="501" x2="987.5931780003702" y2="501" stroke="#e1e0d9" stroke-width="1"/>
+<circle cx="987.5931780003702" cy="501" r="8" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>On Viseca's server, slowest of 185: 664 ms</title></circle>
+<text x="1005.5931780003702" y="507" font-size="18" font-weight="600" fill="#0b0b0b">664 ms</text>
+</svg></div><p class="src">docs/pitch/latency-vs-deadline.svg · docs/pitch/png/latency-vs-deadline.png</p></section>
+<section class="fig" id="viseca-list-status"><h2>Viseca list, built or not</h2><div class="frame"><svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="624" viewBox="0 0 1200 624" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="624" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">Viseca's list: 15 of 19 rows built, 3 partial, 1 not built on purpose</text>
+<text x="40" y="86" font-size="19" fill="#52514e">Checked against the code on 25 September. Built: in the repo with a test or a live run. Partial: works, with a stated limit.</text>
+<text x="40" y="152" font-size="19" font-weight="700" fill="#0b0b0b">Frontend · 6</text>
+<rect x="40" y="168" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Clear, executable permissions: Built</title></rect>
+<circle cx="62" cy="197" r="11" fill="#0ca30c"/><path d="M57,197l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="82" y="193" font-size="15" fill="#0b0b0b">Clear, executable</text><text x="82" y="211" font-size="15" fill="#0b0b0b">permissions</text>
+<rect x="40" y="234" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Spending limits: Built</title></rect>
+<circle cx="62" cy="263" r="11" fill="#0ca30c"/><path d="M57,263l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="82" y="268" font-size="15" fill="#0b0b0b">Spending limits</text>
+<rect x="40" y="300" width="216" height="58" rx="6" fill="rgba(250,178,25,0.16)"><title>Merchant requirements: Partial</title></rect>
+<circle cx="62" cy="329" r="10" fill="none" stroke="#fab219" stroke-width="2.5"/><path d="M62,319a10,10 0 0 0 0,20z" fill="#fab219"/>
+<text x="82" y="325" font-size="15" fill="#0b0b0b">Merchant</text><text x="82" y="343" font-size="15" fill="#0b0b0b">requirements</text>
+<rect x="40" y="366" width="216" height="58" rx="6" fill="rgba(250,178,25,0.16)"><title>Time windows: Partial</title></rect>
+<circle cx="62" cy="395" r="10" fill="none" stroke="#fab219" stroke-width="2.5"/><path d="M62,385a10,10 0 0 0 0,20z" fill="#fab219"/>
+<text x="82" y="400" font-size="15" fill="#0b0b0b">Time windows</text>
+<rect x="40" y="432" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Rules for uncertain cases: Built</title></rect>
+<circle cx="62" cy="461" r="11" fill="#0ca30c"/><path d="M57,461l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="82" y="457" font-size="15" fill="#0b0b0b">Rules for uncertain</text><text x="82" y="475" font-size="15" fill="#0b0b0b">cases</text>
+<rect x="40" y="498" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Tighten, update or revoke: Built</title></rect>
+<circle cx="62" cy="527" r="11" fill="#0ca30c"/><path d="M57,527l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="82" y="523" font-size="15" fill="#0b0b0b">Tighten, update</text><text x="82" y="541" font-size="15" fill="#0b0b0b">or revoke</text>
+<text x="268" y="152" font-size="19" font-weight="700" fill="#0b0b0b">Backend · 5</text>
+<rect x="268" y="168" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Approve, decline or step up, every time: Built</title></rect>
+<circle cx="290" cy="197" r="11" fill="#0ca30c"/><path d="M285,197l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="310" y="193" font-size="15" fill="#0b0b0b">Approve, decline or</text><text x="310" y="211" font-size="15" fill="#0b0b0b">step up, every time</text>
+<rect x="268" y="234" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Explain in plain language: Built</title></rect>
+<circle cx="290" cy="263" r="11" fill="#0ca30c"/><path d="M285,263l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="310" y="259" font-size="15" fill="#0b0b0b">Explain in plain</text><text x="310" y="277" font-size="15" fill="#0b0b0b">language</text>
+<rect x="268" y="300" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Customer's final approve or reject: Built</title></rect>
+<circle cx="290" cy="329" r="11" fill="#0ca30c"/><path d="M285,329l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="310" y="325" font-size="15" fill="#0b0b0b">Customer's final</text><text x="310" y="343" font-size="15" fill="#0b0b0b">approve or reject</text>
+<rect x="268" y="366" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Track state: limits, retries, duplicates: Built</title></rect>
+<circle cx="290" cy="395" r="11" fill="#0ca30c"/><path d="M285,395l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="310" y="391" font-size="15" fill="#0b0b0b">Track state: limits,</text><text x="310" y="409" font-size="15" fill="#0b0b0b">retries, duplicates</text>
+<rect x="268" y="432" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Merchant text is untrusted: Built</title></rect>
+<circle cx="290" cy="461" r="11" fill="#0ca30c"/><path d="M285,461l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="310" y="457" font-size="15" fill="#0b0b0b">Merchant text is</text><text x="310" y="475" font-size="15" fill="#0b0b0b">untrusted</text>
+<text x="496" y="152" font-size="19" font-weight="700" fill="#0b0b0b">Technical · 3</text>
+<rect x="496" y="168" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>UI decoupled from the engine: Built</title></rect>
+<circle cx="518" cy="197" r="11" fill="#0ca30c"/><path d="M513,197l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="538" y="193" font-size="15" fill="#0b0b0b">UI decoupled from</text><text x="538" y="211" font-size="15" fill="#0b0b0b">the engine</text>
+<rect x="496" y="234" width="216" height="58" rx="6" fill="#f0efec"><title>Small, fast models, predictable fallback: Not built</title></rect>
+<circle cx="518" cy="263" r="10" fill="none" stroke="#898781" stroke-width="2"/><line x1="513" y1="263" x2="523" y2="263" stroke="#898781" stroke-width="2.5" stroke-linecap="round"/>
+<text x="538" y="259" font-size="15" fill="#0b0b0b">Small, fast models,</text><text x="538" y="277" font-size="15" fill="#0b0b0b">predictable fallback</text>
+<rect x="496" y="300" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>No hard-coding to scenarios or ids: Built</title></rect>
+<circle cx="518" cy="329" r="11" fill="#0ca30c"/><path d="M513,329l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="538" y="325" font-size="15" fill="#0b0b0b">No hard-coding to</text><text x="538" y="343" font-size="15" fill="#0b0b0b">scenarios or ids</text>
+<text x="724" y="152" font-size="19" font-weight="700" fill="#0b0b0b">Demo · 4</text>
+<rect x="724" y="168" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Ordinary purchase, little friction: Built</title></rect>
+<circle cx="746" cy="197" r="11" fill="#0ca30c"/><path d="M741,197l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="766" y="193" font-size="15" fill="#0b0b0b">Ordinary purchase,</text><text x="766" y="211" font-size="15" fill="#0b0b0b">little friction</text>
+<rect x="724" y="234" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Unsafe purchase, useful intervention: Built</title></rect>
+<circle cx="746" cy="263" r="11" fill="#0ca30c"/><path d="M741,263l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="766" y="259" font-size="15" fill="#0b0b0b">Unsafe purchase,</text><text x="766" y="277" font-size="15" fill="#0b0b0b">useful intervention</text>
+<rect x="724" y="300" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>Approve, reject or revoke path: Built</title></rect>
+<circle cx="746" cy="329" r="11" fill="#0ca30c"/><path d="M741,329l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="766" y="325" font-size="15" fill="#0b0b0b">Approve, reject or</text><text x="766" y="343" font-size="15" fill="#0b0b0b">revoke path</text>
+<rect x="724" y="366" width="216" height="58" rx="6" fill="rgba(250,178,25,0.16)"><title>Judges see evidence and why: Partial</title></rect>
+<circle cx="746" cy="395" r="10" fill="none" stroke="#fab219" stroke-width="2.5"/><path d="M746,385a10,10 0 0 0 0,20z" fill="#fab219"/>
+<text x="766" y="391" font-size="15" fill="#0b0b0b">Judges see evidence</text><text x="766" y="409" font-size="15" fill="#0b0b0b">and why</text>
+<text x="952" y="152" font-size="19" font-weight="700" fill="#0b0b0b">Surprise · 1</text>
+<rect x="952" y="168" width="216" height="58" rx="6" fill="rgba(12,163,12,0.10)"><title>A separate card for online shopping: Built</title></rect>
+<circle cx="974" cy="197" r="11" fill="#0ca30c"/><path d="M969,197l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="994" y="193" font-size="15" fill="#0b0b0b">A separate card for</text><text x="994" y="211" font-size="15" fill="#0b0b0b">online shopping</text>
+<circle cx="51" cy="588" r="11" fill="#0ca30c"/><path d="M46,588l3.5,3.5l7,-7" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="72" y="594" font-size="18" fill="#52514e">Built 15</text>
+<circle cx="197.88" cy="588" r="10" fill="none" stroke="#fab219" stroke-width="2.5"/><path d="M197.88,578a10,10 0 0 0 0,20z" fill="#fab219"/>
+<text x="218.88" y="594" font-size="18" fill="#52514e">Partial 3</text>
+<circle cx="354.12" cy="588" r="10" fill="none" stroke="#898781" stroke-width="2"/><line x1="349.12" y1="588" x2="359.12" y2="588" stroke="#898781" stroke-width="2.5" stroke-linecap="round"/>
+<text x="375.12" y="594" font-size="18" fill="#52514e">Not built 1</text>
+<text x="528.08" y="594" font-size="16" fill="#898781">Not built: no model runs in the decision path, and that is said as a strength.</text>
+</svg></div><p class="src">docs/pitch/viseca-list-status.svg · docs/pitch/png/viseca-list-status.png</p></section>
+<section class="fig" id="guards-by-family"><h2>The 21 checks in five families</h2><div class="frame"><svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="624" viewBox="0 0 1200 624" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1200" height="624" rx="0" fill="#fcfcfb"></rect>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">21 checks in five families.</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">Every decision lists each one as pass, fail or unsure, with the fact.</text>
+<text x="40" y="126" font-size="19" fill="#52514e">Guards in the engine on 25 September: rules from the customer's words and built-in protections, grouped as the app shows them.</text>
+<text x="40" y="188" font-size="19" font-weight="700" fill="#0b0b0b">Money</text>
+<text x="40" y="212" font-size="15" fill="#52514e">6 checks</text>
+<rect x="40" y="228" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="236" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="260" font-size="15" fill="#0b0b0b">Per-order limit</text>
+<rect x="40" y="290" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="298" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="313" font-size="15" fill="#0b0b0b">Spending budget</text><text x="58" y="331" font-size="15" fill="#0b0b0b">over time</text>
+<rect x="40" y="352" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="360" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="375" font-size="15" fill="#0b0b0b">No orders split to</text><text x="58" y="393" font-size="15" fill="#0b0b0b">stay under the limit</text>
+<rect x="40" y="414" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="422" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="437" font-size="15" fill="#0b0b0b">Price per item,</text><text x="58" y="455" font-size="15" fill="#0b0b0b">night or unit</text>
+<rect x="40" y="476" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="484" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="499" font-size="15" fill="#0b0b0b">How many orders</text><text x="58" y="517" font-size="15" fill="#0b0b0b">per period</text>
+<rect x="40" y="538" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="40" y="546" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="58" y="561" font-size="15" fill="#0b0b0b">Card limit per</text><text x="58" y="579" font-size="15" fill="#0b0b0b">purchase</text>
+<text x="268" y="188" font-size="19" font-weight="700" fill="#0b0b0b">Item and terms</text>
+<text x="268" y="212" font-size="15" fill="#52514e">6 checks</text>
+<rect x="268" y="228" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="236" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="251" font-size="15" fill="#0b0b0b">Only the categories</text><text x="286" y="269" font-size="15" fill="#0b0b0b">you allowed</text>
+<rect x="268" y="290" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="298" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="313" font-size="15" fill="#0b0b0b">Only the item</text><text x="286" y="331" font-size="15" fill="#0b0b0b">you asked for</text>
+<rect x="268" y="352" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="360" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="375" font-size="15" fill="#0b0b0b">No extras you</text><text x="286" y="393" font-size="15" fill="#0b0b0b">did not ask for</text>
+<rect x="268" y="414" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="422" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="446" font-size="15" fill="#0b0b0b">Return policy</text>
+<rect x="268" y="476" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="484" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="508" font-size="15" fill="#0b0b0b">Things you excluded</text>
+<rect x="268" y="538" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="268" y="546" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="286" y="570" font-size="15" fill="#0b0b0b">Refundable only</text>
+<text x="496" y="188" font-size="19" font-weight="700" fill="#0b0b0b">Shop</text>
+<text x="496" y="212" font-size="15" fill="#52514e">4 checks</text>
+<rect x="496" y="228" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="496" y="236" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="514" y="260" font-size="15" fill="#0b0b0b">Type of shop</text>
+<rect x="496" y="290" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="496" y="298" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="514" y="313" font-size="15" fill="#0b0b0b">Only shops you</text><text x="514" y="331" font-size="15" fill="#0b0b0b">have used</text>
+<rect x="496" y="352" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="496" y="360" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="514" y="375" font-size="15" fill="#0b0b0b">Real shop, not</text><text x="514" y="393" font-size="15" fill="#0b0b0b">a lookalike</text>
+<rect x="496" y="414" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="496" y="422" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="514" y="437" font-size="15" fill="#0b0b0b">Hotel in the city</text><text x="514" y="455" font-size="15" fill="#0b0b0b">you named</text>
+<text x="724" y="188" font-size="19" font-weight="700" fill="#0b0b0b">Looks like you</text>
+<text x="724" y="212" font-size="15" fill="#52514e">2 checks</text>
+<rect x="724" y="228" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="724" y="236" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="742" y="260" font-size="15" fill="#0b0b0b">Looks like you</text>
+<rect x="724" y="290" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="724" y="298" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="742" y="322" font-size="15" fill="#0b0b0b">Days you allowed</text>
+<text x="952" y="166" font-size="19" font-weight="700" fill="#0b0b0b">Repeats and</text><text x="952" y="188" font-size="19" font-weight="700" fill="#0b0b0b">manipulation</text>
+<text x="952" y="212" font-size="15" fill="#52514e">3 checks</text>
+<rect x="952" y="228" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="952" y="236" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="970" y="251" font-size="15" fill="#0b0b0b">Shop text is</text><text x="970" y="269" font-size="15" fill="#0b0b0b">never obeyed</text>
+<rect x="952" y="290" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="952" y="298" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="970" y="322" font-size="15" fill="#0b0b0b">No duplicate orders</text>
+<rect x="952" y="352" width="216" height="54" rx="6" fill="rgba(42,120,214,0.10)"></rect>
+<rect x="952" y="360" width="4" height="38" rx="2" fill="#2a78d6"></rect>
+<text x="970" y="375" font-size="15" fill="#0b0b0b">No new price</text><text x="970" y="393" font-size="15" fill="#0b0b0b">after a decline</text>
+</svg></div><p class="src">docs/pitch/guards-by-family.svg · docs/pitch/png/guards-by-family.png</p></section>
+</main>
+</body>
+</html>

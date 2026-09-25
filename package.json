@@ -18,6 +18,7 @@
     "jury-figures": "tsx packages/backend/src/cli/juryFigures.ts",
     "replay": "tsx packages/engine/src/replay.ts",
     "compare": "tsx packages/engine/src/compare.ts",
+    "figures": "node scripts/pitch-figures.mjs",
     "inspect-live": "tsx packages/backend/src/cli/inspectLive.ts",
     "live-review": "tsx packages/backend/src/cli/liveReview.ts",
     "test": "vitest run",
