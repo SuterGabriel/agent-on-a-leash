@@ -1,6 +1,17 @@
 // One adapter for mock and live. Set VITE_API_BASE (e.g. http://localhost:8080) to go live; unset = mock.
 // The mock returns the same shapes from src/mocks/decisions.json and demo-data.ts so the screens don't know the difference.
-import type { CreateLeashRequest, FeedResponse, Leash, ResolveRequest, StreamEvent, SuggestResponse, TightenRequest } from "@/features/shopping-card/api/types";
+import type {
+    ColdStart,
+    CreateLeashRequest,
+    FeedResponse,
+    Leash,
+    MemoryView,
+    ResolveRequest,
+    StreamEvent,
+    SuggestResponse,
+    TightenRequest,
+    UnderstandResponse,
+} from "@/features/shopping-card/api/types";
 import {
     analysis,
     customer,
@@ -17,14 +28,21 @@ import type { Decision } from "@/types/decision";
 export const apiBase: string | undefined = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "");
 export const dataMode: "mock" | "live" = apiBase ? "live" : "mock";
 
-// The backend refuses writes under /app/* without this bearer when APP_SECRET is set (always in live mode).
-// Hackathon-grade: one shared secret in the app bundle, not user authentication.
+// The backend refuses writes under /app/* without the bearer when APP_SECRET is set (always in live mode).
+// Local dev: leave VITE_APP_SECRET empty, the Vite proxy adds it server-side (vite.config.ts), so it never reaches the
+// browser. A static deploy without a proxy (Vercel) needs VITE_APP_SECRET: hackathon-grade, one shared secret in the bundle.
 const appSecret = (import.meta.env.VITE_APP_SECRET as string | undefined)?.trim();
 export const authHeaders = (): Record<string, string> => (appSecret ? { Authorization: `Bearer ${appSecret}` } : {});
 
 const json = async <T>(path: string, init?: RequestInit): Promise<T> => {
     const res = await fetch(`${apiBase}${path}`, { ...init, headers: { "Content-Type": "application/json", ...authHeaders(), ...(init?.headers ?? {}) } });
-    if (!res.ok) throw new Error(`${init?.method ?? "GET"} ${path} → ${res.status}`);
+    if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
+        throw Object.assign(new Error(body?.error?.message ?? `${init?.method ?? "GET"} ${path} → ${res.status}`), {
+            status: res.status,
+            code: body?.error?.code,
+        });
+    }
     return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
 };
 
@@ -90,7 +108,16 @@ const mockLeash = (): Leash => ({
 // ---------- public API (same signatures for mock and live) ----------
 
 export const api = {
-    suggest: (): Promise<SuggestResponse> => (apiBase ? json("/app/leash/suggest") : wait(300).then(mockSuggest)),
+    /** customerId: look at a customer without history (cold start). */
+    suggest: (customerId?: string): Promise<SuggestResponse> =>
+        apiBase ? json(`/app/leash/suggest${customerId ? `?customer_id=${encodeURIComponent(customerId)}` : ""}`) : wait(300).then(mockSuggest),
+    /** Live only: customers without purchases the demo can look at. */
+    coldCustomers: (): Promise<{ customer_id: string; name: string }[]> => (apiBase ? json("/app/profile/customers") : Promise.resolve([])),
+    profileInsight: (customerId?: string): Promise<({ cold_start: true } & ColdStart) | { cold_start: false; customer_id: string; reason: string }> =>
+        apiBase ? json(`/app/profile/insight${customerId ? `?customer_id=${encodeURIComponent(customerId)}` : ""}`) : Promise.reject(new Error("mock mode")),
+    /** A leash in any language: Apertus translates, our compiler reads. Live only. */
+    understand: (instruction: string): Promise<UnderstandResponse> =>
+        apiBase ? json("/app/leash/understand", { method: "POST", body: JSON.stringify({ instruction }) }) : Promise.reject(new Error("mock mode")),
     getLeash: (): Promise<Leash> => (apiBase ? json("/app/leash") : wait(100).then(mockLeash)),
     createLeash: (body: CreateLeashRequest): Promise<Leash> =>
         apiBase
@@ -106,6 +133,23 @@ export const api = {
     resolve: (id: string, body: ResolveRequest): Promise<void> =>
         apiBase ? json(`/app/asks/${id}/resolve`, { method: "POST", body: JSON.stringify(body) }) : wait(100).then(() => undefined),
     acceptSuggestion: (id: string): Promise<void> => (apiBase ? json(`/app/suggestions/${id}/accept`, { method: "POST" }) : wait(100).then(() => undefined)),
+    /** Unfreeze: a loosening, needs Face ID. */
+    resume: (): Promise<Leash> =>
+        apiBase ? json("/app/leash/resume", { method: "POST", body: JSON.stringify({ face_id_confirmed: true }) }) : wait(100).then(mockLeash),
+    unblockShop: (merchantId: string): Promise<Leash> =>
+        apiBase
+            ? json("/app/leash/unblock-shop", { method: "POST", body: JSON.stringify({ merchant_id: merchantId, face_id_confirmed: true }) })
+            : wait(100).then(mockLeash),
+    /** "Was this you?" yes trusts the device (Face ID); no pauses the card and never trusts the device again. */
+    wasMe: (id: string, answer: "yes" | "no"): Promise<{ learned: string[]; paused: boolean; leash: Leash } | undefined> =>
+        apiBase
+            ? json(`/app/decisions/${id}/was-me`, { method: "POST", body: JSON.stringify({ answer, face_id_confirmed: answer === "yes" }) })
+            : wait(100).then(() => undefined),
+    memory: (): Promise<MemoryView | null> => (apiBase ? json("/app/memory") : Promise.resolve(null)),
+    forgetShop: (merchantId: string): Promise<MemoryView | null> =>
+        apiBase ? json(`/app/memory/shops/${encodeURIComponent(merchantId)}`, { method: "DELETE" }) : Promise.resolve(null),
+    forgetDevice: (deviceId: string): Promise<MemoryView | null> =>
+        apiBase ? json(`/app/memory/devices/${encodeURIComponent(deviceId)}`, { method: "DELETE" }) : Promise.resolve(null),
 
     /** Live demo control: the scenarios the backend can replay, and starting one (the task lands on top of the card rules). */
     scenarios: (): Promise<{ scenario_id: string; scenario_name: string; cardholder_instruction: string; event_count: number }[]> =>

@@ -6,6 +6,7 @@ import { TabBar } from "@/components/chrome/tab-bar";
 import { GroupedList } from "@/components/shopping-card/grouped-list";
 import { ListRow } from "@/components/shopping-card/list-row";
 import { customer } from "@/features/shopping-card/demo-data";
+import { cardLast4, isLive } from "@/features/shopping-card/live-view";
 import { usePrototype } from "@/features/shopping-card/prototype-state";
 import { QuickAction } from "@/features/shopping-card/quick-action";
 import { Hero, Screen } from "@/features/shopping-card/screens/screen";
@@ -32,7 +33,7 @@ export const CardTabScreen = () => {
                             </span>
                         }
                         title={customer.cardName}
-                        subtitle={`•• ${customer.cardLast4} · for your shopping agent`}
+                        subtitle={`•• ${cardLast4(state)} · for your shopping agent`}
                         pill={state.frozen ? "paused" : "active"}
                         trailing="chevron"
                         onPress={() => dispatch({ type: "GO", screen: "3.1" })}
@@ -95,7 +96,8 @@ export const HowItWorksScreen = () => {
 
 /** 1.5 Your Agent Card is ready (the token, shown as a card the customer can hand over) */
 export const CardReadyScreen = () => {
-    const { dispatch } = usePrototype();
+    const { state, dispatch } = usePrototype();
+    const last4 = cardLast4(state);
     const [shown, setShown] = useState(false);
     const [copied, setCopied] = useState(false);
 
@@ -118,11 +120,14 @@ export const CardReadyScreen = () => {
                 <ListRow
                     plainTitle
                     title="Card number"
-                    value={<span className="tabular-nums">{shown ? "5310 0042 8871 7310" : `•••• •••• •••• ${customer.cardLast4}`}</span>}
+                    value={<span className="tabular-nums">{shown && !isLive ? "5310 0042 8871 7310" : `•••• •••• •••• ${last4}`}</span>}
                     accessory={
-                        <Button size="sm" color="secondary" onClick={() => setShown(!shown)}>
-                            {shown ? "Hide" : "Show"}
-                        </Button>
+                        // Live: Viseca holds the full token; the demo only ever sees its last four digits.
+                        isLive ? undefined : (
+                            <Button size="sm" color="secondary" onClick={() => setShown(!shown)}>
+                                {shown ? "Hide" : "Show"}
+                            </Button>
+                        )
                     }
                 />
                 <ListRow plainTitle title="Expiry" value={customer.cardExpiry} />

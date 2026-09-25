@@ -127,5 +127,7 @@ export type TightenRequest =
   | { type: "block_shop"; merchant_id: string; name?: string }
   | { type: "block_category"; category: string }
   | { type: "unsure_decline" }
+  /** Nothing at night (23:00–06:00). Back to "ask" is a loosening: new leash. */
+  | { type: "night_decline" }
   /** Ends the leash earlier. A later date (or removing the end) is a loosening: new leash. */
   | { type: "end_earlier"; valid_until: string };

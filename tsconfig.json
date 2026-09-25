@@ -32,6 +32,8 @@
     "packages/backend/test/live-reference.test.ts",
     "packages/backend/test/app-engine.test.ts",
     "packages/backend/test/engine-no-history.test.ts",
+    "packages/backend/test/memory.test.ts",
+    "packages/backend/test/coldstart.test.ts",
     "packages/backend/test/learned-shop-text.test.ts",
     "packages/backend/test/paraphrases.test.ts",
     "packages/backend/test/performance.test.ts",

@@ -6,6 +6,10 @@ export interface StoredDecision extends Decision {
   post_status: "posted" | "post_failed";
   deadline_missed: boolean;
   human_deadline_at?: string;
+  /** Who and from where (for what the customer teaches us: memory keys by customer, then card). */
+  card_id?: string;
+  customer_id?: string | null;
+  device_id?: string | null;
 }
 
 /** Decisions keyed by live authorization_id. In memory for now; Supabase in Step 4. */

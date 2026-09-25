@@ -401,6 +401,15 @@ export function compilePolicy(instruction: string): Policy {
   // "stop and ask me" / "ask me" in the sentence that describes the session: a question, not a stop, however many signs.
   const sessionSentenceAsks = (text: string) =>
     text.split(/(?<=[.!?])\s+/).some((sentence) => SESSION_PHRASE.test(sentence) && /\bask\b/i.test(sentence) && !/\b(don't|do\s+not|never)\s+ask\b/i.test(sentence));
+  // --- Night, 23:00–06:00 Swiss time: "no purchases at night" declines, "ask me before … at night" asks.
+  const nightAsk = instruction.match(/\bask\s+me\s+(?:before|for)\s+(?:any\s+)?(?:purchases?|orders?|payments?|anything)\s+(?:at|during\s+the)\s+night\b|\bat\s+night,?\s+ask\s+me\b/i);
+  const nightDecline = instruction.match(
+    /\bno\s+(?:purchases?|orders?|payments?|shopping|buying)\s+(?:at|during\s+the)\s+night\b|\b(?:never|not)\s+(?:\w+\s+){0,2}(?:at|during\s+the)\s+night\b|\bnothing\s+(?:at|during\s+the)\s+night\b|\bonly\s+during\s+the\s+day\b|\bnot\s+between\s+(?:23|11\s*pm)/i,
+  );
+  const nightAction: Policy["nightAction"] = nightDecline ? "decline" : nightAsk ? "ask" : null;
+  markMatch("nightAction", nightDecline ?? nightAsk);
+  if (nightAction) assumptions.push(nightAction === "decline" ? "Nothing is bought between 23:00 and 06:00 (Swiss time)." : "Between 23:00 and 06:00 (Swiss time) I ask you before buying.");
+
   const sessionAction: Policy["sessionAction"] = sessionIntegrity && sessionSentenceAsks(instruction) ? "ask" : "stop";
   if (sessionIntegrity) {
     assumptions.push(
@@ -449,6 +458,8 @@ export function compilePolicy(instruction: string): Policy {
     sessionAction,
     shopTextAction: "ask",
     lookalikeAction: "ask",
+    nightAction,
+    blockedMerchants: null,
     perUnitLimit,
     maxOrdersPerPeriod,
     allowedWeekdays,
@@ -501,6 +512,8 @@ export function toHardRules(p: Policy): HardRule[] {
   if (p.blockedCategories) rules.push({ field: "items.item_category", operator: "not_in", value: p.blockedCategories });
   if (p.blockedKeywords) rules.push({ field: "items.keywords", operator: "not_in", value: p.blockedKeywords });
   if (p.refundableRequired) rules.push({ field: "order.refundable", operator: "=", value: "true" });
+  if (p.nightAction) rules.push({ field: "authorization.night", operator: "=", value: p.nightAction });
+  if (p.blockedMerchants?.length) rules.push({ field: "merchant.merchant_id", operator: "not_in", value: p.blockedMerchants });
   if (p.destinationCity) rules.push({ field: "order.destination_city", operator: "=", value: p.destinationCity });
   if (p.stayNights !== null) rules.push({ field: "order.nights", operator: "=", value: p.stayNights });
   return rules;

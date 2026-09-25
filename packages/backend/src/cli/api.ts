@@ -9,6 +9,11 @@ import { LeashService } from "../leash/service.js";
 import { createLeashServer } from "../http/server.js";
 import { loadLiveReference } from "../live/referenceData.js";
 import { attachSnapshotFile } from "../persist.js";
+import { MemoryStore } from "../memory/memoryStore.js";
+import { PeerIndex } from "../coldstart/peers.js";
+import { loadPeerSources } from "../coldstart/peerSources.js";
+import { Apertus } from "../llm/apertus.js";
+import { readProfile } from "../llm/profileReader.js";
 import { buildBaselines } from "../../../shared/src/baselines.js";
 
 const cfg = loadConfig(process.argv.includes("--live") ? { mode: "live" } : {});
@@ -21,7 +26,38 @@ const log = (line: string) => console.log(`[worker] ${line}`);
 const liveRef = cfg.mode === "live" ? await loadLiveReference(client, resolve(cfg.dataDir, "live"), log) : null;
 const engine = new LeashEngine(undefined, liveRef ? buildBaselines(liveRef.history, liveRef.merchants, { cards: liveRef.cards, accounts: liveRef.accounts }) : undefined);
 
+// What customers teach us survives restarts: data/live/memory-<mode>.json (git-ignored). LEASH_MEMORY_FILE=off keeps it in memory.
+const memoryFile = process.env.LEASH_MEMORY_FILE?.trim() || resolve(cfg.dataDir, "live", `memory-${cfg.mode}.json`);
+const memory = new MemoryStore({ file: memoryFile === "off" ? null : memoryFile, log });
+engine.useMemory(memory.lookup);
+
+// Cold start: customers like this one (nearest neighbours by profile) for cards without history. Evidence only.
+const peerSrc = loadPeerSources(cfg.dataDir, liveRef);
+const peers = new PeerIndex(peerSrc.sources);
+engine.usePeers(peers.lookup);
+log(`cold start: ${peerSrc.sources.customers.length} customers from ${peerSrc.from}${peerSrc.profileCustomerId ? `, profile ${peerSrc.profileCustomerId}` : ""}`);
+
+// Apertus (Swisscom AI Platform): reads new customers' profiles and leashes in other languages. Never decides; cached
+// in data/live/llm-cache.json (LEASH_LLM_CACHE=off to disable); without APERTUS_* in .env every call falls back.
+const llmCache = process.env.LEASH_LLM_CACHE?.trim() || resolve(cfg.dataDir, "live", "llm-cache.json");
+const llm = new Apertus({ cacheFile: llmCache === "off" ? null : llmCache, log });
+if (llm.enabled) {
+  // In the background: the server answers at once, the neighbours get sharper as each profile is read.
+  void (async () => {
+    let read = 0;
+    for (const { customer_id, text } of peers.coldProfiles()) {
+      const r = await readProfile(llm, text);
+      if (r.signals.source === "apertus") {
+        peers.setSignals(customer_id, r.signals);
+        read += 1;
+      }
+    }
+    log(`apertus: read ${read} new customer profile(s)`);
+  })();
+} else log("apertus: not configured (APERTUS_* in .env); profiles read by keywords, leashes in English or German only");
+
 const service = new LeashService({
+  memory,
   api: cfg.mode === "live" ? client : new OfflinePlatform(pack),
   pack,
   engine,
@@ -48,7 +84,7 @@ if (cfg.mode === "live" && (!appSecret || !corsOrigin || corsOrigin === "*")) {
 }
 if (!appSecret) console.warn("APP_SECRET is not set: anyone who reaches this server can answer purchases.");
 
-createLeashServer(service, { corsOrigin: corsOrigin as string, appSecret, app: { history: liveRef?.history } }).listen(port, () => {
+createLeashServer(service, { corsOrigin: corsOrigin as string, appSecret, app: { history: liveRef?.history, peers, profileCustomerId: peerSrc.profileCustomerId, llm } }).listen(port, () => {
   console.log(`Leash API on http://localhost:${port} · mode ${cfg.mode} · engine ${engine.version}`);
   console.log(`  scenarios: ${service.scenarios().map((s) => s.scenario_id).join(" ")}`);
   console.log(`  GET  /app/leash · /app/feed · /app/asks · /app/stream (SSE) · /app/tokens · /judge/decisions · /api/status`);

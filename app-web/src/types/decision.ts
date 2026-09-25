@@ -66,6 +66,10 @@ export interface Decision {
     merchant: Merchant;
     items: LineItem[];
     device_id?: string;
+    /** Session signals the engine noticed (new_device, unusual_hour, quick_series, new_country …). */
+    signals?: string[];
+    /** What this decision rests on, counted over its checks (live only). */
+    evidence_mix?: { your_rules: number; your_history: number; taught_by_you: number; customers_like_you: number; unknown: number };
     group_id: string | null;
     deadline_at?: string;
     suggestion?: { id: string; text: string };

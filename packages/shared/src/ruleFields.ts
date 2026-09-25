@@ -28,6 +28,7 @@ export const RULE_KEYS = {
   refundable: "refundable",
   destination: "destination",
   nights: "nights",
+  night: "night",
   /** "until Friday": kept in our store only, the engine cannot read a date rule (see valid_until on the leash). */
   valid_until: "valid_until",
 } as const;
@@ -70,6 +71,7 @@ export const RULE_KEYS = {
  * Shown to the customer but not sent as hard_rules (the engine's guards cover them): one_item, delivery, split_orders.
  */
 export const RULE_FIELDS = {
+  night: "authorization.night",
   amount: "authorization.billing_amount_chf",
   unitPrice: "items.unit_price_chf",
   destinationCity: "order.destination_city", // "a hotel in Lyon": the stay must be in that city (engine: destination guard)

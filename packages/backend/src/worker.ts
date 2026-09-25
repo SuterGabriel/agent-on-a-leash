@@ -164,6 +164,9 @@ export class Worker {
       actions: verdict.decision === "step_up" ? ["approve", "decline"] : ["ok"],
       post_status: postStatus,
       deadline_missed: decidedAt > Date.parse(event.deadline_at),
+      card_id: a.card_id,
+      customer_id: event.mandate.customer_id ?? null,
+      device_id: a.customer_device_id ?? null,
     };
 
     if (verdict.decision === "step_up" && postStatus === "posted") {

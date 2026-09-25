@@ -5,7 +5,8 @@ import { ListRow } from "@/components/shopping-card/list-row";
 import { StatusPill } from "@/components/shopping-card/status-pill";
 import { BudgetMeter } from "@/features/shopping-card/budget-meter";
 import type { ActivityItem } from "@/features/shopping-card/demo-data";
-import { customer, getDecision, task } from "@/features/shopping-card/demo-data";
+import { customer, getDecision } from "@/features/shopping-card/demo-data";
+import { freesUpLabel, taskView } from "@/features/shopping-card/live-view";
 import { formatChf, formatClock } from "@/features/shopping-card/format";
 import { usePrototype } from "@/features/shopping-card/prototype-state";
 import { QuickAction } from "@/features/shopping-card/quick-action";
@@ -27,12 +28,14 @@ export const ActivityRow = ({ item, onPress }: { item: ActivityItem; onPress?: (
     />
 );
 
-export const monthCaption = (spent: number) => (spent > 0 ? `Rolling 30 days · ${formatChf(spent)} frees up 11 Sep` : "Rolling 30 days");
+export const monthCaption = (spent: number, freesUp: string | null = "11 Sep") =>
+    spent > 0 && freesUp ? `Rolling 30 days · ${formatChf(spent)} frees up ${freesUp}` : "Rolling 30 days";
 
 /** 3.1 Agent Card home (3.1b no payments yet, 3.1c offline are states of this screen). */
 export const HomeScreen = () => {
     const { state, dispatch, secondsLeft } = usePrototype();
     const waiting = state.waiting ? getDecision(state.waiting.decisionId) : null;
+    const task = taskView(state);
 
     return (
         <Screen nav={<NavBar variant="inline" backLabel="Card" title={customer.cardName} onBack={() => dispatch({ type: "GO", screen: "1.1" })} />}>
@@ -46,14 +49,14 @@ export const HomeScreen = () => {
                     <QuickAction
                         icon={Snowflake01}
                         label={state.frozen ? "Unfreeze" : "Freeze"}
-                        onPress={() => (state.frozen ? dispatch({ type: "PATCH", patch: { frozen: false } }) : dispatch({ type: "SHEET", sheet: "freeze" }))}
+                        onPress={() => (state.frozen ? dispatch({ type: "FACE_ID", then: { type: "RESUME" } }) : dispatch({ type: "SHEET", sheet: "freeze" }))}
                     />
                     <QuickAction icon={Sliders02} label="Rules" onPress={() => dispatch({ type: "GO", screen: "6.1" })} />
                     <QuickAction icon={File06} label="Details" onPress={() => dispatch({ type: "GO", screen: "6.3" })} />
                 </div>
             </div>
 
-            <BudgetMeter label="This month" total={state.rules.monthBudget} spent={state.monthSpent} caption={monthCaption(state.monthSpent)} />
+            <BudgetMeter label="This month" total={state.rules.monthBudget} spent={state.monthSpent} caption={monthCaption(state.monthSpent, freesUpLabel(state))} />
 
             {waiting && (
                 <GroupedList title="Waiting for you">
@@ -73,7 +76,7 @@ export const HomeScreen = () => {
                 </GroupedList>
             )}
 
-            {state.taskActive && (
+            {state.taskActive && task && (
                 <GroupedList title="What your agent was asked to buy" footer={`${task.rules.length} rules from this task are checked on every payment, next to your card rules.`}>
                     <ListRow title={<span className="font-normal">&ldquo;{task.instruction}&rdquo;</span>} trailing="chevron" onPress={() => dispatch({ type: "GO", screen: "6.1" })} />
                 </GroupedList>

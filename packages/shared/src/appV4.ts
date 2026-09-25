@@ -45,6 +45,8 @@ export interface AppCreateLeashRequest {
   rules: AppRuleValues;
   smart: AppSmart;
   task_instruction?: string;
+  /** The customer's own words when the task was written in another language (shown back; the task is its translation). */
+  original_instruction?: { language: string; text: string };
   /** ISO instant the Agent Card stops working; null or omitted = no end. */
   valid_until?: string | null;
 }
@@ -58,11 +60,13 @@ export interface AppLeash {
   rules: AppRuleValues;
   smart: AppSmart;
   learned: { id: string; text: string; added_at: string }[];
-  task: { instruction: string; rules: { key: string; label: string; your_words: string }[] } | null;
+  task: { instruction: string; rules: { key: string; label: string; your_words: string }[]; original?: { language: string; text: string } } | null;
   month_spent_chf: number;
   frees_up_at: string | null;
   /** The card stops working here (purchases after it are declined `leash_ended`); null = no end. */
   valid_until: string | null;
+  /** Shops the customer knows: card history plus what they confirmed (memory). `new` = learned from an answer. */
+  known_shops?: { merchant_id: string; name: string; times_used: number; new: boolean }[];
 }
 
 /** PATCH /v4/app/leash/rules */
@@ -93,6 +97,13 @@ export interface AppDecision {
   merchant: { id: string; name: string; category: string; country: string };
   items: { name: string; category: string; qty: number; unit_price: number; currency: string }[];
   device_id?: string;
+  /** Session signals the engine noticed (new_device, unusual_hour, quick_series, new_country, unfamiliar_merchant …). */
+  signals?: string[];
+  /**
+   * What this decision rests on, counted over its checks: your rules and your history, what you taught the card,
+   * customers like you, and what we could not know. Shown as one bar, so "how sure" is never a black box.
+   */
+  evidence_mix?: { your_rules: number; your_history: number; taught_by_you: number; customers_like_you: number; unknown: number };
   group_id: string | null;
   deadline_at?: string;
   suggestion?: { id: string; text: string };
@@ -119,3 +130,16 @@ export type AppStreamEvent =
   | { type: "ask"; decision: AppDecision; deadline_at: string }
   | { type: "ask_expired"; id: string }
   | { type: "leash_changed"; leash: AppLeash };
+
+/** POST /v4/app/leash/understand: a leash in any language, read by our compiler after Apertus translated it. */
+export interface AppUnderstandResponse {
+  language: string;
+  original: string;
+  english: string;
+  translated: boolean;
+  /** Numbers or currencies the translation lost; non-empty = show both texts and ask before creating. */
+  please_check: string[];
+  rules: { key: string; label: string; label_local: string; your_words: string | null }[];
+  not_understood: string[];
+  model: { used: boolean; cached: boolean; fallback: boolean; latency_ms: number; name: string | null; error?: string };
+}

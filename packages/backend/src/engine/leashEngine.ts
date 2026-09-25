@@ -16,6 +16,7 @@ import type {
 import { decide, ENGINE_VERSION } from "../../../engine/src/decide.js";
 import { Ledger } from "../../../engine/src/ledger.js";
 import type { DecisionResult, GuardResult } from "../../../engine/src/types.js";
+import type { LearnedLookup, PeerLookup } from "../../../shared/src/memory.js";
 import { buildBaselines, type Baselines } from "../../../shared/src/baselines.js";
 import { compilePolicy, itemTokens, WEEKDAYS } from "../../../shared/src/compiler.js";
 import { loadDataPack } from "../../../shared/src/loaders.js";
@@ -85,6 +86,9 @@ function dropGuessesCoveredByRules(p: Policy, rules: MandateRule[]) {
         break;
       case "order.nights =":
         p.stayNights = null;
+        break;
+      case "authorization.night =":
+        p.nightAction = null;
         break;
     }
   }
@@ -156,6 +160,15 @@ function tighten(p: Policy, r: MandateRule): boolean {
       if (str !== "decline") return false;
       p.shopTextAction = "decline";
       return true;
+    case "authorization.night =":
+      // decline is stricter than ask; two mandates meet at the stricter one.
+      if (str !== "decline" && str !== "ask") return false;
+      p.nightAction = p.nightAction === "decline" || str === "decline" ? "decline" : "ask";
+      return true;
+    case "merchant.merchant_id not_in":
+      if (!list) return false;
+      p.blockedMerchants = [...new Set([...(p.blockedMerchants ?? []), ...list])];
+      return true;
     case "merchant.lookalike =":
       // The learned rule after a declined lookalike ask: a lookalike is declined even where the guard would ask.
       if (str !== "decline") return false;
@@ -225,7 +238,10 @@ const HEADLINES: Record<string, string> = {
   blocked_item: "Something you excluded",
   not_refundable: "Not refundable",
   no_shop_history: "No history to check the shop",
+  no_session_history: "No history to compare with",
   over_card_limit: "Above your card's limit",
+  night_purchase: "A purchase at night",
+  blocked_shop: "A shop you blocked",
   guard_error: "Please check this purchase",
 };
 const FALLBACK_HEADLINE: Record<EngineDecisionValue, string> = {
@@ -256,6 +272,8 @@ const CHECKS: Record<string, { label: string; source: CheckSource }> = {
   blocked: { label: "Things you excluded", source: "you" },
   refundable: { label: "Refundable only", source: "you" },
   issuer_limits: { label: "Card limit per purchase", source: "built_in" },
+  night: { label: "Night, 23:00 to 06:00", source: "you" },
+  blocked_shop: { label: "Shops you blocked", source: "you" },
 };
 
 /** Guard → family. Money: amounts and budgets. Item: what is in the basket and on what terms. Shop: who sells.
@@ -271,7 +289,7 @@ const FAMILY: Record<string, CheckFamily> = {
 function checkResult(g: GuardResult): CheckResult {
   if (g.verdict === "PASS") return "pass";
   // No history is a missing fact, not a failed check: the card shows it as unsure, and the customer is asked.
-  if (g.verdict === "UNCERTAIN" || g.reason_code === "guard_error" || g.reason_code === "no_shop_history") return "unsure";
+  if (g.verdict === "UNCERTAIN" || g.reason_code === "guard_error" || g.reason_code === "no_shop_history" || g.reason_code === "no_session_history") return "unsure";
   return "fail";
 }
 
@@ -368,6 +386,18 @@ export class LeashEngine implements Engine {
   readonly version = ENGINE_VERSION;
   private readonly baselines: Baselines;
   private readonly ledgers = new Map<string, Ledger>();
+  private learned: LearnedLookup | undefined;
+  private peers: PeerLookup | undefined;
+
+  /** What the customer taught us (backend memory). The engine reads it on every decision. */
+  useMemory(lookup: LearnedLookup | undefined) {
+    this.learned = lookup;
+  }
+
+  /** Customers like this one, for cards without history. Evidence only: the guards never pass on it. */
+  usePeers(lookup: PeerLookup | undefined) {
+    this.peers = lookup;
+  }
 
   /**
    * Pass the bus so the customer's answers reach the run's ledger. Pass baselines built from the live pack's history
@@ -407,7 +437,8 @@ export class LeashEngine implements Engine {
 
     const ledger = this.ledgerFor(ctx.runId);
     // Same event shape. The two type files differ only in `context` (spend may be null live), which the engine never reads.
-    const result = decide(event as unknown as EngineEvent, policy, ledger, this.baselines);
+    const base = this.learned || this.peers ? { ...this.baselines, learned: this.learned, peers: this.peers } : this.baselines;
+    const result = decide(event as unknown as EngineEvent, policy, ledger, base);
     const verdict = toVerdict(result);
     const trackRecord = trackRecordCheck(event.authorization.merchant.merchant_id, this.baselines);
     if (!notApplied.length) return withTrackRecord(verdict, trackRecord);

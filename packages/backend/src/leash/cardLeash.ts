@@ -14,12 +14,15 @@ const whole = (n: number) => String(Math.round(n));
  * The card rules as one instruction. Every sentence matches a compiler pattern, so the leash gets
  * order_limit, period_budget (30 days), known_shop (when new shops are off) and the uncertainty policy.
  */
-export function instructionFromCard(rules: AppRuleValues, smart: Pick<AppSmart, "unsure" | "newShops">): string {
+export function instructionFromCard(rules: AppRuleValues, smart: Pick<AppSmart, "unsure" | "newShops"> & Partial<Pick<AppSmart, "night">>): string {
   const parts = [
     `Each order at or below CHF ${whole(rules.orderLimit)} including delivery.`,
     `Keep the total across any ${MONTH_DAYS} days at or below CHF ${whole(rules.monthBudget)}.`,
   ];
   if (smart.newShops === "known") parts.push("Only from shops I have used before.");
+  // Night, 23:00–06:00: the compiler turns this into a hard rule the night guard enforces.
+  if (smart.night === "decline") parts.push("No purchases at night.");
+  else if (smart.night === "ask") parts.push("Ask me before any purchase at night.");
   parts.push(smart.unsure === "decline" ? "Decline when uncertain." : "Ask me when uncertain.");
   return parts.join(" ");
 }
