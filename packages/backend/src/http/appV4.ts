@@ -112,6 +112,7 @@ export class AppV4 {
     this.values = values;
     this.smart = smart;
     this.validUntil = validUntil;
+    this.service.setLearning(smart.learn === "on");
   }
 
   leash(): AppLeash {
@@ -125,6 +126,7 @@ export class AppV4 {
       rules: { orderLimit: enforced.orderLimit, monthBudget: enforced.monthBudget },
       smart: {
         ...this.smart,
+        night: enforcedNight(view) ?? this.smart.night,
         unsure: view.uncertainty_policy === "decline" ? "decline" : "ask",
         newShops: enforced.knownShopsOnly ? "known" : this.smart.newShops === "known" ? "ask" : this.smart.newShops,
       },
@@ -154,6 +156,7 @@ export class AppV4 {
       nextValues.monthBudget > current.rules.monthBudget ||
       (nextSmart.unsure === "ask" && current.smart.unsure === "decline") ||
       (nextSmart.newShops === "ask" && current.smart.newShops === "known") ||
+      (nextSmart.night === "ask" && current.smart.night === "decline") ||
       untilLooser;
     if (looser && body.face_id_confirmed !== true) throw new ServiceError(403, "face_id_required", "Loosening a rule needs Face ID.");
 
@@ -164,10 +167,12 @@ export class AppV4 {
       if (nextValues.orderLimit < current.rules.orderLimit) await this.service.tighten({ type: "lower_order_limit", value: nextValues.orderLimit });
       if (nextValues.monthBudget < current.rules.monthBudget) await this.service.tighten({ type: "lower_period_budget", value: nextValues.monthBudget, period_days: MONTH_DAYS });
       if (nextSmart.unsure === "decline" && current.smart.unsure !== "decline") await this.service.tighten({ type: "unsure_decline" });
+      if (nextSmart.night === "decline" && current.smart.night !== "decline") await this.service.tighten({ type: "night_decline" });
       if (untilChanged && nextUntil !== null) await this.service.tighten({ type: "end_earlier", valid_until: nextUntil });
       this.values = nextValues;
       this.smart = nextSmart;
       this.validUntil = nextUntil;
+      this.service.setLearning(nextSmart.learn === "on");
     }
 
     if (typeof body.block_shop === "string" && body.block_shop.trim()) {
@@ -180,6 +185,54 @@ export class AppV4 {
 
   async pause(): Promise<void> {
     this.service.pause(24);
+  }
+
+  /** Unfreeze: a loosening, so it needs Face ID. */
+  async resume(body: { face_id_confirmed?: boolean }): Promise<AppLeash> {
+    if (body?.face_id_confirmed !== true) throw new ServiceError(403, "face_id_required", "Unfreezing needs Face ID.");
+    this.service.resume();
+    return this.leash();
+  }
+
+  // ── 6.3 What we learned, 7.2 / 7.3 Was this you ────────────────────────────────────────────────
+
+  /** yes trusts the device from now on (a loosening: Face ID). no pauses the card and never trusts the device again. */
+  wasMe(id: string, body: { answer?: string; face_id_confirmed?: boolean }) {
+    const answer = body?.answer === "yes" || body?.answer === "no" ? body.answer : null;
+    if (!answer) throw new ServiceError(400, "invalid_answer", "Answer yes or no.");
+    if (answer === "yes" && body.face_id_confirmed !== true) throw new ServiceError(403, "face_id_required", "Trusting this device needs Face ID.");
+    const r = this.service.wasMe(id, answer);
+    return { learned: r.learned, paused: r.paused, leash: this.leash() };
+  }
+
+  memory() {
+    return this.service.memoryView();
+  }
+
+  forgetShop(merchantId: string) {
+    return this.service.forgetShop(merchantId);
+  }
+
+  forgetDevice(deviceId: string) {
+    return this.service.forgetDevice(deviceId);
+  }
+
+  /**
+   * Unblock a shop: a loosening (Face ID). Memory lets go at once; the mandate's own "never buy from" rule can only
+   * disappear with a new mandate, so the card is re-created with the same values (Viseca can't remove a rule).
+   */
+  async unblockShop(body: { merchant_id?: string; face_id_confirmed?: boolean }): Promise<AppLeash> {
+    if (!body?.merchant_id) throw new ServiceError(400, "merchant_required", "Which shop?");
+    if (body.face_id_confirmed !== true) throw new ServiceError(403, "face_id_required", "Unblocking a shop needs Face ID.");
+    const inMemory = this.service.unblockShopInMemory(body.merchant_id);
+    const view = this.service.getLeash();
+    const inMandate = [...view.rules, ...view.learned_rules].some((r) => r.hard_rule?.field === "merchant.merchant_id" && Array.isArray(r.hard_rule.value) && r.hard_rule.value.includes(body.merchant_id as string));
+    if (!inMemory && !inMandate) throw new ServiceError(404, "not_blocked", `${body.merchant_id} is not blocked.`);
+    if (inMandate) {
+      const current = this.leash();
+      await this.setCard(instructionFromCard(current.rules, current.smart), current.rules, current.smart, null, current.valid_until);
+    }
+    return this.leash();
   }
 
   async revoke(): Promise<void> {
@@ -248,6 +301,7 @@ export class AppV4 {
       amount: d.amount,
       merchant: d.merchant,
       items: d.items,
+      ...(d.device_id ? { device_id: d.device_id } : {}),
       group_id: d.group_id ?? (burst ? `${d.run_id}:burst` : null),
       ...(d.deadline_at ? { deadline_at: d.deadline_at } : {}),
       ...(d.suggestion ? { suggestion: d.suggestion } : {}),
@@ -283,6 +337,13 @@ export class AppV4 {
         return null;
     }
   }
+}
+
+/** The night rule the leash enforces ("decline" / "ask"), or null when it has none. */
+function enforcedNight(view: LeashView): AppSmart["night"] | null {
+  const rule = [...view.rules, ...view.learned_rules].find((r) => r.hard_rule?.field === "authorization.night");
+  const v = rule?.hard_rule?.value;
+  return v === "decline" || v === "ask" ? v : null;
 }
 
 function busiestCard(rows: Row[]): string {

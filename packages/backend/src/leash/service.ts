@@ -31,6 +31,7 @@ import { VisecaError, type MandateDraftRequest, type VisecaApi } from "../viseca
 import { computeBudget } from "./budget.js";
 import { LEARNS_SHOP_ON_APPROVE, suggestionFor } from "./suggestions.js";
 import { TokenVault } from "../tokens/vault.js";
+import { MemoryStore, type MemoryView } from "../memory/memoryStore.js";
 
 /** Errors the HTTP layer turns into status codes. */
 export class ServiceError extends Error {
@@ -122,6 +123,8 @@ export interface LeashServiceOptions {
   scenarios?: ScenarioInfo[];
   /** Live mode: the live card history, for known shops. */
   historyRows?: Row[];
+  /** What customers teach us, across runs (default: in memory only). */
+  memory?: MemoryStore;
   log?: (line: string) => void;
 }
 
@@ -175,6 +178,9 @@ export class LeashService {
   readonly bus = new LeashBus();
   readonly worker: Worker;
   readonly tokens: TokenVault;
+  readonly memory: MemoryStore;
+  /** "Learn from my answers": off = no memory writes and no suggested rules. */
+  private learning = true;
   private leash: LeashState | null = null;
   private runs = new Map<string, RunRecord>();
   private suggestions = new Map<string, Suggestion>();
@@ -200,6 +206,7 @@ export class LeashService {
     this.historyRows = opts.historyRows ?? null;
     this.store = opts.store ?? new InMemoryDecisionStore();
     this.tokens = opts.tokens ?? new TokenVault();
+    this.memory = opts.memory ?? new MemoryStore();
     this.worker = new Worker(this.api, this.leashEngine(), this.store, this.bus, { log: this.log, ...opts.worker });
     this.bus.on("decision", (d) => this.afterDecision(d));
   }
@@ -411,6 +418,12 @@ export class LeashService {
     const history = leash.card_id ? this.history(leash.card_id) : new Map<string, { name: string; count: number }>();
     const shops = new Map<string, KnownShop>();
     for (const [id, h] of history) shops.set(id, { merchant_id: id, name: h.name, times_used: h.count, new: false });
+    // Shops the customer confirmed in earlier runs (memory), then in this leash.
+    const who = this.currentCustomer();
+    for (const s of this.memory.view(who.customer_id, who.card_id).shops) {
+      const prev = shops.get(s.merchant_id);
+      shops.set(s.merchant_id, prev ? { ...prev, times_used: prev.times_used + s.times } : { merchant_id: s.merchant_id, name: s.name, times_used: s.times, new: true });
+    }
     for (const [id, l] of leash.learned_shops) {
       const prev = shops.get(id);
       shops.set(id, prev ? { ...prev, times_used: prev.times_used + l.count } : { merchant_id: id, name: l.name, times_used: l.count, new: true });
@@ -480,7 +493,13 @@ export class LeashService {
     if (req.type === "block_shop") {
       if (!req.merchant_id) throw new ServiceError(400, "merchant_required", "Which shop should be blocked?");
       const name = req.name ?? this.pack.merchants.get(req.merchant_id)?.merchant_name ?? req.merchant_id;
+      // Also in memory: the engine enforces it even after a new mandate (loosening re-creates the mandate).
+      const who = this.currentCustomer();
+      this.memory.block(who.customer_id, who.card_id, { id: req.merchant_id, name });
       return { ...base, id: this.nextId("r_blocked_shop"), key: RULE_KEYS.blocked_shop, label: `Never buy from ${name}`, group: "restrictions", hard_rule: { field: RULE_FIELDS.merchantId, operator: "not_in", value: [req.merchant_id] } };
+    }
+    if (req.type === "night_decline") {
+      return { ...base, id: this.nextId("r_night"), key: RULE_KEYS.night, label: "No purchases at night (23:00–06:00)", group: "restrictions", hard_rule: { field: RULE_FIELDS.night, operator: "=", value: "decline" } };
     }
     if (req.type === "block_category") {
       if (!req.category) throw new ServiceError(400, "category_required", "Which category should be blocked?");
@@ -542,6 +561,14 @@ export class LeashService {
     return this.feed().filter((d) => d.status === "waiting_for_you");
   }
 
+  setLearning(on: boolean) {
+    this.learning = on;
+  }
+
+  get learningOn(): boolean {
+    return this.learning;
+  }
+
   async resolve(id: string, answer: "approve" | "decline", acceptSuggestion = false, overBudgetOk = false): Promise<StoredDecision> {
     if (answer !== "approve" && answer !== "decline") throw new ServiceError(400, "invalid_answer", "Answer approve or decline.");
     const reserved = answer === "approve" ? this.reserveBudget(id, overBudgetOk) : false;
@@ -551,7 +578,7 @@ export class LeashService {
     } finally {
       if (reserved) this.approving.delete(id);
     }
-    if (answer === "decline") {
+    if (answer === "decline" && this.learning) {
       const purpose = this.leash?.rules.filter((r) => r.key === RULE_KEYS.purpose).flatMap((r) => (Array.isArray(r.hard_rule?.value) ? r.hard_rule.value : [])) ?? [];
       const draft = suggestionFor(d, purpose);
       if (draft && !this.alreadyHasRule(draft.rule)) {
@@ -630,6 +657,8 @@ export class LeashService {
       const prev = leash.learned_shops.get(d.merchant.id);
       leash.learned_shops.set(d.merchant.id, { name: d.merchant.name, count: (prev?.count ?? 0) + 1 });
     }
+    // The customer said yes to this purchase: shop, device, country and hour are theirs, for every later run.
+    if (d.status === "approved_by_you" && this.learning) this.memory.learnFromApproval(this.memoryPurchase(d));
     this.issueToken(leash, d);
     if (/^y(es)?$/i.test(leash.answers[QUESTION_IDS.closeAfterFirst] ?? "")) {
       void this.revoke(d.id).catch((err: Error) => this.log(`closing leash after first item failed: ${err.message}`));
@@ -793,6 +822,64 @@ export class LeashService {
         token: d.token ? { id: d.token.id, status: d.token.status, max_chf: d.token.max_chf } : null,
       })),
     };
+  }
+
+  // ── Memory: what the customer teaches us (6.3, 7.2, 7.3) ──────────────────────────────────────
+
+  private memoryPurchase(d: StoredDecision) {
+    return { id: d.id, customer_id: d.customer_id ?? null, card_id: d.card_id ?? this.leash?.card_id ?? null, device_id: d.device_id ?? null, merchant: { id: d.merchant.id, name: d.merchant.name, country: d.merchant.country }, purchased_at: d.purchased_at };
+  }
+
+  /** The customer the app is looking at: from the latest decision of this leash, else the leash's card. */
+  currentCustomer(): { customer_id: string | null; card_id: string | null } {
+    const latest = this.leashDecisions().sort((a, b) => b.decided_at.localeCompare(a.decided_at)).find((d) => d.customer_id || d.card_id);
+    const card = latest?.card_id ?? this.leash?.card_id ?? null;
+    return { customer_id: latest?.customer_id ?? null, card_id: card };
+  }
+
+  /**
+   * "Was this you?" on a purchase. yes: learn it (shop, device, country, hour), unless learning is off.
+   * no: the device is never trusted again and the leash pauses for 24 hours.
+   */
+  wasMe(id: string, answer: "yes" | "no"): { learned: boolean; paused: boolean; leash: LeashView } {
+    const d = this.decision(id);
+    if (answer !== "yes" && answer !== "no") throw new ServiceError(400, "invalid_answer", "Answer yes or no.");
+    let learned = false;
+    let paused = false;
+    if (answer === "yes") {
+      learned = this.learning && this.memory.confirmWasMe(this.memoryPurchase(d));
+    } else {
+      this.memory.denyWasMe(this.memoryPurchase(d));
+      if (this.leash && !this.leash.revoked) {
+        this.pause(24);
+        paused = true;
+      }
+    }
+    this.bus.emit("leash_changed", { mandate_id: this.leash?.mandate_id ?? "" });
+    return { learned, paused, leash: this.getLeash() };
+  }
+
+  memoryView(): MemoryView & { learning: boolean } {
+    const who = this.currentCustomer();
+    return { ...this.memory.view(who.customer_id, who.card_id), learning: this.learning };
+  }
+
+  forgetShop(merchantId: string): MemoryView {
+    const who = this.currentCustomer();
+    if (!this.memory.forgetShop(who.customer_id, who.card_id, merchantId)) throw new ServiceError(404, "not_remembered", `We don't remember shop ${merchantId}.`);
+    return this.memory.view(who.customer_id, who.card_id);
+  }
+
+  forgetDevice(deviceId: string): MemoryView {
+    const who = this.currentCustomer();
+    if (!this.memory.forgetDevice(who.customer_id, who.card_id, deviceId)) throw new ServiceError(404, "not_remembered", `We don't remember device ${deviceId}.`);
+    return this.memory.view(who.customer_id, who.card_id);
+  }
+
+  /** Removes a block from memory. The mandate's own rule can only go with a new mandate (AppV4 re-creates it). */
+  unblockShopInMemory(merchantId: string): boolean {
+    const who = this.currentCustomer();
+    return this.memory.unblock(who.customer_id, who.card_id, merchantId);
   }
 
   // ── Snapshot: what a restart must not lose (persist.ts writes it to a file) ────────────────────

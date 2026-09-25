@@ -150,8 +150,14 @@ describe("/v4/app: the app's contract on our backend", () => {
     expect(loosened.body.rules).toEqual({ orderLimit: 350, monthBudget: 1200 });
     expect(loosened.body.mandate_id).not.toBe(firstMandate);
 
-    const decline = await call<AppLeash>("PATCH", "/v4/app/leash/rules", { smart: { unsure: "decline", night: "ask" } });
-    expect(decline.body.smart).toMatchObject({ unsure: "decline", night: "ask" });
+    // "At night" is a real rule now: back from "decline" to "ask" loosens it, so it needs Face ID like any loosening.
+    const nightLooser = await call<{ error: { code: string } }>("PATCH", "/v4/app/leash/rules", { smart: { night: "ask" } });
+    expect(nightLooser.status).toBe(403);
+    expect(nightLooser.body.error.code).toBe("face_id_required");
+    const decline = await call<AppLeash>("PATCH", "/v4/app/leash/rules", { smart: { unsure: "decline" } });
+    expect(decline.body.smart).toMatchObject({ unsure: "decline", night: "decline" });
+    const nightAsk = await call<AppLeash>("PATCH", "/v4/app/leash/rules", { smart: { night: "ask" }, face_id_confirmed: true });
+    expect(nightAsk.body.smart).toMatchObject({ unsure: "decline", night: "ask" });
     const back = await call<AppLeash>("PATCH", "/v4/app/leash/rules", { smart: { unsure: "ask" }, face_id_confirmed: true });
     expect(back.body.smart.unsure).toBe("ask");
     expect(back.body.rules).toEqual({ orderLimit: 350, monthBudget: 1200 });

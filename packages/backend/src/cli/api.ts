@@ -9,6 +9,7 @@ import { LeashService } from "../leash/service.js";
 import { createLeashServer } from "../http/server.js";
 import { loadLiveReference } from "../live/referenceData.js";
 import { attachSnapshotFile } from "../persist.js";
+import { MemoryStore } from "../memory/memoryStore.js";
 import { buildBaselines } from "../../../shared/src/baselines.js";
 
 const cfg = loadConfig(process.argv.includes("--live") ? { mode: "live" } : {});
@@ -21,7 +22,13 @@ const log = (line: string) => console.log(`[worker] ${line}`);
 const liveRef = cfg.mode === "live" ? await loadLiveReference(client, resolve(cfg.dataDir, "live"), log) : null;
 const engine = new LeashEngine(undefined, liveRef ? buildBaselines(liveRef.history, liveRef.merchants, { cards: liveRef.cards, accounts: liveRef.accounts }) : undefined);
 
+// What customers teach us survives restarts: data/live/memory-<mode>.json (git-ignored). LEASH_MEMORY_FILE=off keeps it in memory.
+const memoryFile = process.env.LEASH_MEMORY_FILE?.trim() || resolve(cfg.dataDir, "live", `memory-${cfg.mode}.json`);
+const memory = new MemoryStore({ file: memoryFile === "off" ? null : memoryFile, log });
+engine.useMemory(memory.lookup);
+
 const service = new LeashService({
+  memory,
   api: cfg.mode === "live" ? client : new OfflinePlatform(pack),
   pack,
   engine,

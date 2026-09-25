@@ -1,6 +1,7 @@
 // What "normal" looks like, computed once from authorization_history.csv.
 // Only APPROVED PURCHASES count. Historical status is context, not an answer key.
 import type { Row } from "./loaders";
+import type { LearnedLookup, PeerLookup } from "./memory.js";
 
 export interface CardBaseline {
   purchases: number;
@@ -19,6 +20,10 @@ export interface Baselines {
   issuerRefunds: Map<string, number>; // merchant -> refunds across ALL customers (shop track record, display only)
   cardLimits: Map<string, CardLimits>; // card -> limits of the account behind it
   merchantNames: Map<string, { name: string; category: string }>;
+  /** What the customer taught us (backend memory). Absent = nothing learned. */
+  learned?: LearnedLookup;
+  /** Customers like this one, for a card with little or no history. Absent = no peers. */
+  peers?: PeerLookup;
 }
 
 export interface CardLimits {

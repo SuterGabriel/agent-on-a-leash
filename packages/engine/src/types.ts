@@ -1,4 +1,5 @@
 import type { Baselines, CardBaseline } from "../../shared/src/baselines";
+import type { LearnedMemory, PeerPrior } from "../../shared/src/memory";
 import type { Authorization, Decision, Evidence, Policy } from "../../shared/src/types";
 import type { Ledger } from "./ledger";
 import type { ShopTextReport } from "./shoptext";
@@ -25,6 +26,8 @@ export interface Facts {
   habits: CardBaseline; // what familiarity and session compare with: this card, or all the customer's cards
   habitsScope: "card" | "customer" | "none"; // "customer" when the card has fewer than MIN_CARD_HISTORY purchases
   customerId: string | null;
+  learned: LearnedMemory | null; // what the customer taught us (can turn an ask into a pass)
+  peers: PeerPrior | null; // customers like this one (evidence only, never a pass on its own)
   shop: ShopTextReport; // quarantined shop text, computed once
   addonLines: Set<number>; // line numbers that are add-ons, not the thing asked for
 }

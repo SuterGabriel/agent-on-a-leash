@@ -27,6 +27,8 @@ import { blockedItems } from "./guards/blocked";
 import { refundableOrder } from "./guards/refundable";
 import { issuerLimits } from "./guards/issuerLimits";
 import { destination } from "./guards/destination";
+import { nightPurchase } from "./guards/night";
+import { blockedShop } from "./guards/shopBlock";
 
 export const ENGINE_VERSION = "leash-0.3.0";
 
@@ -41,6 +43,7 @@ export const GUARDS: Guard[] = [
   periodBudget,
   orderFrequency,
   allowedWeekday,
+  nightPurchase,
   splitOrder,
   itemScope,
   blockedItems,
@@ -50,6 +53,7 @@ export const GUARDS: Guard[] = [
   refundableOrder,
   destination,
   merchantType,
+  blockedShop,
   merchantFamiliarity,
   lookalikeMerchant,
   duplicateOrder,
@@ -125,6 +129,8 @@ export function decide(
     habits: habitsScope === "customer" && customerHabits ? customerHabits : card,
     habitsScope,
     customerId,
+    learned: base.learned?.(customerId, auth.card_id) ?? null,
+    peers: habitsScope === "none" ? (base.peers?.(customerId, auth.card_id) ?? null) : null,
     shop,
     addonLines: findAddonLines(auth.items, policy, shop),
   };
