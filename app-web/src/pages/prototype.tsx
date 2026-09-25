@@ -435,19 +435,6 @@ const DemoControls = () => {
                         </p>
                     )}
                 </div>
-                {next && (
-                    <p className="px-1 text-sm text-tertiary">
-                        Next: {next.where}
-                    </p>
-                )}
-                <div className="flex gap-2 *:flex-1">
-                    <Button size="sm" color="secondary" isDisabled={step === 0} onClick={() => setStep((i) => Math.max(0, i - 1))}>
-                        Back
-                    </Button>
-                    <Button size="sm" color="secondary" isDisabled={!next} onClick={() => setStep((i) => Math.min(STEPS.length - 1, i + 1))}>
-                        Next
-                    </Button>
-                </div>
             </div>
 
             <VoiceToggle />
