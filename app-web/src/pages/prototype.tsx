@@ -489,12 +489,9 @@ const DemoControls = () => {
                 href="https://github.com/SuterGabriel/agent-on-a-leash"
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 text-md font-semibold text-primary outline-focus-ring hover:bg-primary_hover focus-visible:outline-2"
+                className="flex items-center justify-center rounded-2xl bg-primary px-4 py-3 text-md font-semibold text-primary outline-focus-ring hover:bg-primary_hover focus-visible:outline-2"
             >
-                <span>For the code, click here</span>
-                <span aria-hidden className="text-secondary">
-                    github.com/SuterGabriel/agent-on-a-leash ↗
-                </span>
+                For the code, click here (GitHub)
             </a>
         </aside>
     );
