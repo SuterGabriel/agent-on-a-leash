@@ -113,3 +113,31 @@ Relay (St. Gallen, same data): a desktop dashboard, a 0 to 100 trust score, dete
 | Product spec | `docs/PRODUCT_SPEC.md` |
 | Voice | `app-web/docs/voice.md` |
 | Security and performance learnings | `docs/learnings/2026-09-24-tests-merge-and-hardening.md`, `2026-09-24-security-review.md` |
+
+## 10. Viseca's list, row by row: built or not, and where the pitch shows it
+
+Checked against the code on 25 September. **Built** = in the repo and covered by a test or a live run. **Partial** = works, with a stated limit. **Not built** = say it plainly if asked.
+
+| Part | Viseca asks | Status | Where it is | How the pitch shows it |
+|---|---|---|---|---|
+| Frontend | Customer input into clear, executable permissions | Built | Compiler reads the sentence into rules; every rule carries the words it came from (`your_words`) and shows them on the rule row; rules are grouped on screen 6.1, checks in five families on 5.2 | 0:00 to 0:10, screen 1.3: rules proposed from history, each with its evidence line |
+| Frontend | Spending limits | Built | Per-order limit and rolling budget; the app's budget meter shows "CHF x left" and `frees_up_at` | 0:25: the bar moves on the first quiet approval |
+| Frontend | Merchant requirements | Partial | Any shop or known shops, shop types, blocked shops. Lookalikes of the customer's own shops are declined; a lookalike of another customer's shop is asked about, because the customer never bought at the original. Learned rule "block lookalikes" turns that into decline | 0:30: PixelHarbour declined, "Real shop, not a lookalike" failed |
+| Frontend | Time windows | Partial | Rules valid until a date (`valid_until`, engine judges it in simulated time). A task does not end by itself after its purchase: an identical repeat is caught as a duplicate, a different second order of the same item is not stopped | Not in the 60 s; answer in Q&A if asked |
+| Frontend | Rules for uncertain cases | Built | "Ask me" or "decline" from the sentence; every ask says why; 120 s window, nothing bought without an answer | 0:40: the ask sheet with the shop text quoted |
+| Frontend | Tighten, update or revoke | Built | PATCH tightens instantly; loosening needs Face ID (403 without); DELETE turns the card off | 0:50: learned rule, then "Turn off Agent Card" |
+| Backend | approve, decline, step_up for every purchase | Built | Worker long-polls, decides, posts; 0 of 185 live purchases after the deadline | Section 3 numbers on the slide |
+| Backend | Explain in plain language, highlight uncertainty | Built | Headline, one "because" sentence with the numbers, checklist pass / fail / unsure with the fact, "what we don't know" list | 0:30: tap the declined purchase, checks per family |
+| Backend | Customer's final approve or reject | Built | Ask sheet, 2:00 timer, Decline and Approve the same size, Face ID on approve, one answer to Viseca even on a double tap | 0:40 to 0:50 |
+| Backend | Track state: rolling limits, retries, duplicates, earlier decisions | Built | Ledger per run: only approvals count, same live id counted once, same basket again is a duplicate, waiting asks do not count, budget frees as days roll; state file survives a restart | Q&A: "what if your backend dies" |
+| Backend | Merchant text is untrusted | Built | Quarantine: facts extracted from clean sentences, orders to the agent flagged and quoted in the grey box, 7 injection phrasings in the red team | 0:40: the grey "From the shop page" box |
+| Technical | Decouple UI from the engine | Built | App talks only to our backend under `/v4/app/*`; the engine is a pure package the worker calls; Viseca's API is behind one client interface with an offline copy | Architecture line in Q&A |
+| Technical | Small, fast models; predictable if a model fails | Not built as described | Rules decide on their own, no model runs in the decision path. The fallback described in the table is the only path today. Models were researched and the seam exists (`docs/research/MODEL_DECISION.md`) | Say it as a strength, section 5 |
+| Technical | No hard-coding to scenario, id or order | Built | A test fails if the engine or compiler mentions a scenario or purchase id; all 45 and all 111 live purchases run through the same engine | Section 8 answer |
+| Demo | One ordinary purchase with little friction | Built | AU0035 PixelHarbor CHF 289: approved, quiet row | 0:25 |
+| Demo | One unsafe or manipulated purchase with a useful intervention | Built | AU0039 lookalike declined with reason; AU0040 shop text asked, quoted | 0:30 and 0:40 |
+| Demo | Human approval, rejection or revocation path | Built | Decline on the sheet, the learned-rule offer, turn off the card | 0:50 |
+| Demo | Judges see what was permitted, evidence, why, how the customer kept control | Partial | Every decision carries the checklist with families; `GET /judge/decisions` returns every purchase with reasons, checks, latency, deadline margin and token summary. It is JSON, there is no judge web page | 0:58: the comparison figure on the laptop, the JSON if a judge wants to look |
+| Surprise | A separate card for all online shopping | Built | The Agent Card in the app; on the backend every approval issues a decision-bound token: one shop, one maximum, fifteen minutes, one use, hash-chained history with a verify endpoint. The main card number is never handed out | 0:15: "Give this card to your agent"; Q&A: "what if the agent is fooled after the approval" |
+
+Three things to say without being asked, because a jury member will otherwise find them: no model in the decision path (a strength, section 5); the judge view is an endpoint, not a page; a lookalike of a shop the customer never used is a question, not a block, by design.
