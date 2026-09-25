@@ -2,7 +2,7 @@
 // The agent (packages/backend/src/voice/agentDefinition.ts) never decides: every tool reads prototype state or
 // dispatches the same action a tap would. Tool names must match VOICE_TOOLS in that file.
 import type { Dispatch } from "react";
-import { apiBase } from "@/features/shopping-card/api/client";
+import { apiBase, authHeaders } from "@/features/shopping-card/api/client";
 import { getDecision, shopQuote } from "@/features/shopping-card/demo-data";
 import type { Action, State } from "@/features/shopping-card/prototype-state";
 import type { Decision } from "@/types/decision";
@@ -104,7 +104,7 @@ export const parseInstruction = async (instruction: string): Promise<ParsedRules
     const root = apiBase.replace(/\/v4$/, "");
     const res = await fetch(`${root}/app/leash/parse`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ instruction }),
     });
     if (!res.ok) return parseLocally(instruction);

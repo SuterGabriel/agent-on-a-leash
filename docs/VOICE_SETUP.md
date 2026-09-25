@@ -61,9 +61,11 @@ Create `app-web/.env.local` (copy from `app-web/.env.example`):
 
 ```text
 VITE_API_BASE=http://localhost:8787/v4
+VITE_APP_SECRET=<same value as APP_SECRET in the root .env>
 VITE_ELEVENLABS_AGENT_ID=agent_...
 ```
 
+`VITE_APP_SECRET` is needed whenever the backend has `APP_SECRET` set; without it every write from the app gets 401.
 Leave `VITE_API_BASE` out to run the app in mock mode. Voice works in both modes; mock mode does not need the
 backend or Wi-Fi, which is the fallback on stage.
 
@@ -93,7 +95,8 @@ Setup by voice: with no card created (Reset demo), click **Call now** and say "g
 | Voice block says "set VITE_ELEVENLABS_AGENT_ID" | env not read | check `app-web/.env.local`, restart `npm run web` |
 | "Voice unavailable" right after clicking | mic denied, or not on localhost | Chrome site settings → allow microphone; use `http://localhost:5173` |
 | `npm run voice:agent` fails with 401 | wrong or missing key | recreate the key, check `.env` has no quotes or spaces |
-| `npm run voice:agent` fails with 422 | a field in the definition the API rejects | read the message; usually the LLM or model id. Set `ELEVENLABS_LLM=gpt-4o-mini` |
+| `npm run voice:agent` fails with 400 or 422 | a field in the definition the API rejects | read the message. English agents need `eleven_flash_v2` or `eleven_turbo_v2` (the default is flash v2); for the LLM set `ELEVENLABS_LLM=gpt-4o-mini` |
+| Approve or decline does nothing in live mode, console shows 401 | app sends no secret | add `VITE_APP_SECRET` to `app-web/.env.local`, restart `npm run web` |
 | Agent speaks but says "{{opening}}" | dynamic variable not passed | only happens if the session was started outside the app; use the app's buttons |
 | Agent hears nothing | wrong input device | Chrome → site settings → microphone device |
 | Call never starts on an ask | voice not switched on | "Read asks aloud" must be on before the ask arrives, or click "Read it to me" on the sheet |
