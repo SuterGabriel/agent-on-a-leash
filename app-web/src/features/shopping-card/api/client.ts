@@ -112,6 +112,9 @@ export const api = {
         apiBase ? json("/api/scenarios") : Promise.resolve([]),
     startRun: (scenarioId: string): Promise<{ run_id: string; scenario_id: string; state: string }> =>
         apiBase ? json("/api/runs", { method: "POST", body: JSON.stringify({ scenario_id: scenarioId }) }) : Promise.reject(new Error("mock mode")),
+    /** Live: the latest run and whether it is still running, so the next scene starts only after the last one ended. */
+    status: (): Promise<{ latest_run: { run_id: string; scenario_id: string; state: "running" | "finished" | "failed" } | null }> =>
+        apiBase ? json("/api/status") : Promise.resolve({ latest_run: null }),
 
     /** Live: subscribe to /app/stream. Mock: no-op (the demo controls dispatch INGEST directly). Returns an unsubscribe. */
     stream: (onEvent: (e: StreamEvent) => void, onError?: (e: Event) => void): (() => void) => {

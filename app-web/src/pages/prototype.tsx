@@ -83,7 +83,9 @@ const DEMO_STEPS: { frames: FrameId[]; where: string; tap: string; startRun?: bo
     { frames: ["4.0", "4.1", "4.2"], where: "Your agent wants to pay", tap: "Read why we ask, then Decline (or say it)" },
     { frames: ["4.4", "4.3", "4.5"], where: "You declined", tap: "Yes, always: the answer becomes a rule" },
     { frames: ["6.1"], where: "Rules", tap: "Learned rule, tighten in one tap, Turn off Agent Card" },
+    { frames: [], where: "Next scene", tap: "The card and its learned rules stay. Pick the next scene and start it", startRun: true },
 ];
+const HOME_STEP = DEMO_STEPS.findIndex((st) => st.frames.includes("3.1"));
 const stepIndex = (frame: FrameId) => DEMO_STEPS.findIndex((st) => st.frames.includes(frame));
 
 /** Outside the phone. In mock mode the buttons stand in for the engine; in live mode the stream drives the phone. */
@@ -95,10 +97,13 @@ const DemoControls = () => {
 
     const demo = (d: "approve" | "duplicate" | "lookalike" | "ask" | "burst") => dispatch({ type: "DEMO", demo: d });
 
+    // One demo step at a time. The phone's frame sets the step when it maps to one; Back and Next move it by hand.
+    const [step, setStep] = useState(0);
+
     // Live: the backend replays a scenario through the engine; every decision arrives on the stream.
-    const [scenarios, setScenarios] = useState<{ scenario_id: string; scenario_name: string }[]>([]);
+    const [scenarios, setScenarios] = useState<{ scenario_id: string; scenario_name: string; event_count?: number }[]>([]);
     const [scenario, setScenario] = useState("SCEN0004");
-    const [run, setRun] = useState<{ id: string; error?: string } | null>(null);
+    const [run, setRun] = useState<{ id: string; scenario: string; state: "running" | "finished" | "failed"; error?: string } | null>(null);
     useEffect(() => {
         if (dataMode !== "live") return;
         api.scenarios()
@@ -112,9 +117,27 @@ const DemoControls = () => {
     const startRun = () => {
         setRun(null);
         api.startRun(scenario)
-            .then((r) => setRun({ id: r.run_id }))
-            .catch((err: Error) => setRun({ id: "", error: err.message }));
+            .then((r) => {
+                setRun({ id: r.run_id, scenario, state: "running" });
+                setStep(HOME_STEP);
+            })
+            .catch((err: Error) => setRun({ id: "", scenario, state: "failed", error: err.message }));
     };
+    // Scenes play one after another: poll the backend until the run ended, and only then allow the next Start run.
+    useEffect(() => {
+        if (!run || run.state !== "running") return;
+        const id = window.setInterval(() => {
+            api.status()
+                .then((st) => {
+                    const latest = st.latest_run;
+                    if (latest && latest.run_id === run.id && latest.state !== "running") setRun({ ...run, state: latest.state });
+                })
+                .catch(() => undefined);
+        }, 1500);
+        return () => window.clearInterval(id);
+    }, [run]);
+    const running = run?.state === "running";
+    const sceneSize = scenarios.find((sc) => sc.scenario_id === run?.scenario)?.event_count ?? 0;
 
     const stopReplay = () => {
         if (timer.current) window.clearTimeout(timer.current);
@@ -141,8 +164,6 @@ const DemoControls = () => {
 
     const isLive = dataMode === "live";
 
-    // One demo step at a time. The phone's frame sets the step when it maps to one; Back and Next move it by hand.
-    const [step, setStep] = useState(0);
     const frameStep = stepIndex(currentFrame(state));
     useEffect(() => {
         if (frameStep >= 0) setStep(frameStep);
@@ -245,12 +266,18 @@ const DemoControls = () => {
                                 ))}
                             </select>
                             {SCENE[scenario] && <p className="text-sm text-tertiary">{SCENE[scenario].shows}</p>}
-                            <Button size="md" color="primary" onClick={startRun}>
-                                Start run
+                            <Button size="md" color="primary" isDisabled={running || !!state.waiting} onClick={startRun}>
+                                {running ? "Scene running…" : "Start run"}
                             </Button>
                             {run && (
                                 <p className="text-sm text-secondary" aria-live="polite">
-                                    {run.error ? `Could not start: ${run.error}` : `Run ${run.id} started. Decisions arrive on the stream.`}
+                                    {run.error
+                                        ? `Could not start: ${run.error}`
+                                        : running
+                                          ? `Scene running · ${state.activity.length} of ${sceneSize || "?"} purchases decided`
+                                          : run.state === "finished"
+                                            ? "Scene finished. Walk through the phone, then pick the next scene here."
+                                            : "The run failed on the backend. Start it again."}
                                 </p>
                             )}
                         </div>
