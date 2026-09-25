@@ -41,11 +41,14 @@ function closest(name: string, category: string, selfId: string, ids: Iterable<s
 }
 
 // The learned rule "Block shops that look like my known shops" turns both questions below into declines.
-export const lookalikeMerchant: Guard = ({ auth, base, customerId, ledger, policy }) => {
+export const lookalikeMerchant: Guard = ({ auth, base, customerId, ledger, policy, learned }) => {
   const ask = policy.lookalikeAction === "decline" ? "DECLINE" : "STEP_UP";
   const m = auth.merchant;
   const known = customerId ? base.customerMerchants.get(customerId) : undefined;
   if (known?.has(m.merchant_id)) return { guard: "lookalike", verdict: "PASS", evidence: [] };
+  // The customer confirmed this very shop before (memory, any earlier run): it is theirs, not a copy.
+  const confirmed = learned?.shops.get(m.merchant_id);
+  if (confirmed) return { guard: "lookalike", verdict: "PASS", evidence: [{ fact: "confirmed_by_you", value: confirmed.count, comparator: ">=", threshold: 1, source: "memory" }] };
   const approvedHere = ledger.approvedAtMerchant(m.merchant_id);
   if (approvedHere > 0) {
     return { guard: "lookalike", verdict: "PASS", evidence: [{ fact: "approved_in_this_run", value: approvedHere, comparator: ">=", threshold: 1, source: "ledger" }] };
