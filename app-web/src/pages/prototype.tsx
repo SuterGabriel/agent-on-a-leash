@@ -218,8 +218,6 @@ const DemoControls = () => {
                 </div>
             )}
 
-            <VoiceToggle />
-
             <div className="flex flex-col gap-2" aria-live="polite">
                 <div className="flex items-baseline justify-between">
                     <span className="text-md font-semibold text-primary">Demo, tap by tap</span>
@@ -277,6 +275,8 @@ const DemoControls = () => {
                     </Button>
                 </div>
             </div>
+
+            <VoiceToggle />
 
             <Button size="md" color="tertiary" onClick={() => dispatch({ type: "RESET" })}>
                 Reset demo
