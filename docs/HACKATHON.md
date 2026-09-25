@@ -78,6 +78,16 @@ If asked: the public set proves correctness against the reference; the synthetic
 
 If asked "why no AI in the engine": a bank cannot explain a probability to a customer or a regulator. Every decision here is a list of checks with the fact that failed. The AI is at the edges, reading language, and it can be switched off without changing a single decision.
 
+## 5a. The voice, in one sentence
+
+**On stage:** "When the card has a question and you cannot look at your phone, it asks you out loud and takes your yes or no, and nothing else: the voice never decides, it only carries your answer."
+
+**If there is time for a second sentence:** "That is the same 120-second question the screen shows, read by an ElevenLabs agent, and the spoken answer goes to the same endpoint as the tap, so there is no second path into the card."
+
+**What it could become, for Q&A.** The card could call you instead of pushing a notification when a purchase needs you while you drive or cook. You could set up the card by talking: "let it buy groceries up to 120 a week", read back as rules before Face ID. And it is the accessibility path for people who cannot read a small screen. Every one of these stays inside the rule that a spoken answer is data for the engine, never an instruction to it.
+
+**How it works today.** ElevenLabs conversational agent, gpt-4o-mini as its language model, eleven_flash_v2 for speech. The opening sentence is composed by the app from the engine's own question, so the model does not invent what it reads. Its only write is the resolve call with the word the cardholder said. Silence, "hmm" or an unclear answer never becomes an approval; the two-minute window then expires as it would on screen. Needs `VITE_ELEVENLABS_AGENT_ID` and internet; without either, the mic does nothing and the tap path is unchanged. Setup: `app-web/docs/voice.md`.
+
 ## 6. What a jury member can see in the first five seconds
 
 - The phone: a rule failed, in the customer's own words, with the fact next to it. Five families, so the shape of the problem is visible before reading.
@@ -108,6 +118,7 @@ Relay (St. Gallen, same data): a desktop dashboard, a 0 to 100 trust score, dete
 | Demo script and recovery | `docs/DEMO_GUIDE.md` |
 | Evidence tracker | `docs/PITCH_EVIDENCE.md` |
 | Comparison with a plain limit | `docs/pitch/comparison.md`, `comparison.svg` |
+| Figures for the slides | `docs/pitch/figures.md`: nine SVGs, one per claim, regenerated with `npm run figures` and `npm run compare` |
 | Live figures | `docs/pitch/live-figures-asks-approved.md`, `live-figures-asks-declined.md`, `docs/learnings/2026-09-25-live-before-after.md` |
 | Model decision | `docs/research/MODEL_DECISION.md` |
 | Product spec | `docs/PRODUCT_SPEC.md` |
