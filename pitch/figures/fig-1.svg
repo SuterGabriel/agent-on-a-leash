@@ -1,0 +1,10 @@
+<svg role="img" xmlns="http://www.w3.org/2000/svg" width="1200" height="372" viewBox="0 0 1200 372" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="1200" height="372" fill="#fcfcfb"/>
+<text x="40" y="52" font-size="32" font-weight="700" fill="#0b0b0b">A spending limit catches 6 of 28 risky purchases.</text>
+<text x="40" y="92" font-size="32" font-weight="700" fill="#0b0b0b">The rules engine catches 28.</text>
+<text x="40" y="128" font-size="19" fill="#52514e">Risky purchases stopped or put to the customer, of 28 in Viseca's five public scenarios</text>
+<line x1="300" y1="158" x2="300" y2="342" stroke="#d9d8d3" stroke-width="2"/>
+<text x="276" y="190" text-anchor="end" font-size="24" font-weight="600" fill="#0b0b0b">No control</text><text x="320" y="190" font-size="24" fill="#0b0b0b">0 of 28</text>
+<text x="276" y="244" text-anchor="end" font-size="24" font-weight="600" fill="#0b0b0b">Plain spending limit</text><rect x="300" y="224" width="137" height="24" rx="4" fill="#eb6834"><title>Plain spending limit: 6 of 28 risky purchases stopped or asked</title></rect><text x="453" y="244" font-size="24" fill="#0b0b0b">6 of 28</text>
+<text x="276" y="298" text-anchor="end" font-size="24" font-weight="600" fill="#0b0b0b">Our engine</text><rect x="300" y="278" width="640" height="24" rx="4" fill="#2a78d6"><title>Our engine: 28 of 28 risky purchases stopped or asked</title></rect><text x="956" y="298" font-size="24" fill="#0b0b0b">28 of 28</text>
+</svg>

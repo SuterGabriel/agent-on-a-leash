@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandat · The Agent Card</title>
+<meta name="description" content="Swiss {ai} Weeks Hackathon Zurich 2026 · Viseca challenge Agent on a Leash · Team Mandat">
+<!--
+  Static pitch, five slides, no build step. Deploy this folder as is (Vercel: `npx vercel --prod` in here,
+  or drag the folder onto vercel.com/new). Arrow keys or scrolling move between slides; print gives one page per slide.
+
+  LINKS.demo: the deployed app-web, route /prototype. Until app-web is on Vercel it points at the local dev server.
+  Figures: pitch/figures/fig-*.svg, exported from docs/pitch (npm run figures). Screens: pitch/assets/screen-*.png,
+  taken from the app at /prototype?screen=1.3, 3.1, 5.2 and 4.2. A phone whose image is missing is hidden.
+-->
+<script>
+  const LINKS = {
+    demo:   "http://localhost:5173/prototype",
+    github: "https://github.com/SuterGabriel/agent-on-a-leash"
+  };
+</script>
+<style>
+  :root{
+    --ink:#000; --ink-2:#6b6b6b; --rule:#d9d9d9; --paper:#fff; --panel:#f2f2f2; --red:#e2001a;
+    --m:clamp(24px,4vw,64px);
+  }
+  *{box-sizing:border-box}
+  html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1}
+  a{color:inherit}
+  .slide{min-height:100vh;max-width:1920px;margin:0 auto;scroll-snap-align:start;padding:var(--m);display:grid;grid-template-rows:auto 1fr auto;gap:clamp(12px,2.2vh,28px)}
+  .top{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:12px;font-size:clamp(13px,1.1vw,16px);letter-spacing:.01em}
+  .top .team{display:flex;align-items:center;gap:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+  .top .team::before{content:"";width:14px;height:14px;background:var(--red);display:inline-block}
+  .top .num{font-variant-numeric:tabular-nums;color:var(--ink-2)}
+  .foot{display:flex;justify-content:space-between;border-top:1px solid var(--rule);padding-top:10px;font-size:clamp(11px,.9vw,13px);color:var(--ink-2)}
+  .foot kbd{font-family:inherit;border:1px solid var(--rule);padding:0 5px;border-radius:2px}
+  h1{font-size:clamp(40px,5.6vw,88px);line-height:.95;letter-spacing:-.03em;margin:0;font-weight:700}
+  h2{font-size:clamp(26px,3.2vw,48px);line-height:1.02;letter-spacing:-.02em;margin:0;font-weight:700;max-width:22ch}
+  h3{font-size:clamp(13px,1.05vw,15px);text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px;font-weight:700;border-top:2px solid var(--ink);padding-top:10px}
+  .lead{font-size:clamp(16px,1.4vw,22px);line-height:1.3;max-width:36ch;margin:0;color:var(--ink)}
+  .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:clamp(16px,2vw,32px);align-items:start}
+  .c4{grid-column:span 4}.c3{grid-column:span 3}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:1/-1}
+  ul{margin:0;padding:0;list-style:none;font-size:clamp(13px,1.05vw,16px);line-height:1.35}
+  ul li{padding:6px 0 6px 18px;border-bottom:1px solid var(--rule);position:relative}
+  ul li::before{content:"";position:absolute;left:0;top:calc(.7em + 2px);width:8px;height:8px;background:var(--ink)}
+  ul li b{font-weight:700}
+  ol.cases{margin:0;padding:0;list-style:none;counter-reset:c}
+  ol.cases li{counter-increment:c;display:grid;grid-template-columns:2.2em minmax(0,1fr);gap:8px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:clamp(14px,1.1vw,17px);line-height:1.35}
+  ol.cases li::before{content:counter(c,decimal-leading-zero);font-weight:700;color:var(--red);font-variant-numeric:tabular-nums}
+  ol.cases li b{display:block;font-weight:700}
+  .phones{display:flex;min-width:0;gap:clamp(12px,1.6vw,28px);align-items:flex-start;justify-content:flex-start}
+  .phone{flex:0 1 auto;width:min(100%,clamp(180px,15vw,260px));border-radius:26px;overflow:hidden;background:var(--panel);box-shadow:0 0 0 1px var(--rule)}
+  .phone img{display:block;width:100%;height:auto}
+  .phone.tall{max-height:clamp(320px,50vh,600px);overflow:hidden}
+  .phone.missing{display:none}
+  .cap{font-size:clamp(11px,.9vw,13px);color:var(--ink-2);margin:8px 2px 0;font-variant-numeric:tabular-nums}
+  .btn{display:inline-flex;align-items:center;gap:14px;background:var(--ink);color:#fff;text-decoration:none;font-weight:700;font-size:clamp(16px,1.4vw,22px);padding:14px 22px;margin-top:14px}
+  .btn:hover{background:var(--red)}
+  .btn span{font-weight:400}
+  .note{font-size:clamp(12px,1vw,14px);color:var(--ink-2);margin:12px 0 0;line-height:1.4;max-width:48ch}
+  .nums{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border-top:2px solid var(--ink)}
+  .num{padding:10px 12px 10px 0;border-bottom:1px solid var(--rule)}
+  .num strong{display:block;font-size:clamp(26px,2.7vw,44px);letter-spacing:-.03em;line-height:1;font-weight:700}
+  .num span{display:block;font-size:clamp(12px,1vw,14px);color:var(--ink-2);margin-top:6px;line-height:1.3}
+  .bars{border-top:2px solid var(--ink);padding-top:10px}
+  .bar{display:grid;grid-template-columns:11em 1fr 5em;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:clamp(13px,1.05vw,16px)}
+  .bar i{display:block;height:14px;background:var(--ink)}
+  .bar i.red{background:var(--red)}
+  .bar em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+  .arch{display:flex;flex-wrap:wrap;gap:8px 0;align-items:center;font-size:clamp(13px,1.05vw,16px);border-top:2px solid var(--ink);padding-top:10px}
+  .arch b{padding:4px 8px;border:1px solid var(--ink);font-weight:700;font-size:clamp(12px,.95vw,14px)}
+  .arch s{text-decoration:none;padding:0 10px;color:var(--ink-2)}
+  #s3 h2{max-width:none}
+  #s3 ul{font-size:clamp(13px,1vw,15px)}
+  /* Slide 4: figures. Each SVG has its own light surface and title; the frame only adds the hairline. */
+  .figs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,1.6vw,28px)}
+  .fig{margin:0;border:1px solid var(--rule);background:#fcfcfb}
+  .fig img{display:block;width:100%;height:auto}
+  .fig.wide{grid-column:1/-1}
+  .fig figcaption{font-size:clamp(11px,.9vw,13px);color:var(--ink-2);padding:8px 12px;border-top:1px solid var(--rule)}
+  /* Slide 5: Viseca's list */
+  table{width:100%;border-collapse:collapse;font-size:clamp(11px,.92vw,14px);line-height:1.3}
+  thead th{text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:clamp(10px,.8vw,12px);color:var(--ink-2);padding:0 10px 8px 0;border-bottom:2px solid var(--ink)}
+  tbody td{padding:7px 10px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+  tbody th{text-align:left;font-weight:700;padding:7px 10px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top;white-space:nowrap;color:var(--ink-2)}
+  td.ask{width:26%}
+  td.st{width:7em;white-space:nowrap;font-weight:700}
+  td.st.partial{color:var(--red)}
+  tr.surprise td, tr.surprise th{background:#fbf1f2}
+  @media (max-width:900px){
+    .c4,.c3,.c5,.c6,.c7,.c8{grid-column:1/-1}
+    .slide{min-height:auto;scroll-snap-align:none}
+    .phones{flex-wrap:wrap}
+    .figs{grid-template-columns:1fr}
+    td.ask{width:auto}
+  }
+  @media print{.slide{min-height:auto;page-break-after:always}.foot kbd{display:none}}
+</style>
+</head>
+<body>
+
+<!-- ================= SLIDE 1 · THE CASE ================= -->
+<section class="slide" id="s1">
+  <header class="top">
+    <div class="team">Mandat</div>
+    <div>Swiss {ai} Weeks Zurich 2026 · Viseca challenge «Agent on a Leash»</div>
+    <div class="num">01 / 05</div>
+  </header>
+
+  <div class="grid">
+    <div class="c8">
+      <h1>The Agent Card.</h1>
+      <p class="lead" style="margin-top:20px">Your AI shopping agent gets its own Viseca card. The card carries your rules, not your money. Every payment is approved, stopped or put to you, and explained in your words.</p>
+    </div>
+    <div class="c4 phones" style="justify-content:flex-end">
+      <figure class="phone tall" style="margin:0"><img src="assets/screen-1-3-rules.png" alt="Rules from your shopping, screen 1.3"></figure>
+    </div>
+
+    <div class="c3">
+      <h3>Problem</h3>
+      <ul>
+        <li>To let an AI shop, you paste your real card into it. A blank cheque.</li>
+        <li>The only rule is a sentence inside the agent. A shop page can rewrite it.</li>
+        <li>When it goes wrong: a decline without a reason, a dispute on Viseca's desk.</li>
+      </ul>
+    </div>
+    <div class="c3">
+      <h3>Solution</h3>
+      <ul>
+        <li>Viseca issues a separate card number for the agent. The main card is never shared.</li>
+        <li>Rules live at Viseca, inside the mandate, and travel with every payment.</li>
+        <li>Approve, decline or ask in milliseconds, with the rule and the fact behind it.</li>
+      </ul>
+    </div>
+    <div class="c3">
+      <h3>Set-up and learning</h3>
+      <ul>
+        <li>Rules proposed from 90 days of your own shopping, with evidence. Nothing to type.</li>
+        <li>Correct a value, confirm with Face&nbsp;ID. Under a minute.</li>
+        <li>Your answers become rules. Stricter is one tap, looser needs your face.</li>
+      </ul>
+    </div>
+    <div class="c3">
+      <h3>Accessibility</h3>
+      <ul>
+        <li>Every question and every stop can be heard, not only read (ElevenLabs).</li>
+        <li>Answer by voice within the 120&nbsp;s window. Approve still needs Face&nbsp;ID.</li>
+        <li>Set the card up by voice: the same history-based proposal, read aloud.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <div>Kim Badertscher · design and app &nbsp;·&nbsp; Ara · engine &nbsp;·&nbsp; Gabriel Suter · backend, voice, lead</div>
+    <div>Scroll or press <kbd>→</kbd></div>
+  </footer>
+</section>
+
+<!-- ================= SLIDE 2 · DEMO ================= -->
+<section class="slide" id="s2">
+  <header class="top">
+    <div class="team">Mandat</div>
+    <div>Live demo · Viseca one, Card tab</div>
+    <div class="num">02 / 05</div>
+  </header>
+
+  <div class="grid">
+    <div class="c7 phones">
+      <figure class="phone tall" style="margin:0"><img src="assets/screen-3-1-home.png" alt="Agent Card home"><figcaption class="cap">Quiet approval, budget moves</figcaption></figure>
+      <figure class="phone tall" style="margin:0"><img src="assets/screen-5-2-stopped.png" alt="Payment stopped, lookalike shop"><figcaption class="cap">Stopped, with the rule that failed</figcaption></figure>
+      <figure class="phone tall" style="margin:0"><img src="assets/screen-4-2-ask-checks.png" alt="Ask me with shop text quoted"><figcaption class="cap">Ask me, shop text quoted and ignored</figcaption></figure>
+    </div>
+    <div class="c5">
+      <h2>Three use cases, one card.</h2>
+      <ol class="cases" style="margin-top:18px">
+        <li><div><b>Ordinary purchase, no friction</b> The agent pays CHF 289 at a known shop. A quiet row appears, the budget bar moves. No push.</div></li>
+        <li><div><b>Lookalike shop, stopped with a reason</b> «PixelHarbour» is one letter off «PixelHarbor». The rule that failed is shown with the customer's own words. Nothing was bought.</div></li>
+        <li><div><b>Manipulated shop text, the customer decides</b> The page tells the agent to ignore the limit. We quarantine it, ask, by tap or by voice, and the decline becomes a rule. Then: turn the card off in one sheet.</div></li>
+      </ol>
+      <a class="btn" id="demoLink" href="#">Open the demo <span>→</span></a>
+      <p class="note">Runs in the browser. Start on the Card tab, tap «Get started», follow the flow. The side panel switches between mock and live backend and switches the voice on.</p>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <div>Screens: Viseca one visual language, SF Pro, black pill, grey status. No agent brand inside the bank's app.</div>
+    <div><kbd>←</kbd> <kbd>→</kbd></div>
+  </footer>
+</section>
+
+<!-- ================= SLIDE 3 · BACKEND ================= -->
+<section class="slide" id="s3">
+  <header class="top">
+    <div class="team">Mandat</div>
+    <div>Backend and engine</div>
+    <div class="num">03 / 05</div>
+  </header>
+
+  <div class="grid">
+    <div class="c12">
+      <h2>Rules decide. No model in the decision path.</h2>
+    </div>
+
+    <div class="c4">
+      <div class="nums">
+        <div class="num"><strong>45 / 45</strong><span>decisions match Viseca's reference on the public set</span></div>
+        <div class="num"><strong>28 / 28</strong><span>risky purchases stopped or asked; a plain limit catches 6</span></div>
+        <div class="num"><strong>0 / 185</strong><span>live decisions after the 8 s deadline</span></div>
+        <div class="num"><strong>268 ms</strong><span>median decision on Viseca's server, network included</span></div>
+        <div class="num"><strong>0.04 ms</strong><span>median engine time per decision</span></div>
+        <div class="num"><strong>21</strong><span>checks in five families: money, item, shop, session, manipulation</span></div>
+        <div class="num"><strong>262</strong><span>tests, all green, in 22 files</span></div>
+        <div class="num"><strong>2</strong><span>learned rules enforced after one decline</span></div>
+      </div>
+      <div class="bars" style="margin-top:22px">
+        <div class="bar"><span>No control</span><i style="width:2px"></i><em>0 / 28</em></div>
+        <div class="bar"><span>Plain spending limit</span><i class="red" style="width:21%"></i><em>6 / 28</em></div>
+        <div class="bar"><span>Our engine</span><i style="width:100%"></i><em>28 / 28</em></div>
+      </div>
+      <p class="note">Risky purchases caught, of 28 in the five public scenarios.</p>
+    </div>
+
+    <div class="c8">
+      <h3>How we solved it</h3>
+      <ul>
+        <li><div><b>Deterministic engine in TypeScript.</b> The instruction is compiled into rules; every rule keeps the words it came from. 21 guards, each returning pass, fail or unsure with the fact.</div></li>
+        <li><div><b>Merchant text is quarantined.</b> Unicode-normalised pattern scan, facts extracted, orders to the agent flagged and quoted. Seven injection phrasings in the red team; none is ever approved.</div></li>
+        <li><div><b>State that survives.</b> A ledger per run for rolling budgets, duplicates and retries. A state file restores the leash, feed, open asks and tokens after a crash; expired asks buy nothing.</div></li>
+        <li><div><b>Decision-bound payment tokens.</b> Every approval issues a token for one shop, one maximum, fifteen minutes, one use. Hash-chained history with a verify endpoint.</div></li>
+        <li><div><b>Human in the loop.</b> 120 s ask, Face&nbsp;ID on approve, one answer to Viseca even on a double tap. The API only tightens; loosening is a new mandate.</div></li>
+        <li><div><b>Voice channel.</b> An ElevenLabs agent reads the question the engine composed and passes the spoken yes or no to the same endpoint. It never decides. Setup by voice proposes the same rules screen 1.3 shows.</div></li>
+        <li><div><b>Decoupled.</b> App → our backend → worker and engine → Viseca API behind one client with an offline copy. Nothing is hard-coded to a scenario; a test fails if it were.</div></li>
+      </ul>
+      <div class="arch" style="margin-top:18px">
+        <b>Shopping agent</b><s>→</s><b>Viseca platform</b><s>→</s><b>Worker + rules engine</b><s>→</s><b>Backend, ledger, tokens</b><s>→</s><b>Viseca one app</b>
+      </div>
+      <a class="btn" id="githubLink" href="#">Code on GitHub <span>→</span></a>
+      <p class="note" style="max-width:none">Local models (Qwen 3.5) were researched and the seam exists. Not wired in: rules alone reach 45 of 45, and a bank can explain a checklist, not a probability.</p>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <div>Re-run every number: <code>npm run replay</code> · <code>npm run compare</code> · <code>npm run jury-figures</code> · <code>npm test</code></div>
+    <div>Team Mandat · 25 September 2026</div>
+  </footer>
+</section>
+
+<!-- ================= SLIDE 4 · EVIDENCE ================= -->
+<section class="slide" id="s4">
+  <header class="top">
+    <div class="team">Mandat</div>
+    <div>Evidence · measured 24 and 25 September</div>
+    <div class="num">04 / 05</div>
+  </header>
+
+  <div class="grid">
+    <div class="c12">
+      <h2>What a plain spending limit misses, and what changes when the customer answers.</h2>
+    </div>
+    <div class="c12 figs">
+      <figure class="fig"><img src="figures/fig-1.svg" alt="A spending limit catches 6 of 28 risky purchases. The rules engine catches 28."><figcaption>Five public scenarios, 28 risky purchases of 45. <code>npm run compare</code></figcaption></figure>
+      <figure class="fig"><img src="figures/fig-3.svg" alt="CHF 4,173 of risky purchases still go through with a plain limit. CHF 0 with the engine."><figcaption>Risky amount paid unchecked. <code>npm run compare</code></figcaption></figure>
+      <figure class="fig wide"><img src="figures/fig-2.svg" alt="A spending limit sees only the amount. The engine catches all six kinds of risk; the limit, one."><figcaption>The same 28 by kind of risk. A limit scores only where the amount is the problem.</figcaption></figure>
+      <figure class="fig wide"><img src="figures/fig-4.svg" alt="Say yes once and the shop is known: 52 questions become 28 on the same 74 purchases."><figcaption>Seven live scenarios on Viseca's server, run twice: every question answered no, then every question answered yes. <code>npm run jury-figures</code></figcaption></figure>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <div>Every figure is generated from the measured files: <code>npm run figures</code>, <code>docs/pitch/figures.md</code></div>
+    <div><kbd>←</kbd> <kbd>→</kbd></div>
+  </footer>
+</section>
+
+<!-- ================= SLIDE 5 · VISECA'S LIST ================= -->
+<section class="slide" id="s5">
+  <header class="top">
+    <div class="team">Mandat</div>
+    <div>Viseca's list, row by row · checked against the code on 25 September</div>
+    <div class="num">05 / 05</div>
+  </header>
+
+  <div class="grid">
+    <div class="c12">
+      <table>
+        <thead><tr><th>Part</th><th>Viseca asks</th><th>Our answer</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><th>Frontend</th><td class="ask">Turn the customer's input into clear, executable permissions</td><td>Rules proposed from 90 days of shopping, or written in the customer's own words. Shown as checks in five families: Money · Item · Shop · Session · Manipulation. Each check shows the words it came from.</td><td class="st">Built</td></tr>
+          <tr><th>Frontend</th><td class="ask">Spending limits</td><td>Max per payment plus a rolling budget per 30 days, with «CHF 76.50 left · frees up Mon 09:12».</td><td class="st">Built</td></tr>
+          <tr><th>Frontend</th><td class="ask">Merchant requirements</td><td>Any shop, or only shops you bought from. Shop types allowed. A lookalike of your own shop is declined; a lookalike of a shop you never used is asked about.</td><td class="st partial">Partial</td></tr>
+          <tr><th>Frontend</th><td class="ask">Time windows</td><td>Rules valid until a date. A task does not end by itself after its purchase; an identical repeat is caught as a duplicate.</td><td class="st partial">Partial</td></tr>
+          <tr><th>Frontend</th><td class="ask">Rules for uncertain cases</td><td>When unsure: Ask me (2 min, nothing bought without an answer) or Decline. Every ask says why.</td><td class="st">Built</td></tr>
+          <tr><th>Frontend</th><td class="ask">Tighten, update or revoke the policy</td><td>Tighten: one tap, instant. Loosen: review what changes, Face ID. Revoke: turn the card off.</td><td class="st">Built</td></tr>
+          <tr><th>Backend</th><td class="ask">Approve · decline · step_up for every proposed purchase</td><td>Worker long-polls, decides and posts. 0.04 ms median engine time, 268 ms median on Viseca's server, 0 of 185 after the 8 s deadline.</td><td class="st">Built</td></tr>
+          <tr><th>Backend</th><td class="ask">Explain in plain language, highlight uncertainty</td><td>Headline, one «because» sentence with the numbers, checklist pass / fail / unsure with the fact, «What we don't know».</td><td class="st">Built</td></tr>
+          <tr><th>Backend</th><td class="ask">Support the customer's final approve or reject</td><td>Question sheet with 2:00 timer, answered by tap or by voice. Approve with Face ID. One answer to Viseca even on a double tap.</td><td class="st">Built</td></tr>
+          <tr><th>Backend</th><td class="ask">Track state: rolling limits, retries, duplicates, earlier decisions, without blocking normal buys</td><td>Ledger per run: only approvals count, the same live ID is counted once, the same basket again is a duplicate, waiting asks don't count, budget frees as days roll. A state file survives a restart.</td><td class="st">Built</td></tr>
+          <tr><th>Backend</th><td class="ask">Merchant text is untrusted (prompt injection)</td><td>Shop text is quarantined: facts pulled out, orders to the agent flagged and quoted in the grey «From the shop» box. Seven injection phrasings in the red team, none ever approved.</td><td class="st">Built</td></tr>
+          <tr><th>Technical</th><td class="ask">Decouple UI from the decision engine</td><td>App ↔ our backend ↔ Viseca API. The engine is a pure package the worker calls. An offline copy of Viseca's API runs the demo without Wi-Fi.</td><td class="st">Built</td></tr>
+          <tr><th>Technical</th><td class="ask">Small, fast models. Predictable if a model fails</td><td>Rules decide on their own; no model runs in the decision path. Models were researched and the seam exists. A bank can explain a checklist, not a probability.</td><td class="st partial">Not built, on purpose</td></tr>
+          <tr><th>Technical</th><td class="ask">No hard-coding to scenario, ID or order</td><td>Generic checks from the policy and the history. A test fails if the engine mentions a scenario or purchase id. All 45 public and 111 live purchases run through the same engine.</td><td class="st">Built</td></tr>
+          <tr><th>Demo</th><td class="ask">One ordinary purchase with little friction</td><td>AU0035 · PixelHarbor · CHF 289 → approved, quiet row, budget moves.</td><td class="st">Built</td></tr>
+          <tr><th>Demo</th><td class="ask">One ambiguous, unsafe or manipulated purchase with a useful intervention</td><td>AU0039 PixelHarbour (lookalike) → declined with reason. AU0040 shop text «ignore the limit» → asked, quoted.</td><td class="st">Built</td></tr>
+          <tr><th>Demo</th><td class="ask">Human approval, rejection or revocation path</td><td>Customer declines AU0040 → the answer becomes a rule → turns the card off.</td><td class="st">Built</td></tr>
+          <tr><th>Demo</th><td class="ask">Judges see what was permitted, which evidence, why, and how the customer kept control</td><td>Every decision carries the checklist. <code>GET /judge/decisions</code> lists all purchases with reasons, evidence, latency and token summary. It is JSON; there is no judge page.</td><td class="st partial">Partial</td></tr>
+          <tr class="surprise"><th>Our surprise</th><td class="ask">(not asked) A separate card for all online shopping</td><td>The rules live on their own card. The agent never gets the main card. Every approval issues a decision-bound token: one shop, one maximum, fifteen minutes, one use. Revoke = throw it away.</td><td class="st">Built</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <div>Source: <code>docs/HACKATHON.md</code> section 10. Three things we say unasked: no model in the decision path; the judge view is an endpoint, not a page; a lookalike of a shop you never used is a question, not a block.</div>
+    <div>Team Mandat · 25 September 2026</div>
+  </footer>
+</section>
+
+<script>
+  document.getElementById('demoLink').href = LINKS.demo;
+  document.getElementById('githubLink').href = LINKS.github;
+  // A phone whose screenshot is not in assets/ is hidden rather than shown broken.
+  document.querySelectorAll('.phone img').forEach(img => { img.addEventListener('error', () => img.closest('.phone').classList.add('missing')); });
+  const slides = [...document.querySelectorAll('.slide')];
+  addEventListener('keydown', e => {
+    const i = slides.findIndex(s => s.getBoundingClientRect().top > -innerHeight/2);
+    if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); (slides[i+1]||slides[i]).scrollIntoView(); }
+    if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); (slides[i-1]||slides[0]).scrollIntoView(); }
+  });
+</script>
+</body>
+</html>
