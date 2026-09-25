@@ -84,7 +84,8 @@ npm run scenario -- SCEN0004     # one scenario offline, decision by decision
 | `packages/shared` | event, decision and leash types, data pack loaders |
 | `app-web` | the phone app, handover pack, design system |
 | `pitch` | the five-slide pitch site |
-| `docs` | HACKATHON.md, DEMO_GUIDE.md, VOICE_SETUP.md, PRODUCT_SPEC.md, pitch figures, research |
+| `video` | Remotion project, one 20-second video of a declined purchase (`npm run render` inside) |
+| `docs` | HACKATHON.md, DEMO_GUIDE.md, VOICE_SETUP.md, VIDEO_GUIDE.md, PRODUCT_SPEC.md, pitch figures, research |
 | `data` | Viseca's synthetic challenge data pack |
 | `tests` | engine, phrasing and red-team tests |
 

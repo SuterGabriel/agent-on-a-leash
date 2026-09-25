@@ -1,0 +1,22 @@
+{
+  "name": "agent-card-video",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Remotion video: one declined purchase on the Agent Card, 20 seconds, silent",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts AgentCardDecline out/agent-card-decline.mp4",
+    "still": "remotion still src/index.ts AgentCardDecline out/frame.png --frame=400",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.417",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.417"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
