@@ -141,3 +141,14 @@ Checked against the code on 25 September. **Built** = in the repo and covered by
 | Surprise | A separate card for all online shopping | Built | The Agent Card in the app; on the backend every approval issues a decision-bound token: one shop, one maximum, fifteen minutes, one use, hash-chained history with a verify endpoint. The main card number is never handed out | 0:15: "Give this card to your agent"; Q&A: "what if the agent is fooled after the approval" |
 
 Three things to say without being asked, because a jury member will otherwise find them: no model in the decision path (a strength, section 5); the judge view is an endpoint, not a page; a lookalike of a shop the customer never used is a question, not a block, by design.
+
+## 11. The four rows that are not fully built, and what each would take
+
+| Row | What is missing | Why it is that way | To build it | Effort |
+|---|---|---|---|---|
+| Merchant requirements, lookalikes | "Always blocked" is only true for lookalikes of shops the customer has used. A lookalike of a shop only other customers use is asked about | The customer never bought at the original, so it may be their usual shop with a different spelling. The learned rule "block shops that look like my known shops" turns the ask into a decline | Nothing, unless the stricter default is wanted: one line in the lookalike guard | Design choice |
+| Time windows, task ends by itself | After the requested item is bought once, a different second order of it is not stopped. An identical repeat is caught as a duplicate | No goal-fulfilled guard; the public set contains a repeat that must stay approved | A guard that asks on any later order of the requested item once one was approved in the run; the ledger already has the data; re-check the reference | About an hour |
+| Judge view | A JSON endpoint, `GET /judge/decisions`, with every purchase, reasons, checks per family, latency, deadline margin and the token summary. No web page | Kim's handover planned the page; it was never started | One static table page over that JSON | About two hours, or show the comparison figure and the JSON in a browser tab |
+| Small, fast models with a predictable fallback | No model runs in the decision path | Rules alone reach 45 of 45, so the model path was deprioritised; the research and the seam exist | Local llama-server with Qwen3.5-4B for unusual instruction wording, 5 s cutoff, facts only, rules decide | Half a day plus a machine that runs it at the venue |
+
+If one of them is done before the submission, the goal-fulfilled guard is the only one that fits the time and changes a decision. The judge page is the one a jury member is most likely to notice. The model row should stay as it is and be said out loud as a strength.
