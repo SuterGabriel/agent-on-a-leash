@@ -71,13 +71,13 @@ const SCENE: Record<string, { title: string; shows: string }> = {
 };
 
 /** The demo, tap by tap. The step whose frames contain the phone's current frame is highlighted. */
-const DEMO_STEPS: { frames: FrameId[]; where: string; tap: string }[] = [
+const DEMO_STEPS: { frames: FrameId[]; where: string; tap: string; startRun?: boolean }[] = [
     { frames: ["1.1"], where: "Card tab", tap: "Tap Get started" },
     { frames: ["1.2"], where: "How it works", tap: "Continue" },
     { frames: ["1.3", "1.3a"], where: "Rules from your shopping", tap: "Tap CHF 300, step to 400. Tap the 30-day budget, step to 2'000. Then Use these rules" },
     { frames: ["1.4"], where: "Smart settings", tap: "Leave as proposed. Create card with Face ID" },
     { frames: ["1.5"], where: "Your Agent Card is ready", tap: "Done" },
-    { frames: ["3.1b"], where: "Home, no payments yet", tap: "Here: Start run. The agent goes shopping" },
+    { frames: ["3.1b"], where: "Home, no payments yet", tap: "Pick the scene, then Start run. The agent goes shopping", startRun: true },
     { frames: ["3.1", "3.1c"], where: "Home", tap: "Quiet approvals move the bar. Tap a stopped payment" },
     { frames: ["5.1", "5.2", "5.2b", "5.2c"], where: "Payment details", tap: "The rule that failed, the fact next to it. OK" },
     { frames: ["4.0", "4.1", "4.2"], where: "Your agent wants to pay", tap: "Read why we ask, then Decline (or say it)" },
@@ -160,44 +160,6 @@ const DemoControls = () => {
                 </p>
             </div>
 
-            {isLive && (
-                <div className="flex flex-col gap-2">
-                    <label className="flex flex-col gap-2">
-                        <span className="text-md font-semibold text-primary">Scenario on the backend</span>
-                        <select
-                            value={scenario}
-                            onChange={(e) => setScenario(e.target.value)}
-                            className="h-11 w-full cursor-pointer rounded-full bg-primary px-4 text-md text-primary outline-focus-ring focus-visible:outline-2"
-                        >
-                            {(scenarios.length ? scenarios : [{ scenario_id: scenario, scenario_name: scenario }]).map((s) => (
-                                <option key={s.scenario_id} value={s.scenario_id}>
-                                    {s.scenario_id} · {SCENE[s.scenario_id]?.title ?? s.scenario_name}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                    {SCENE[scenario] && <p className="px-1 text-sm text-tertiary">{SCENE[scenario].shows}</p>}
-                    <Button
-                        size="md"
-                        color="secondary"
-                        className="h-auto min-h-10 justify-start bg-primary py-2 text-left whitespace-normal"
-                        onClick={startRun}
-                    >
-                        Start run: the agent shops with your card rules
-                    </Button>
-                    {run && (
-                        <p className="px-1 text-sm text-secondary" aria-live="polite">
-                            {run.error ? `Could not start: ${run.error}` : `Run ${run.id} started. Decisions arrive on the stream.`}
-                        </p>
-                    )}
-                    {state.waiting && (
-                        <p className="px-1 text-sm text-secondary tabular-nums" aria-live="off">
-                            Question open · {formatClock(secondsLeft)} left
-                        </p>
-                    )}
-                </div>
-            )}
-
             {!isLive && (
                 <div className="flex flex-col gap-2">
                     <Button
@@ -265,9 +227,41 @@ const DemoControls = () => {
                         {step + 1} of {DEMO_STEPS.length}
                     </span>
                 </div>
-                <div className="rounded-xl bg-primary px-4 py-3">
-                    <p className="text-md font-semibold text-primary">{current.where}</p>
-                    <p className="text-sm text-secondary">{current.tap}</p>
+                <div className="flex flex-col gap-3 rounded-xl bg-primary px-4 py-3">
+                    <div>
+                        <p className="text-md font-semibold text-primary">{current.where}</p>
+                        <p className="text-sm text-secondary">{current.tap}</p>
+                    </div>
+                    {current.startRun && isLive && (
+                        <div className="flex flex-col gap-2">
+                            <select
+                                aria-label="Scene"
+                                value={scenario}
+                                onChange={(e) => setScenario(e.target.value)}
+                                className="h-11 w-full cursor-pointer rounded-full bg-secondary px-4 text-md text-primary outline-focus-ring focus-visible:outline-2"
+                            >
+                                {(scenarios.length ? scenarios : [{ scenario_id: scenario, scenario_name: scenario }]).map((sc) => (
+                                    <option key={sc.scenario_id} value={sc.scenario_id}>
+                                        {sc.scenario_id} · {SCENE[sc.scenario_id]?.title ?? sc.scenario_name}
+                                    </option>
+                                ))}
+                            </select>
+                            {SCENE[scenario] && <p className="text-sm text-tertiary">{SCENE[scenario].shows}</p>}
+                            <Button size="md" color="primary" onClick={startRun}>
+                                Start run
+                            </Button>
+                            {run && (
+                                <p className="text-sm text-secondary" aria-live="polite">
+                                    {run.error ? `Could not start: ${run.error}` : `Run ${run.id} started. Decisions arrive on the stream.`}
+                                </p>
+                            )}
+                        </div>
+                    )}
+                    {isLive && state.waiting && (
+                        <p className="text-sm text-secondary tabular-nums" aria-live="off">
+                            Question open · {formatClock(secondsLeft)} left
+                        </p>
+                    )}
                 </div>
                 {next && (
                     <p className="px-1 text-sm text-tertiary">
