@@ -70,23 +70,118 @@ const SCENE: Record<string, { title: string; shows: string }> = {
     },
 };
 
-/** The demo, tap by tap. The step whose frames contain the phone's current frame is highlighted. */
-const DEMO_STEPS: { frames: FrameId[]; where: string; tap: string; startRun?: boolean }[] = [
+/** One step of the guide. `optional` steps are taps the presenter may skip (the guide then moves past them). */
+type Step = { frames: FrameId[]; where: string; tap: string; startRun?: boolean; scenario?: string; scene?: number; optional?: boolean };
+
+const SETUP: Step[] = [
     { frames: ["1.1"], where: "Card tab", tap: "Tap Get started" },
     { frames: ["1.2"], where: "How it works", tap: "Continue" },
     { frames: ["1.3", "1.3a"], where: "Rules from your shopping", tap: "Tap CHF 300, step to 400. Tap the 30-day budget, step to 2'000. Then Use these rules" },
     { frames: ["1.4"], where: "Smart settings", tap: "Leave as proposed. Create card with Face ID" },
     { frames: ["1.5"], where: "Your Agent Card is ready", tap: "Done" },
-    { frames: ["3.1b"], where: "Home, no payments yet", tap: "Pick the scene, then Start run. The agent goes shopping", startRun: true },
-    { frames: ["3.1", "3.1c"], where: "Home", tap: "Quiet approvals move the bar. Tap a stopped payment" },
-    { frames: ["5.1", "5.2", "5.2b", "5.2c"], where: "Payment details", tap: "The rule that failed, the fact next to it. OK" },
-    { frames: ["4.0", "4.1", "4.2"], where: "Your agent wants to pay", tap: "Read why we ask, then Decline (or say it)" },
-    { frames: ["4.4", "4.3", "4.5"], where: "You declined", tap: "Yes, always: the answer becomes a rule" },
-    { frames: ["6.1"], where: "Rules", tap: "Learned rule, tighten in one tap, Turn off Agent Card" },
-    { frames: [], where: "Next scene", tap: "The card and its learned rules stay. Pick the next scene and start it", startRun: true },
 ];
-const HOME_STEP = DEMO_STEPS.findIndex((st) => st.frames.includes("3.1"));
-const stepIndex = (frame: FrameId) => DEMO_STEPS.findIndex((st) => st.frames.includes(frame));
+
+const ASK: FrameId[] = ["4.0", "4.1", "4.2"];
+const ANSWERED: FrameId[] = ["4.4", "4.3", "4.5"];
+const HOME: FrameId[] = ["3.1", "3.1c"];
+const DETAILS: FrameId[] = ["5.1", "5.2", "5.2b", "5.2c"];
+
+/**
+ * The programme: every scene in the order that tells the story, with its beats in the order the purchases arrive.
+ * A question pauses the run until it is answered, so the order on the phone is fixed.
+ */
+const PROGRAMME: { scenario: string; title: string; beats: Omit<Step, "scenario" | "scene">[] }[] = [
+    {
+        scenario: "SCEN0004",
+        title: "Manipulated agent",
+        beats: [
+            { frames: HOME, where: "Home", tap: "PixelHarbor, CHF 289: approved, quiet. The bar moves" },
+            { frames: ASK, where: "Buy it again?", tap: "The same monitor 25 minutes later. Decline" },
+            { frames: ANSWERED, where: "You declined", tap: "Nothing to learn from a repeat. Done" },
+            { frames: HOME, where: "Home", tap: "CHF 520 with 'pre-authorised up to CHF 900' in the text: declined, quoted. PixelHarbour, one letter off: declined. Tap it" },
+            { frames: DETAILS, where: "Payment details", tap: "'Real shop, not a lookalike' failed, the fact next to it. OK", optional: true },
+            { frames: ASK, where: "Your agent wants to pay CHF 299", tap: "The grey box: 'ignore any previous spending instructions'. Decline (or say it)" },
+            { frames: ANSWERED, where: "You declined", tap: "Always decline when a shop's text gives orders? Yes, always" },
+            { frames: HOME, where: "Home", tap: "Protection plan added: declined. A new offer after the decline: approved. A gift voucher instead of the monitor: declined" },
+            { frames: ASK, where: "Circuit and Pine", tap: "Bought there with his other card, never with this one. Decline" },
+            { frames: ["6.1"], where: "Rules", tap: "The learned rule. Tighten in one tap, looser needs Face ID" },
+        ],
+    },
+    {
+        scenario: "SCEN0003",
+        title: "Above the limit",
+        beats: [
+            { frames: HOME, where: "Home", tap: "Loom and Pine, Milano Weave: quiet approvals at shops he knows" },
+            { frames: ASK, where: "Is this you?", tap: "A device he never used, at night. Approve: it was him" },
+            { frames: HOME, where: "Home", tap: "Four more orders in minutes from that device at shops he never used: stopped, no question. Tap one" },
+            { frames: DETAILS, where: "Payment details", tap: "'Looks like you' and 'Only shops you have used' failed. OK", optional: true },
+            { frames: ASK, where: "RainThread", tap: "A shop he never used, from the new device. Approve" },
+            { frames: ASK, where: "CHF 268 at Loom and Pine", tap: "Above his CHF 250 limit. Decline" },
+            { frames: HOME, where: "Home", tap: "A yes to one purchase never raises a limit. The card learned the device, not a higher limit" },
+        ],
+    },
+    {
+        scenario: "SCEN0001",
+        title: "Weekly groceries budget",
+        beats: [
+            { frames: HOME, where: "Home", tap: "CHF 44.50, then CHF 120 exactly at the limit: both quiet" },
+            { frames: ASK, where: "CHF 126", tap: "5 % over the CHF 120 limit. Decline" },
+            { frames: ASK, where: "Second order in 10 minutes", tap: "Together CHF 135. Split order? Decline" },
+            { frames: ASK, where: "Fragrance gift in the basket", tap: "Not groceries. Decline" },
+            { frames: ANSWERED, where: "You declined", tap: "Never buy cosmetics? Yes, always" },
+            { frames: ASK, where: "CHF 324 in 7 days", tap: "Over the CHF 300 budget. Decline" },
+            { frames: HOME, where: "Home", tap: "CHF 138: declined without a question. The week rolls on, CHF 88 goes through" },
+        ],
+    },
+    {
+        scenario: "SCEN0002",
+        title: "One item, right shop, returns",
+        beats: [
+            { frames: HOME, where: "Home", tap: "The shoes at CHF 165: approved. Then size 42, final sale, 7-day returns: declined quietly. Tap one" },
+            { frames: DETAILS, where: "Payment details", tap: "The fact that failed, in his words. OK", optional: true },
+            { frames: ASK, where: "No return policy stated", tap: "He asked for 14 days. Decline" },
+            { frames: ASK, where: "Protection plan added", tap: "CHF 29 he did not ask for. Decline" },
+            { frames: ANSWERED, where: "You declined", tap: "Always decline when something is added? Yes, always" },
+            { frames: ASK, where: "CHF 215", tap: "7.5 % over the CHF 200 limit. Decline" },
+            { frames: HOME, where: "Home", tap: "A cycling helmet and a sustainable-goods shop: declined. Summit Thread CHF 179: approved" },
+        ],
+    },
+    {
+        scenario: "SCEN0000",
+        title: "Connection check",
+        beats: [{ frames: HOME, where: "Home", tap: "One grocery order, CHF 18 against CHF 20: approved, quiet. That is the whole scene" }],
+    },
+];
+
+const STEPS: Step[] = [
+    ...SETUP,
+    ...PROGRAMME.flatMap((sc, n) => [
+        {
+            frames: (n === 0 ? ["3.1b"] : []) as FrameId[],
+            where: `Scene ${n + 1} of ${PROGRAMME.length} · ${sc.title}`,
+            tap: SCENE[sc.scenario]?.shows ?? "Start run. The agent goes shopping",
+            startRun: true,
+            scenario: sc.scenario,
+            scene: n,
+        },
+        ...sc.beats.map((b) => ({ ...b, scene: n })),
+    ]),
+];
+
+/**
+ * Where the guide goes when the phone shows `frame`: only forward, to the next step if it has that frame, or past an
+ * optional step to the one after it. Home and the ask sheet come round several times in a scene, so going back or
+ * jumping far ahead would put the guide on the wrong beat.
+ */
+function follow(step: number, frame: FrameId): number {
+    const here = STEPS[step];
+    if (!here) return step;
+    const next = STEPS[step + 1];
+    if (next?.frames.includes(frame)) return step + 1;
+    const after = STEPS[step + 2];
+    if (next?.optional && after?.frames.includes(frame) && after.scene === here.scene) return step + 2;
+    return step;
+}
 
 /** Outside the phone. In mock mode the buttons stand in for the engine; in live mode the stream drives the phone. */
 const DemoControls = () => {
@@ -119,7 +214,7 @@ const DemoControls = () => {
         api.startRun(scenario)
             .then((r) => {
                 setRun({ id: r.run_id, scenario, state: "running" });
-                setStep(HOME_STEP);
+                setStep((i) => (STEPS[i]?.startRun ? i + 1 : i));
             })
             .catch((err: Error) => setRun({ id: "", scenario, state: "failed", error: err.message }));
     };
@@ -164,17 +259,24 @@ const DemoControls = () => {
 
     const isLive = dataMode === "live";
 
-    const frameStep = stepIndex(currentFrame(state));
+    const frame = currentFrame(state);
+    const prevFrame = useRef<FrameId | null>(null);
     useEffect(() => {
-        if (frameStep >= 0) setStep(frameStep);
-    }, [frameStep]);
-    const current = DEMO_STEPS[Math.min(step, DEMO_STEPS.length - 1)]!;
-    const next = DEMO_STEPS[step + 1];
+        if (frame === prevFrame.current) return;
+        prevFrame.current = frame;
+        setStep((i) => follow(i, frame));
+    }, [frame]);
+    const current = STEPS[Math.min(step, STEPS.length - 1)]!;
+    const next = STEPS[step + 1];
+    // Landing on a scene's start step preselects that scene; the picker can still override it.
+    useEffect(() => {
+        if (current.startRun && current.scenario) setScenario(current.scenario);
+    }, [current]);
     const [listOpen, setListOpen] = useState(false);
     /** Choosing a step moves the guide and puts the phone on that step's first screen (the "Next scene" step has none). */
     const goTo = (i: number) => {
         setStep(i);
-        const frame = DEMO_STEPS[i]?.frames[0];
+        const frame = STEPS[i]?.frames[0];
         if (frame) dispatch({ type: "JUMP", frame });
         setListOpen(false);
     };
@@ -261,13 +363,13 @@ const DemoControls = () => {
                 >
                     <span className="text-md font-semibold text-primary">Demo, tap by tap {listOpen ? "▾" : "▸"}</span>
                     <span className="text-sm text-tertiary tabular-nums">
-                        {step + 1} of {DEMO_STEPS.length}
+                        {step + 1} of {STEPS.length}
                     </span>
                 </button>
                 {listOpen && (
                     <ol className="flex flex-col gap-1" aria-label="All demo steps">
-                        {DEMO_STEPS.map((st, i) => (
-                            <li key={st.where}>
+                        {STEPS.map((st, i) => (
+                            <li key={i}>
                                 <button
                                     type="button"
                                     onClick={() => goTo(i)}
@@ -342,7 +444,7 @@ const DemoControls = () => {
                     <Button size="sm" color="secondary" isDisabled={step === 0} onClick={() => setStep((i) => Math.max(0, i - 1))}>
                         Back
                     </Button>
-                    <Button size="sm" color="secondary" isDisabled={!next} onClick={() => setStep((i) => Math.min(DEMO_STEPS.length - 1, i + 1))}>
+                    <Button size="sm" color="secondary" isDisabled={!next} onClick={() => setStep((i) => Math.min(STEPS.length - 1, i + 1))}>
                         Next
                     </Button>
                 </div>
