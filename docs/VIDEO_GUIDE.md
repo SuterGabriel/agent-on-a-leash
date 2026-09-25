@@ -68,9 +68,14 @@ npx remotion still  src/index.ts AgentCardDecline out/f.png --frame=180         
 | File | What |
 |---|---|
 | `src/index.ts` | registers the root, nothing else |
-| `src/Root.tsx` | declares the one `<Composition>`; add a second one here |
-| `src/AgentCardDecline.tsx` | the whole video: timing, copy, phone screen, captions |
+| `src/Root.tsx` | declares the two `<Composition>`s; add a third one here |
+| `src/shared.tsx` | what both videos use: colours, font loader, animation helpers, the phone frame, caption, wordmark, footnote |
+| `src/AgentCardDecline.tsx` | the 20-second decline video: timing, copy, the payment details screen |
+| `src/AgentCardVoice.tsx` | the 10-second voice clip: the ask-me sheet with the voice pill, three captions |
 | `remotion.config.ts` | JPEG frames, overwrite output |
+
+Render the voice clip with `npm run render:voice`. The sections below walk through the decline video; the voice clip is
+built the same way and is the shorter one to read first.
 
 Inside `AgentCardDecline.tsx`, top to bottom:
 

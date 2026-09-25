@@ -6,6 +6,7 @@
   "scripts": {
     "studio": "remotion studio src/index.ts",
     "render": "remotion render src/index.ts AgentCardDecline out/agent-card-decline.mp4",
+    "render:voice": "remotion render src/index.ts AgentCardVoice out/agent-card-voice.mp4",
     "still": "remotion still src/index.ts AgentCardDecline out/frame.png --frame=400",
     "typecheck": "tsc --noEmit"
   },
