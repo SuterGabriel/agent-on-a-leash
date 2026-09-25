@@ -170,6 +170,14 @@ const DemoControls = () => {
     }, [frameStep]);
     const current = DEMO_STEPS[Math.min(step, DEMO_STEPS.length - 1)]!;
     const next = DEMO_STEPS[step + 1];
+    const [listOpen, setListOpen] = useState(false);
+    /** Choosing a step moves the guide and puts the phone on that step's first screen (the "Next scene" step has none). */
+    const goTo = (i: number) => {
+        setStep(i);
+        const frame = DEMO_STEPS[i]?.frames[0];
+        if (frame) dispatch({ type: "JUMP", frame });
+        setListOpen(false);
+    };
 
     return (
         <aside aria-label="Demo controls" style={{ width: CONTROLS_W }} className="flex max-w-full shrink-0 flex-col gap-6 rounded-2xl bg-secondary p-5">
@@ -240,17 +248,45 @@ const DemoControls = () => {
             )}
 
             <div className="flex flex-col gap-2" aria-live="polite">
-                <div className="flex items-baseline justify-between">
-                    <span className="text-md font-semibold text-primary">Demo, tap by tap</span>
+                <button
+                    type="button"
+                    className="flex cursor-pointer items-baseline justify-between rounded-lg outline-focus-ring focus-visible:outline-2"
+                    aria-expanded={listOpen}
+                    onClick={() => setListOpen((o) => !o)}
+                >
+                    <span className="text-md font-semibold text-primary">Demo, tap by tap {listOpen ? "▾" : "▸"}</span>
                     <span className="text-sm text-tertiary tabular-nums">
                         {step + 1} of {DEMO_STEPS.length}
                     </span>
-                </div>
+                </button>
+                {listOpen && (
+                    <ol className="flex flex-col gap-1" aria-label="All demo steps">
+                        {DEMO_STEPS.map((st, i) => (
+                            <li key={st.where}>
+                                <button
+                                    type="button"
+                                    onClick={() => goTo(i)}
+                                    className={cx(
+                                        "w-full cursor-pointer rounded-lg px-3 py-1.5 text-left text-sm outline-focus-ring focus-visible:outline-2",
+                                        i === step ? "bg-primary font-semibold text-primary" : "text-secondary hover:bg-primary",
+                                    )}
+                                >
+                                    {i + 1}. {st.where}
+                                </button>
+                            </li>
+                        ))}
+                    </ol>
+                )}
                 <div className="flex flex-col gap-3 rounded-xl bg-primary px-4 py-3">
-                    <div>
+                    <button
+                        type="button"
+                        onClick={() => goTo(step)}
+                        title="Put the phone on this screen"
+                        className="cursor-pointer rounded-lg text-left outline-focus-ring focus-visible:outline-2"
+                    >
                         <p className="text-md font-semibold text-primary">{current.where}</p>
                         <p className="text-sm text-secondary">{current.tap}</p>
-                    </div>
+                    </button>
                     {current.startRun && isLive && (
                         <div className="flex flex-col gap-2">
                             <select
