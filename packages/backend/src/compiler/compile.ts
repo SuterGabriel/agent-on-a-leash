@@ -59,6 +59,8 @@ const PERIOD_WITH_DAYS = [
   re(String.raw`(?:keep\s+)?the total across any ${DAYS} days (?:at or below|under|no more than|up to) ${AMT}`),
   re(String.raw`(?:innerhalb von|innert|within|over|across|during|in|über)\s+(?:any\s+|every\s+|a\s+|jeweils\s+|beliebigen\s+|allen\s+)?${DAYS}\s+(?:days?|Tagen?)\s+${TOTAL}?(?:(?:spend|ausgeben)\s+)?(?:${LIMIT}\s*)?${AMT}`),
   re(String.raw`(?:${LIMIT}\s*)?${AMT}\s+${TOTAL}?(?:in|within|over|across|for|pro|innerhalb von|innert|über)\s+(?:any\s+|a\s+|every\s+|jeweils\s+|beliebigen\s+|allen\s+)?${DAYS}[- ](?:days?|Tagen?|Tage)\b`),
+  // "300 CHF every seven days", "CHF 250 each 10 days", "alle 7 Tage 200 Franken" without a preposition.
+  re(String.raw`(?:${LIMIT}\s*)?${AMT}\s+${TOTAL}?(?:every|each|any|alle)\s+${DAYS}[- ](?:days?|Tagen?|Tage)\b`),
 ];
 const PERIOD_WITH_UNIT = [
   re(String.raw`(?:${LIMIT}\s*)?${AMT}\s*${TOTAL}?(?:per|a|each|every|pro|je|in der|im)\s*(?<u>week|Woche|month|Monat)\b`),
@@ -168,6 +170,7 @@ const APPROVE_UNSURE = re(
 );
 const ASK_UNSURE = re(
   String.raw`\bask me (?:when|if|whenever) ${UNSURE}\b|\b(?:if|when|whenever) (?:in doubt|unsure|uncertain|not sure),?\s+ask(?: me)?\b|\bcheck with me\b` +
+    String.raw`|\bask me (?:if|when) (?:anything|something) (?:is unclear|doesn't fit|does not fit|seems off)\b|\bask me in case of doubt\b|\b(?:if|when) (?:anything|something) is unclear,?\s+ask(?: me)?\b` +
     String.raw`|\bim Zweifel(?:sfall)?,?\s+(?:frag|frage)\s+mich\b|\bbei Unsicherheit(?:en)?,?\s+(?:frag|frage)\s+mich\b|\b(?:frag|frage)\s+mich\b(?:,?\s+wenn du (?:dir )?unsicher bist|\s+im Zweifel(?:sfall)?|\s+bei Unsicherheit(?:en)?)?`,
 );
 

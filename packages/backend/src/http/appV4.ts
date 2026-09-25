@@ -12,6 +12,7 @@ import {
   type AppSmart,
   type AppSuggestResponse,
   type AppTightenRequest,
+  type AppUnderstandResponse,
   type LeashView,
   type Row,
   type UncertaintyPolicy,
@@ -19,6 +20,8 @@ import {
 import { ServiceError, type LeashService } from "../leash/service.js";
 import { analyzeCard, cardPurchases, DEFAULT_SMART, DEFAULT_VALUES, instructionFromCard, MONTH_DAYS, valuesFromLeash } from "../leash/cardLeash.js";
 import type { ColdStartInsight, PeerIndex } from "../coldstart/peers.js";
+import { Apertus } from "../llm/apertus.js";
+import { localizeLabels, understandLeash } from "../llm/leashTranslator.js";
 import type { LeashEvents, StoredDecision } from "../store.js";
 
 // The v4 app contract (app-web, Kim's handover of 24 Sep) on top of LeashService. Served under /v4/app/*.
@@ -36,6 +39,8 @@ export interface AppV4Options {
   peers?: PeerIndex;
   /** The customer the live pack presents (bootstrap profile), when no leash names one. */
   profileCustomerId?: string;
+  /** Apertus: reads leashes in other languages (POST /understand). Never decides. */
+  llm?: Apertus;
 }
 
 const ASK_WINDOW_MS = 120_000;
@@ -48,6 +53,7 @@ export class AppV4 {
   private smart: AppSmart = { ...DEFAULT_SMART };
   private values: AppRuleValues = { ...DEFAULT_VALUES };
   private cardInstruction: string | null = null;
+  private original: { language: string; text: string } | null = null;
   private validUntil: string | null = null;
   private historyCache: Row[] | null = null;
   /** Decisions already sent on the stream; the bus repeats `decision` (token issued, ask answered) and the app must not. */
@@ -84,6 +90,29 @@ export class AppV4 {
     return analyzeCard(rows, card, { until: Number.isNaN(until) ? undefined : until });
   }
 
+  /**
+   * A leash written in any language. Apertus translates (never decides); our compiler reads the English; every number
+   * and currency of the original must survive the translation, otherwise `please_check` lists what changed.
+   */
+  async understand(body: { instruction?: unknown }): Promise<AppUnderstandResponse> {
+    if (typeof body?.instruction !== "string" || !body.instruction.trim()) throw new ServiceError(400, "instruction_required", "Tell your agent what it may buy.");
+    if (body.instruction.length > 4_000) throw new ServiceError(400, "instruction_too_long", "Keep the leash under 4000 characters.");
+    const llm = this.opts.llm ?? new Apertus({ cacheFile: null });
+    const u = await understandLeash(llm, body.instruction);
+    const parsed = this.service.parse(u.english);
+    const local = await localizeLabels(llm, parsed.rules.map((r) => r.label), u.language);
+    return {
+      language: u.language,
+      original: u.original,
+      english: u.english,
+      translated: u.translated,
+      please_check: u.please_check,
+      rules: parsed.rules.map((r, i) => ({ key: r.key, label: r.label, label_local: local.labels[i] ?? r.label, your_words: r.your_words?.text ?? null })),
+      not_understood: parsed.not_understood,
+      model: { used: u.call.used, cached: u.call.cached, fallback: u.call.fallback, latency_ms: u.call.latency_ms, name: u.call.model, ...(u.call.error ? { error: u.call.error } : {}) },
+    };
+  }
+
   /** Cold start for one customer: profile signals, predicted categories, the neighbours and what they do. */
   profileInsight(customerId?: string) {
     const who = customerId ?? this.service.currentCustomer().customer_id ?? this.opts.profileCustomerId;
@@ -102,6 +131,7 @@ export class AppV4 {
     // The app may send its own sentence; we keep it only if our compiler reads both limits out of it.
     const instruction = given && this.readsLimits(given) ? given : instructionFromCard(values, smart);
     await this.setCard(instruction, values, smart, body.task_instruction?.trim() || null, readUntil(body.valid_until));
+    this.original = body.original_instruction && body.task_instruction ? { language: String(body.original_instruction.language), text: String(body.original_instruction.text).slice(0, 2_000) } : null;
     return this.leash();
   }
 
@@ -151,7 +181,9 @@ export class AppV4 {
         newShops: enforced.knownShopsOnly ? "known" : this.smart.newShops === "known" ? "ask" : this.smart.newShops,
       },
       learned: view.learned_rules.map((r) => ({ id: r.id, text: r.label, added_at: r.added_at ?? "" })),
-      task: view.task ? { instruction: view.task.instruction, rules: view.task.rules.map((r) => ({ key: r.key, label: r.label, your_words: r.your_words?.text ?? "" })) } : null,
+      task: view.task
+        ? { instruction: view.task.instruction, rules: view.task.rules.map((r) => ({ key: r.key, label: r.label, your_words: r.your_words?.text ?? "" })), ...(this.original ? { original: this.original } : {}) }
+        : null,
       month_spent_chf: view.budget?.spent_chf ?? 0,
       frees_up_at: view.budget?.next_release?.at ?? null,
       valid_until: view.valid_until,
