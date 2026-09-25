@@ -3,12 +3,14 @@ import { StatusBar } from "@/components/chrome/status-bar";
 import { PushBanner } from "@/components/shopping-card/push-banner";
 import { getDecision } from "@/features/shopping-card/demo-data";
 import { formatClock } from "@/features/shopping-card/format";
-import { usePrototype } from "@/features/shopping-card/prototype-state";
+import { burstDecisions, burstPush, usePrototype } from "@/features/shopping-card/prototype-state";
 
 /** 4.0 / 5.1 / 7.1 Push: lock screen, dim wallpaper (bg-brand-solid 90 %), one push banner. */
 export const LockScreen = ({ kind }: { kind: "ask" | "stopped" | "burst" }) => {
     const { dispatch, secondsLeft, state } = usePrototype();
     const ask = getDecision(state.waiting?.decisionId ?? "AU0040");
+    const stopped = state.lastStopped ? getDecision(state.lastStopped) : null;
+    const burst = state.burstGroup ? burstPush(burstDecisions(state)) : null;
 
     const push = {
         ask: {
@@ -17,13 +19,13 @@ export const LockScreen = ({ kind }: { kind: "ask" | "stopped" | "burst" }) => {
             onPress: () => dispatch({ type: "GO", screen: "3.1", sheet: "question" }),
         },
         stopped: {
-            title: "We stopped a payment at PixelHarbour",
-            body: "It looks like PixelHarbor, but it isn't. Nothing was bought.",
-            onPress: () => dispatch({ type: "GO", screen: "5.2", patch: { paymentId: "AU0039" } }),
+            title: stopped ? `We stopped a payment at ${stopped.merchant.name}` : "We stopped a payment at PixelHarbour",
+            body: stopped ? `${stopped.headline}. Nothing was bought.` : "It looks like PixelHarbor, but it isn't. Nothing was bought.",
+            onPress: () => dispatch({ type: "GO", screen: "5.2", patch: { paymentId: stopped?.id ?? "AU0039" } }),
         },
         burst: {
-            title: "We stopped 4 payments, 02:14 to 02:24",
-            body: "A new phone tried to pay at shops you never used.",
+            title: burst?.title ?? "We stopped 4 payments, 02:14 to 02:24",
+            body: burst?.body ?? "A new phone tried to pay at shops you never used.",
             onPress: () => dispatch({ type: "GO", screen: "3.1", sheet: "was-this-you" }),
         },
     }[kind];

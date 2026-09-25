@@ -191,6 +191,37 @@ function follow(step: number, frame: FrameId): number {
     return step;
 }
 
+/** Live: pick a customer without purchases; 1.3 then proposes rules from their profile and customers like them. */
+const ColdStartPicker = () => {
+    const { state, dispatch } = usePrototype();
+    const [customers, setCustomers] = useState<{ customer_id: string; name: string }[]>([]);
+    useEffect(() => {
+        api.coldCustomers()
+            .then(setCustomers)
+            .catch(() => setCustomers([]));
+    }, []);
+    if (!customers.length) return null;
+    return (
+        <label className="flex flex-col gap-2">
+            <span className="text-md font-semibold text-primary">Customer for setup (1.3)</span>
+            <select
+                value={state.coldCustomerId ?? ""}
+                disabled={state.cardCreated}
+                onChange={(e) => dispatch({ type: "PATCH", patch: { coldCustomerId: e.target.value || null, suggest: null } })}
+                className="h-11 w-full cursor-pointer rounded-full bg-primary px-4 text-md text-primary outline-focus-ring focus-visible:outline-2 disabled:opacity-50"
+            >
+                <option value="">This card (its own history)</option>
+                {customers.map((c) => (
+                    <option key={c.customer_id} value={c.customer_id}>
+                        New: {c.name} ({c.customer_id})
+                    </option>
+                ))}
+            </select>
+            <span className="px-1 text-sm text-tertiary">{state.cardCreated ? "Turn the card off to set up again." : "A new customer has no purchases: we start from customers like them."}</span>
+        </label>
+    );
+};
+
 /** Outside the phone. In mock mode the buttons stand in for the engine; in live mode the stream drives the phone. */
 const DemoControls = () => {
     const { state, dispatch, secondsLeft } = usePrototype();
@@ -326,8 +357,11 @@ const DemoControls = () => {
                 </p>
             </div>
 
+            {isLive && <ColdStartPicker />}
+
             {!isLive && (
                 <div className="flex flex-col gap-2">
+                    <p className="px-1 text-sm text-tertiary">Mock replay (not the engine): our proposed answers from src/mocks/decisions.json.</p>
                     <Button
                         size="md"
                         color="secondary"

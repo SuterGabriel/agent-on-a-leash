@@ -7,10 +7,11 @@ import { BottomSheet } from "@/components/shopping-card/bottom-sheet";
 import { GroupedList } from "@/components/shopping-card/grouped-list";
 import { ListRow } from "@/components/shopping-card/list-row";
 import { CountdownRing } from "@/features/shopping-card/countdown-ring";
-import { burstIds, checksFor, customer, getDecision, proposedRules, ruleLabel, shopQuote } from "@/features/shopping-card/demo-data";
+import { checksFor, customer, getDecision, proposedRules, ruleLabel, shopQuote } from "@/features/shopping-card/demo-data";
+import { SIGNAL_COPY, cardLast4, isLive } from "@/features/shopping-card/live-view";
 import { FaceIdGlyph } from "@/features/shopping-card/face-id";
 import { formatChf } from "@/features/shopping-card/format";
-import { pendingSuggestion, usePrototype } from "@/features/shopping-card/prototype-state";
+import { burstDecisions, pendingSuggestion, usePrototype } from "@/features/shopping-card/prototype-state";
 import { RuleRow } from "@/features/shopping-card/rule-row";
 import { ShopTextBox } from "@/features/shopping-card/shop-text-box";
 import { VoiceStatus } from "@/features/voice/voice-status";
@@ -44,7 +45,7 @@ const QuestionContent = () => {
                 <DetailLine label="Shop" value={d.merchant.name} />
                 <DetailLine label="Item" value={d.items[0]?.name ?? ""} />
                 <DetailLine label="Amount" value={formatChf(d.amount.chf)} />
-                <DetailLine label="Card" value={`${customer.cardName} •• ${customer.cardLast4}`} />
+                <DetailLine label="Card" value={`${customer.cardName} •• ${cardLast4(state)}`} />
             </div>
             <div className="flex items-start gap-3 rounded-2xl bg-secondary px-4 py-3.5">
                 <InfoCircle aria-hidden className="mt-0.5 size-5 shrink-0 text-primary" />
@@ -150,21 +151,38 @@ const EditRuleContent = () => {
 };
 
 /** 7.2 Was this you sheet */
-const WasThisYouContent = () => (
-    <div className="flex flex-col gap-6">
-        <GroupedList surface="secondary">
-            {burstIds.map((id) => {
-                const d = getDecision(id);
-                return <ListRow key={id} title={d.merchant.name} subtitle={`Today ${d.created_at.slice(11, 16)}`} value={formatChf(d.amount.chf)} />;
-            })}
-        </GroupedList>
-        <GroupedList surface="secondary" title="What looked odd">
-            <ListRow icon={Phone01} plainTitle title="New phone" subtitle="iPhone 15, Zurich" />
-            <ListRow icon={Moon01} plainTitle title="At night" />
-            <ListRow icon={ShoppingBag02} plainTitle title="4 shops you never used" />
-        </GroupedList>
-    </div>
-);
+const WasThisYouContent = () => {
+    const { state } = usePrototype();
+    const group = burstDecisions(state);
+    // Live: what the engine noticed on these payments. Mock: the prototype's three lines.
+    const signals = [...new Set(group.flatMap((d) => d.signals ?? []))];
+    const device = group.find((d) => d.device_id)?.device_id;
+    const icon = (s: string) => (s === "unusual_hour" ? Moon01 : s.includes("device") ? Phone01 : ShoppingBag02);
+    return (
+        <div className="flex flex-col gap-6">
+            <GroupedList surface="secondary">
+                {group.map((d) => (
+                    <ListRow key={d.id} title={d.merchant.name} subtitle={`Today ${d.created_at.slice(11, 16)}`} value={formatChf(d.amount.chf)} />
+                ))}
+            </GroupedList>
+            {isLive ? (
+                signals.length > 0 && (
+                    <GroupedList surface="secondary" title="What looked odd">
+                        {signals.map((s) => (
+                            <ListRow key={s} icon={icon(s)} plainTitle title={SIGNAL_COPY[s] ?? s.replace(/_/g, " ")} subtitle={s === "new_device" && device ? device : undefined} />
+                        ))}
+                    </GroupedList>
+                )
+            ) : (
+                <GroupedList surface="secondary" title="What looked odd">
+                    <ListRow icon={Phone01} plainTitle title="New phone" subtitle="iPhone 15, Zurich" />
+                    <ListRow icon={Moon01} plainTitle title="At night" />
+                    <ListRow icon={ShoppingBag02} plainTitle title="4 shops you never used" />
+                </GroupedList>
+            )}
+        </div>
+    );
+};
 
 interface SheetConfig {
     title?: string;
@@ -265,10 +283,15 @@ export const SheetHost = () => {
                     children: <WasThisYouContent />,
                     actions: (
                         <>
-                            <Button size="lg" color="secondary" onClick={() => dispatch({ type: "GO", screen: "7.3", patch: { frozen: true } })}>
+                            <Button size="lg" color="secondary" onClick={() => dispatch({ type: "WAS_ME", answer: "no" })}>
                                 No, it wasn't me
                             </Button>
-                            <Button size="lg" color="primary" onClick={() => dispatch({ type: "GO", screen: "7.3b" })}>
+                            <Button
+                                size="lg"
+                                color="primary"
+                                iconLeading={<FaceIdGlyph className="text-white" />}
+                                onClick={() => dispatch({ type: "FACE_ID", then: { type: "WAS_ME", answer: "yes" } })}
+                            >
                                 Yes, it was me
                             </Button>
                         </>
